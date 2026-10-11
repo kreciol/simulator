@@ -1,4 +1,4 @@
-[gd_scene load_steps=10 format=3]
+[gd_scene load_steps=12 format=3]
 
 [ext_resource type="Script" path="res://game/main.gd" id="1_main"]
 [ext_resource type="Resource" path="res://config/road_profiles/motorway.tres" id="2_road"]
@@ -6,6 +6,8 @@
 [ext_resource type="Resource" path="res://config/view_config.tres" id="4_view"]
 [ext_resource type="Script" path="res://game/world/road_view.gd" id="5_road_view"]
 [ext_resource type="Script" path="res://game/player/player_view.gd" id="6_player_view"]
+[ext_resource type="Script" path="res://game/session/session_manager.gd" id="7_session"]
+[ext_resource type="Script" path="res://ui/hud.gd" id="8_hud"]
 
 [sub_resource type="ProceduralSkyMaterial" id="SkyMaterial_1"]
 sky_top_color = Color(0.32, 0.52, 0.82, 1)
@@ -36,6 +38,9 @@ road_profile = ExtResource("2_road")
 sim_config = ExtResource("3_sim")
 view_config = ExtResource("4_view")
 
+[node name="SessionManager" type="Node" parent="."]
+script = ExtResource("7_session")
+
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("Environment_1")
 
@@ -48,3 +53,6 @@ script = ExtResource("5_road_view")
 
 [node name="PlayerView" type="Node3D" parent="."]
 script = ExtResource("6_player_view")
+
+[node name="Hud" type="CanvasLayer" parent="."]
+script = ExtResource("8_hud")

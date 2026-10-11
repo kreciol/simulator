@@ -1,6 +1,7 @@
 extends GdUnitTestSuite
 ## The main scene drives the sim from the keyboard and renders it from the cockpit
-## (issue #7 acceptance criteria, spec Phase 3 steps 1–2).
+## (issue #7 acceptance criteria, spec Phase 3 steps 1–2) once the session's
+## countdown is over (issue #8, step 3).
 
 const DT: float = 1.0 / 60.0
 
@@ -11,6 +12,12 @@ var _main: Node3D
 func before_test() -> void:
 	_runner = scene_runner("res://game/main.tscn")
 	_main = _runner.scene() as Node3D
+	_finish_countdown()
+
+
+func _finish_countdown() -> void:
+	while _main.session.state == SessionManager.State.INTRO:
+		_main._physics_process(DT)
 
 
 ## Steps the sim deterministically, as `_physics_process` does, then refreshes the views.
@@ -44,6 +51,27 @@ func test_scene_shows_road_and_cockpit_camera() -> void:
 func test_player_starts_on_the_right_lane_at_the_start_speed() -> void:
 	assert_int(_player().lane).is_equal(0)
 	assert_float(_player().speed_mps * TrafficSim.KMH_PER_MPS).is_equal_approx(_main.sim_config.start_speed_kmh, 1e-6)
+
+
+func test_countdown_runs_first_and_holds_the_car() -> void:
+	var runner: GdUnitSceneRunner = scene_runner("res://game/main.tscn")
+	var main: Node3D = runner.scene() as Node3D
+	var session: SessionManager = main.session
+	assert_int(session.state).is_equal(SessionManager.State.INTRO)
+	var hud: Hud = main.get_node("Hud") as Hud
+	assert_bool(hud.countdown_label.visible).is_true()
+	assert_str(hud.time_label.text).is_equal("1:30")
+	runner.simulate_key_press(KEY_A)
+	runner.simulate_key_release(KEY_A)
+	await runner.await_input_processed()
+	var s_before: float = main.player.s
+	while session.state == SessionManager.State.INTRO:
+		main._physics_process(DT)
+	# Frozen through the countdown: no movement, the lane change press was dropped.
+	assert_float(main.player.s).is_equal(s_before)
+	main._physics_process(DT)
+	assert_float(main.player.s).is_greater(s_before)
+	assert_bool(main.player.lane_change_active).is_false()
 
 
 func test_holding_w_accelerates_smoothly_and_moves_the_road() -> void:

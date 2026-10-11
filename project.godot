@@ -78,6 +78,11 @@ pause={
 ]
 }
 
+[internationalization]
+
+locale/translations=PackedStringArray("res://i18n/strings.pl.translation")
+locale/fallback="pl"
+
 [rendering]
 
 renderer/rendering_method="gl_compatibility"

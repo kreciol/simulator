@@ -11,6 +11,10 @@ extends Resource
 @export var max_speed_kmh: float
 ## Speed the player starts the session with (requirements §9.3).
 @export var start_speed_kmh: float
+## Length of the 3-2-1 intro before the session timer starts (requirements §9.3).
+@export var countdown_s: float
+## Driving time of one session (requirements §9.3).
+@export var session_length_s: float
 ## Duration of the discrete animated lane change (Q12).
 @export var lane_change_duration_s: float
 ## Default body size of a vehicle; `s` is the body's centre (spec Coordinates).
