@@ -8,10 +8,13 @@ enum Dir { RIGHT = -1, NONE = 0, LEFT = 1 }
 enum Longitudinal { NONE, ACCELERATE, BRAKE }
 
 var id: int
-## Distance along the road, metres.
+## Distance along the road to the centre of the body, metres.
 var s: float
 var lane: int
 var speed_mps: float
+## Body size; set from `SimConfig` on spawn.
+var length_m: float
+var width_m: float
 ## Current throttle/brake decision, held until the next command.
 var longitudinal: Longitudinal = Longitudinal.NONE
 
@@ -34,3 +37,11 @@ func lane_change_dir() -> Dir:
 	if not lane_change_active:
 		return Dir.NONE
 	return Dir.LEFT if lane_change_to > lane_change_from else Dir.RIGHT
+
+
+func front_s() -> float:
+	return s + length_m / 2.0
+
+
+func rear_s() -> float:
+	return s - length_m / 2.0
