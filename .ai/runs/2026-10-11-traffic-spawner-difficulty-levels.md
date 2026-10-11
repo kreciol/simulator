@@ -47,8 +47,8 @@ Traffic around the player follows the chosen difficulty level: the spawner keeps
 
 ### Phase 1: Lane index and pooled vehicles
 
-- [ ] 1.1 LaneIndex and LaneQuery over sorted lane lists
-- [ ] 1.2 Vehicle pooling, kinds and add/remove signals
+- [x] 1.1 LaneIndex and LaneQuery over sorted lane lists — 906de67
+- [x] 1.2 Vehicle pooling, kinds and add/remove signals — c7420f1
 
 ### Phase 2: Difficulty levels and spawner
 
