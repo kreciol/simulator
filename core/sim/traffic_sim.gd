@@ -58,24 +58,7 @@ func _init(road_profile: RoadProfile, sim_config: SimConfig, seed_value: int = 0
 
 
 func add_vehicle(s: float, lane: int, speed_mps: float, kind: VehicleState.Kind = VehicleState.Kind.CAR) -> VehicleState:
-	var vehicle: VehicleState = VehicleState.new() if _vehicle_pool.is_empty() else _vehicle_pool.pop_back()
-	vehicle.reset()
-	vehicle.id = _next_id
-	_next_id += 1
-	vehicle.kind = kind
-	vehicle.s = s
-	vehicle.lane = lane
-	vehicle.speed_mps = clampf(speed_mps, 0.0, max_speed_mps())
-	if kind == VehicleState.Kind.TRUCK:
-		vehicle.length_m = config.truck_length_m
-		vehicle.width_m = config.truck_width_m
-	else:
-		vehicle.length_m = config.vehicle_length_m
-		vehicle.width_m = config.vehicle_width_m
-	vehicles.append(vehicle)
-	lanes.add(vehicle)
-	vehicle_added.emit(vehicle.id)
-	return vehicle
+	return _add(s, lane, speed_mps, kind, null)
 
 
 ## Adds a vehicle driven by an `AiDriver` that cruises at `desired_speed_mps` with
@@ -90,8 +73,29 @@ func add_ai_vehicle(
 	var driver: AiDriver = AiDriver.new() if _driver_pool.is_empty() else _driver_pool.pop_back()
 	var phase: float = fposmod(_next_id * DECISION_PHASE_STEP, 1.0)
 	driver.setup(desired_speed_mps, discipline, time_s + phase * config.ai_lane_decision_interval_s)
-	var vehicle: VehicleState = add_vehicle(s, lane, speed_mps, kind)
+	return _add(s, lane, speed_mps, kind, driver)
+
+
+## Takes a vehicle from the pool, sets it up completely, then announces it.
+func _add(s: float, lane: int, speed_mps: float, kind: VehicleState.Kind, driver: AiDriver) -> VehicleState:
+	var vehicle: VehicleState = VehicleState.new() if _vehicle_pool.is_empty() else _vehicle_pool.pop_back()
+	vehicle.reset()
+	vehicle.id = _next_id
+	_next_id += 1
+	vehicle.kind = kind
+	vehicle.s = s
+	vehicle.lane = lane
+	vehicle.speed_mps = clampf(speed_mps, 0.0, max_speed_mps())
+	if kind == VehicleState.Kind.TRUCK:
+		vehicle.length_m = config.truck_length_m
+		vehicle.width_m = config.truck_width_m
+	else:
+		vehicle.length_m = config.vehicle_length_m
+		vehicle.width_m = config.vehicle_width_m
 	vehicle.ai = driver
+	vehicles.append(vehicle)
+	lanes.add(vehicle)
+	vehicle_added.emit(vehicle.id)
 	return vehicle
 
 

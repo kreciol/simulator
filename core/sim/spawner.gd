@@ -9,6 +9,16 @@ extends RefCounted
 ## free with legal gaps and no hard braking for anyone; otherwise the spawn is skipped,
 ## never forced. Vehicles come from the sim's pool. All randomness is the sim's RNG,
 ## so seed + input log still replays a session.
+##
+## Teachable-moment guarantee (spec Research): random traffic may hold nothing to
+## overtake, so while fewer slow vehicles have appeared ahead of the player in the
+## right lane than are due, a truck is placed there, beyond view. The k-th is due
+## `(k - 1) * overtake_opportunity_interval_s` after `attach`, up to
+## `min_overtake_opportunities`.
+
+var level: DifficultyLevel
+## Slow vehicles placed ahead of the player in the right lane since `attach`.
+var overtake_opportunities: int = 0
 
 ## Pairs of AI cars that collided since the last update (spec Edge Cases: despawned
 ## silently, never charged to the player).
@@ -18,8 +28,7 @@ var _next_update_s: float = 0.0
 ## `AiDriver` without adding it to the road first.
 var _probe: VehicleState = VehicleState.new()
 var _probe_driver: AiDriver = AiDriver.new()
-
-var level: DifficultyLevel
+var _attached_s: float = 0.0
 
 
 func _init(difficulty: DifficultyLevel) -> void:
@@ -36,7 +45,9 @@ func attach(sim: TrafficSim) -> void:
 	sim.spawner = self
 	# The sim only holds this spawner; the connection does not keep the sim alive.
 	sim.collision.connect(_on_collision)
+	_attached_s = sim.time_s
 	_populate(sim)
+	_guarantee_overtake_opportunity(sim)
 	_next_update_s = sim.time_s + sim.config.spawn_interval_s
 
 
@@ -63,6 +74,7 @@ func update(sim: TrafficSim) -> void:
 		return
 	_next_update_s = sim.time_s + sim.config.spawn_interval_s
 	_despawn_outside_window(sim)
+	_guarantee_overtake_opportunity(sim)
 	var missing: int = target_count(sim) - count_in_window(sim)
 	for i: int in mini(missing, sim.config.spawn_attempts_per_update):
 		_try_spawn_hidden(sim)
@@ -121,9 +133,47 @@ func _place(sim: TrafficSim, s: float) -> bool:
 		var speed_mps: float = _safe_speed(sim, lane, s)
 		if speed_mps < 0.0:
 			continue
-		sim.add_ai_vehicle(s, lane, speed_mps, _probe_driver.desired_speed_mps, _probe_driver.discipline, _probe.kind)
+		_add(sim, lane, s, speed_mps)
 		return true
 	return false
+
+
+## Adds the drawn vehicle and counts it when it is something to overtake.
+func _add(sim: TrafficSim, lane: int, s: float, speed_mps: float) -> void:
+	sim.add_ai_vehicle(s, lane, speed_mps, _probe_driver.desired_speed_mps, _probe_driver.discipline, _probe.kind)
+	if lane == 0 and s > sim.player.s and is_slow(sim, _probe_driver.desired_speed_mps):
+		overtake_opportunities += 1
+
+
+## Whether a vehicle cruising at `desired_speed_mps` is slow enough to be worth
+## overtaking: at least `overtake_opportunity_margin_kmh` below the limit.
+static func is_slow(sim: TrafficSim, desired_speed_mps: float) -> bool:
+	var limit_kmh: float = sim.road.speed_limit_kmh
+	return desired_speed_mps * TrafficSim.KMH_PER_MPS <= limit_kmh - sim.config.overtake_opportunity_margin_kmh
+
+
+## Places a truck ahead in the right lane, beyond view, when a slow vehicle is due
+## (see the class description), at the nearest safe slot beyond view. When there is
+## none, it is skipped and retried at the next update.
+func _guarantee_overtake_opportunity(sim: TrafficSim) -> void:
+	var config: SimConfig = sim.config
+	if overtake_opportunities >= config.min_overtake_opportunities:
+		return
+	var elapsed_s: float = sim.time_s - _attached_s + LaneQuery.TIME_EPSILON
+	var due: int = mini(config.min_overtake_opportunities, 1 + floori(elapsed_s / config.overtake_opportunity_interval_s))
+	if overtake_opportunities >= due:
+		return
+	var desired_kmh: float = sim.rng.randf_range(config.truck_speed_min_kmh, config.truck_speed_max_kmh)
+	var discipline: float = sim.rng.randf_range(level.ai_discipline_min, level.ai_discipline_max)
+	_set_probe(sim, VehicleState.Kind.TRUCK, desired_kmh / TrafficSim.KMH_PER_MPS, discipline)
+	# Nearest safe slot beyond view, so the player reaches it soon.
+	var s: float = sim.player.s + config.spawn_hidden_ahead_m + _probe.length_m / 2.0
+	while s <= sim.player.s + config.spawn_window_ahead_m:
+		var speed_mps: float = _safe_speed(sim, 0, s)
+		if speed_mps >= 0.0:
+			_add(sim, 0, s, speed_mps)
+			return
+		s += _probe.length_m
 
 
 ## Start speed for the probe at (`lane`, `s`), or -1 when the slot is unsafe. Safe

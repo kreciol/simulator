@@ -43,6 +43,14 @@ func test_adding_and_removing_notify_with_the_id() -> void:
 	assert_object(_sim.find_vehicle(car.id)).is_null()
 
 
+func test_listeners_see_a_fully_set_up_ai_vehicle() -> void:
+	var drivers: Array[AiDriver] = []
+	_sim.vehicle_added.connect(func(vehicle_id: int) -> void: drivers.append(_sim.find_vehicle(vehicle_id).ai))
+	var car: VehicleState = _sim.add_ai_vehicle(0.0, 0, 30.0, 30.0, 1.0)
+	assert_array(drivers).contains_exactly([car.ai])
+	assert_object(car.ai).is_not_null()
+
+
 func test_a_removed_vehicle_is_reused_with_fresh_state_and_a_new_id() -> void:
 	var old: VehicleState = _sim.add_ai_vehicle(0.0, 0, 30.0, 30.0, 0.5)
 	var old_driver: AiDriver = old.ai

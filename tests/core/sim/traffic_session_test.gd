@@ -1,7 +1,8 @@
 extends GdUnitTestSuite
 ## A 90 s session per level × road profile at the game's physics rate: density after
-## the warm-up and where vehicles appear (issue #12, spec Phase 4 step 3, requirements
-## §7.3, §10). The player is a model-driver bot keeping to the limit.
+## the warm-up, where vehicles appear, and something to overtake (issue #12, spec
+## Phase 4 step 3, requirements §7.3, §10). The player is a model-driver bot keeping
+## to the limit.
 
 const DT: float = 1.0 / 60.0
 const KMH: float = 1.0 / TrafficSim.KMH_PER_MPS
@@ -11,7 +12,8 @@ const WARM_UP_S: float = 30.0
 const DENSITY_TOLERANCE: float = 0.2
 
 var _sim: TrafficSim
-## Every vehicle added after `attach`, with its offset from the player at that moment.
+## Every vehicle the spawner added, as seen when it appeared (pooled objects are
+## reused later, so nothing is read back from them).
 var _spawns: Array[Dictionary] = []
 
 
@@ -39,10 +41,16 @@ func test_session_traffic(
 	_sim = TrafficSim.new(road, config, level_id * 31)
 	_sim.player = _sim.add_ai_vehicle(0.0, 0, config.start_speed_kmh * KMH, road.speed_limit_kmh * KMH, 1.0)
 	var spawner: Spawner = Spawner.new(load("res://config/difficulty_levels/level_%d.tres" % level_id) as DifficultyLevel)
-	spawner.attach(_sim)
 	_sim.vehicle_added.connect(func(vehicle_id: int) -> void:
 		var vehicle: VehicleState = _sim.find_vehicle(vehicle_id)
-		_spawns.append({"offset": vehicle.s - _sim.player.s, "half": vehicle.length_m / 2.0}))
+		_spawns.append({
+			"at_start": _sim.time_s == 0.0,
+			"offset": vehicle.s - _sim.player.s,
+			"half": vehicle.length_m / 2.0,
+			"lane": vehicle.lane,
+			"slow": Spawner.is_slow(_sim, vehicle.ai.desired_speed_mps),
+		}))
+	spawner.attach(_sim)
 
 	var samples: int = 0
 	var total: int = 0
@@ -58,15 +66,47 @@ func test_session_traffic(
 	assert_float(mean).override_failure_message("mean %.1f vs target %d" % [mean, target]) \
 			.is_between(target * (1.0 - DENSITY_TOLERANCE), target * (1.0 + DENSITY_TOLERANCE))
 
-	# During the session, vehicles appear only beyond the camera's far plane or the
-	# hidden distance behind, so never within the player's safety margin either.
-	assert_array(_spawns).is_not_empty()
+	# No vehicle is ever placed within the player's safety margin. After the start,
+	# vehicles appear only beyond the camera's far plane or the hidden distance behind.
+	var opportunities: int = 0
+	var runtime_spawns: int = 0
 	for spawn: Dictionary in _spawns:
-		# Recorded at spawn time: pooled objects are reused later.
 		var offset: float = spawn["offset"]
 		var half: float = spawn["half"]
+		assert_float(absf(offset) - (half + _sim.player.length_m / 2.0)).is_greater_equal(config.spawn_player_clearance_m)
+		if spawn["lane"] == 0 and offset > 0.0 and spawn["slow"]:
+			opportunities += 1
+		if spawn["at_start"]:
+			continue
+		runtime_spawns += 1
 		var out_of_view: bool = offset - half >= view.draw_distance_m() \
 				or offset + half <= -config.spawn_hidden_behind_m
 		assert_bool(out_of_view).override_failure_message("spawned %.1f m from the player" % offset).is_true()
-		assert_float(absf(offset) - (half + _sim.player.length_m / 2.0)).is_greater_equal(config.spawn_player_clearance_m)
+	assert_int(runtime_spawns).is_greater(0)
+
+	# Something to overtake: slow vehicles ahead in the right lane (teachable moments).
+	assert_int(opportunities).is_greater_equal(config.min_overtake_opportunities)
+	assert_int(spawner.overtake_opportunities).is_equal(opportunities)
 	assert_bool(_sim.player.off_road).is_false()
+
+
+## The guarantee itself, on the calmest level where random traffic is sparsest: the
+## first slow vehicle comes right at the start, the next once its interval is up. A
+## placement waits for a safe slot, so each gets `SLACK_S` to find one.
+func test_slow_vehicles_are_due_on_schedule() -> void:
+	const SLACK_S: float = 1.0
+	var config: SimConfig = load("res://config/sim_config.tres") as SimConfig
+	var road: RoadProfile = load("res://config/road_profiles/motorway.tres") as RoadProfile
+	_sim = TrafficSim.new(road, config, 5)
+	_sim.player = _sim.add_ai_vehicle(0.0, 0, config.start_speed_kmh * KMH, road.speed_limit_kmh * KMH, 1.0)
+	var spawner: Spawner = Spawner.new(load("res://config/difficulty_levels/level_1.tres") as DifficultyLevel)
+	spawner.attach(_sim)
+	var counts: Dictionary[float, int] = {}
+	var checkpoints: Array[float] = [SLACK_S, config.overtake_opportunity_interval_s + SLACK_S]
+	for i: int in roundi(checkpoints.back() / DT) + 1:
+		_sim.step(DT)
+		for checkpoint: float in checkpoints:
+			if not counts.has(checkpoint) and _sim.time_s >= checkpoint:
+				counts[checkpoint] = spawner.overtake_opportunities
+	assert_int(counts[checkpoints[0]]).is_greater_equal(1)
+	assert_int(counts[checkpoints[1]]).is_greater_equal(mini(2, config.min_overtake_opportunities))
