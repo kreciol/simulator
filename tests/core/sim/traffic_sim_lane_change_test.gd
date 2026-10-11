@@ -12,10 +12,15 @@ var _change_steps: int
 
 
 func before_test() -> void:
+	_start_on_lane(0)
+	_change_steps = roundi(_sim.config.lane_change_duration_s / DT)
+
+
+## A fresh sim with the car alone on `lane`.
+func _start_on_lane(lane: int) -> void:
 	var config: SimConfig = load("res://config/sim_config.tres") as SimConfig
 	_sim = TrafficSim.new(load("res://config/road_profiles/motorway.tres") as RoadProfile, config)
-	_car = _sim.add_vehicle(0.0, 0, 30.0)
-	_change_steps = roundi(config.lane_change_duration_s / DT)
+	_car = _sim.add_vehicle(0.0, lane, 30.0)
 
 
 func _steps(count: int) -> void:
@@ -60,7 +65,7 @@ func test_lateral_position_is_monotonic_during_change() -> void:
 
 
 func test_request_during_active_change_is_ignored() -> void:
-	_car.lane = 1
+	_start_on_lane(1)
 	_sim.request_lane_change(_car, RIGHT)
 	_steps(10)
 	assert_bool(_sim.request_lane_change(_car, LEFT)).is_false()
@@ -79,7 +84,7 @@ func test_change_beyond_outermost_lane_ends_off_road(
 			[0, VehicleState.Dir.RIGHT, -1],
 			[1, VehicleState.Dir.LEFT, 2],
 		]) -> void:
-	_car.lane = start_lane
+	_start_on_lane(start_lane)
 	var offroad_ids: Array[int] = []
 	_sim.offroad.connect(func(vehicle_id: int) -> void: offroad_ids.append(vehicle_id))
 	assert_bool(_sim.request_lane_change(_car, dir)).is_true()

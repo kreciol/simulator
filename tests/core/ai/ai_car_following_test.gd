@@ -37,7 +37,7 @@ func _settled_gap(discipline: float) -> float:
 	_run(sim, 150.0)
 	assert_float(follower.speed_mps).is_equal_approx(leader.speed_mps, 0.5 * KMH)
 	assert_array(_collisions).is_empty()
-	return LaneQuery.gap_to_leader(follower, sim.vehicles)
+	return LaneQuery.gap_to_leader(follower, sim.lanes)
 
 
 func test_time_headway_reaches_the_legal_gap_for_model_drivers(
@@ -86,7 +86,7 @@ func test_disciplined_driver_never_dips_below_the_legal_gap_once_following() -> 
 	for i: int in roundi(60.0 / DT):
 		sim.step(DT)
 		var min_gap: float = LaneQuery.min_gap(follower.speed_mps * TrafficSim.KMH_PER_MPS)
-		worst_ratio = minf(worst_ratio, LaneQuery.gap_to_leader(follower, sim.vehicles) / min_gap)
+		worst_ratio = minf(worst_ratio, LaneQuery.gap_to_leader(follower, sim.lanes) / min_gap)
 	assert_float(worst_ratio).is_greater_equal(1.0)
 
 
@@ -104,10 +104,10 @@ func test_stops_behind_a_stopped_leader_without_overlap() -> void:
 	var min_gap: float = INF
 	for i: int in roundi(60.0 / DT):
 		sim.step(DT)
-		min_gap = minf(min_gap, LaneQuery.gap_to_leader(car, sim.vehicles))
+		min_gap = minf(min_gap, LaneQuery.gap_to_leader(car, sim.lanes))
 	assert_float(min_gap).is_greater(0.0)
 	assert_float(car.speed_mps).is_equal_approx(0.0, 0.1)
-	var gap: float = LaneQuery.gap_to_leader(car, sim.vehicles)
+	var gap: float = LaneQuery.gap_to_leader(car, sim.lanes)
 	assert_float(gap).is_between(0.0, 2.0 * _config.idm_min_spacing_m)
 	assert_array(_collisions).is_empty()
 

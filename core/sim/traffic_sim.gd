@@ -18,6 +18,9 @@ var config: SimConfig
 ## Simulated time since the start, seconds.
 var time_s: float = 0.0
 var vehicles: Array[VehicleState] = []
+## `vehicles` by lane, sorted by `s`, for `LaneQuery` neighbour lookups. Current
+## whenever vehicles change lanes through the sim; re-sorted every step.
+var lanes: LaneIndex
 ## Seed of `rng`; with `input_log` it reproduces a session exactly.
 var rng_seed: int
 ## The sim's only source of randomness; nothing else may draw random numbers.
@@ -37,6 +40,7 @@ var _next_contacts: Dictionary[Vector2i, bool] = {}
 func _init(road_profile: RoadProfile, sim_config: SimConfig, seed_value: int = 0) -> void:
 	road = road_profile
 	config = sim_config
+	lanes = LaneIndex.new(road.lane_count)
 	rng_seed = seed_value
 	rng.seed = seed_value
 
@@ -51,6 +55,7 @@ func add_vehicle(s: float, lane: int, speed_mps: float) -> VehicleState:
 	vehicle.length_m = config.vehicle_length_m
 	vehicle.width_m = config.vehicle_width_m
 	vehicles.append(vehicle)
+	lanes.add(vehicle)
 	return vehicle
 
 
@@ -98,6 +103,7 @@ func request_lane_change(vehicle: VehicleState, dir: VehicleState.Dir) -> bool:
 	vehicle.lane_change_from = vehicle.lane
 	vehicle.lane_change_to = vehicle.lane + dir
 	vehicle.lane_change_progress = 0.0
+	lanes.insert(vehicle, vehicle.lane_change_to)
 	lane_change_started.emit(vehicle.id, vehicle.lane_change_from, vehicle.lane_change_to)
 	return true
 
@@ -116,6 +122,8 @@ func lateral_position(vehicle: VehicleState) -> float:
 ## then decide in vehicle order; a lane change one of them starts is visible to the
 ## next.
 func step(dt: float, player_commands: PlayerCommands = null) -> void:
+	# Callers may have moved vehicles since the last step.
+	lanes.sort()
 	if player != null:
 		input_log.append(player_commands)
 		if player_commands != null:
@@ -127,6 +135,7 @@ func step(dt: float, player_commands: PlayerCommands = null) -> void:
 	for vehicle: VehicleState in vehicles:
 		_integrate_longitudinal(vehicle, dt)
 		_advance_lane_change(vehicle, dt)
+	lanes.sort()
 	_detect_collisions()
 
 
@@ -196,6 +205,7 @@ func _advance_lane_change(vehicle: VehicleState, dt: float) -> void:
 	var dir: VehicleState.Dir = vehicle.lane_change_dir()
 	vehicle.lane_change_progress = 1.0
 	vehicle.lane_change_active = false
+	lanes.erase(vehicle, vehicle.lane_change_from)
 	vehicle.lane = vehicle.lane_change_to
 	# Self-cancelling signal, like a steering-column return (requirements §6.5).
 	if vehicle.signal_dir == dir:
@@ -206,18 +216,29 @@ func _advance_lane_change(vehicle: VehicleState, dt: float) -> void:
 		offroad.emit(vehicle.id)
 
 
+## Overlapping bodies always share a lane in `lanes`: a body lies laterally between
+## the centres of the lanes it occupies, and lanes are wider than any body. So only
+## neighbours along each lane, close enough in `s` to touch, are compared.
 func _detect_collisions() -> void:
 	_next_contacts.clear()
-	for i: int in vehicles.size():
-		for j: int in range(i + 1, vehicles.size()):
-			var a: VehicleState = vehicles[i]
-			var b: VehicleState = vehicles[j]
-			if not vehicles_overlap(a, b):
-				continue
-			var key: Vector2i = Vector2i(mini(a.id, b.id), maxi(a.id, b.id))
-			_next_contacts[key] = true
-			if not _contacts.has(key):
-				collision.emit(key.x, key.y)
+	for lane: int in range(lanes.first_lane(), lanes.end_lane()):
+		var on_lane: Array[VehicleState] = lanes.on_lane(lane)
+		for i: int in on_lane.size():
+			var a: VehicleState = on_lane[i]
+			var reach: float = (a.length_m + lanes.max_length_m) / 2.0
+			for j: int in range(i + 1, on_lane.size()):
+				var b: VehicleState = on_lane[j]
+				if b.s - a.s >= reach:
+					break
+				if not vehicles_overlap(a, b):
+					continue
+				var key: Vector2i = Vector2i(mini(a.id, b.id), maxi(a.id, b.id))
+				# Two vehicles changing lanes can meet on both lanes.
+				if _next_contacts.has(key):
+					continue
+				_next_contacts[key] = true
+				if not _contacts.has(key):
+					collision.emit(key.x, key.y)
 	var previous: Dictionary[Vector2i, bool] = _contacts
 	_contacts = _next_contacts
 	_next_contacts = previous

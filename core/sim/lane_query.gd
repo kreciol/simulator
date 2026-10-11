@@ -3,6 +3,8 @@ extends RefCounted
 ## Shared lane logic (requirements §8.4): the one definition of free lanes, gaps,
 ## overtaking and signal validity used by AI, scoring and hints alike. Static and
 ## pure; callers own the look-ahead/behind windows, which are [PARAM]s of their rules.
+## Neighbour queries read a `LaneIndex` (`TrafficSim.lanes`), so each one visits only
+## the vehicles near the queried position.
 
 enum SignalResult { OK, LATE, NONE, WRONG }
 
@@ -26,14 +28,20 @@ static func occupies_lane(vehicle: VehicleState, lane: int) -> bool:
 ## Whether no vehicle body reaches into `[s - look_behind_m, s + look_ahead_m]` on
 ## `lane`. `ignore` (typically the querying vehicle) is skipped.
 static func is_lane_free(
-		vehicles: Array[VehicleState],
+		lanes: LaneIndex,
 		lane: int,
 		s: float,
 		look_ahead_m: float,
 		look_behind_m: float,
 		ignore: VehicleState = null) -> bool:
-	for other: VehicleState in vehicles:
-		if other == ignore or not occupies_lane(other, lane):
+	var on_lane: Array[VehicleState] = lanes.on_lane(lane)
+	var reach: float = lanes.max_length_m / 2.0
+	# A body overlapping the window has its centre within half a length of it.
+	for i: int in range(LaneIndex.lower_bound(on_lane, s - look_behind_m - reach), on_lane.size()):
+		var other: VehicleState = on_lane[i]
+		if other.s > s + look_ahead_m + reach:
+			break
+		if other == ignore:
 			continue
 		if other.rear_s() <= s + look_ahead_m and other.front_s() >= s - look_behind_m:
 			return false
@@ -42,8 +50,8 @@ static func is_lane_free(
 
 ## Distance from `vehicle`'s front to the rear of the nearest vehicle ahead in its
 ## lane (`vehicle.lane`, the origin lane while changing); INF when there is none.
-static func gap_to_leader(vehicle: VehicleState, vehicles: Array[VehicleState]) -> float:
-	var leader: VehicleState = leader_in_lane(vehicles, vehicle.lane, vehicle.s, vehicle)
+static func gap_to_leader(vehicle: VehicleState, lanes: LaneIndex) -> float:
+	var leader: VehicleState = leader_in_lane(lanes, vehicle.lane, vehicle.s, vehicle)
 	if leader == null:
 		return INF
 	return leader.rear_s() - vehicle.front_s()
@@ -52,13 +60,19 @@ static func gap_to_leader(vehicle: VehicleState, vehicles: Array[VehicleState]) 
 ## The vehicle on `lane` whose centre is ahead of `s` and whose rear is nearest;
 ## null when there is none. `ignore` (typically the querying vehicle) is skipped.
 static func leader_in_lane(
-		vehicles: Array[VehicleState],
+		lanes: LaneIndex,
 		lane: int,
 		s: float,
 		ignore: VehicleState = null) -> VehicleState:
+	var on_lane: Array[VehicleState] = lanes.on_lane(lane)
+	var reach: float = lanes.max_length_m / 2.0
 	var leader: VehicleState = null
-	for other: VehicleState in vehicles:
-		if other == ignore or other.s <= s or not occupies_lane(other, lane):
+	for i: int in range(LaneIndex.upper_bound(on_lane, s), on_lane.size()):
+		var other: VehicleState = on_lane[i]
+		# Further centres cannot have a nearer rear.
+		if leader != null and other.s - reach >= leader.rear_s():
+			break
+		if other == ignore:
 			continue
 		if leader == null or other.rear_s() < leader.rear_s():
 			leader = other
@@ -68,13 +82,19 @@ static func leader_in_lane(
 ## The vehicle on `lane` whose centre is behind `s` and whose front is nearest;
 ## null when there is none. `ignore` (typically the querying vehicle) is skipped.
 static func follower_in_lane(
-		vehicles: Array[VehicleState],
+		lanes: LaneIndex,
 		lane: int,
 		s: float,
 		ignore: VehicleState = null) -> VehicleState:
+	var on_lane: Array[VehicleState] = lanes.on_lane(lane)
+	var reach: float = lanes.max_length_m / 2.0
 	var follower: VehicleState = null
-	for other: VehicleState in vehicles:
-		if other == ignore or other.s >= s or not occupies_lane(other, lane):
+	for i: int in range(LaneIndex.lower_bound(on_lane, s) - 1, -1, -1):
+		var other: VehicleState = on_lane[i]
+		# Earlier centres cannot have a nearer front.
+		if follower != null and other.s + reach <= follower.front_s():
+			break
+		if other == ignore:
 			continue
 		if follower == null or other.front_s() > follower.front_s():
 			follower = other
@@ -84,16 +104,18 @@ static func follower_in_lane(
 ## Whether `vehicle` is overtaking: changing lanes to the left, or left of the
 ## rightmost lane with a slower vehicle on the lane to its right that is alongside or
 ## at most `look_ahead_m` ahead of its front.
-static func is_overtaking(vehicle: VehicleState, vehicles: Array[VehicleState], look_ahead_m: float) -> bool:
+static func is_overtaking(vehicle: VehicleState, lanes: LaneIndex, look_ahead_m: float) -> bool:
 	if vehicle.lane_change_dir() == VehicleState.Dir.LEFT:
 		return true
 	if vehicle.lane <= 0:
 		return false
-	var right_lane: int = vehicle.lane - 1
-	for other: VehicleState in vehicles:
-		if other == vehicle or not occupies_lane(other, right_lane):
-			continue
-		if other.speed_mps >= vehicle.speed_mps:
+	var on_right_lane: Array[VehicleState] = lanes.on_lane(vehicle.lane - 1)
+	var reach: float = lanes.max_length_m / 2.0
+	for i: int in range(LaneIndex.lower_bound(on_right_lane, vehicle.rear_s() - reach), on_right_lane.size()):
+		var other: VehicleState = on_right_lane[i]
+		if other.s > vehicle.front_s() + look_ahead_m + reach:
+			break
+		if other == vehicle or other.speed_mps >= vehicle.speed_mps:
 			continue
 		if other.front_s() >= vehicle.rear_s() and other.rear_s() <= vehicle.front_s() + look_ahead_m:
 			return true
