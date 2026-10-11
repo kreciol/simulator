@@ -45,8 +45,8 @@ Let a player drive the simulation from the driver's seat on an endless dual-carr
 
 ### Phase 1: Road view
 
-- [ ] 1.1 ViewConfig, road layout and segment mesh
-- [ ] 1.2 RoadView segment recycling
+- [x] 1.1 ViewConfig, road layout and segment mesh — d58b913
+- [x] 1.2 RoadView segment recycling — 35a3455
 
 ### Phase 2: Player
 
