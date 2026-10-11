@@ -58,10 +58,7 @@ func dashboard_near_far_z() -> Vector2:
 ## `vehicle` in its blink phase at sim time `time_s`.
 func update(vehicle: VehicleState, lateral_u: float, time_s: float) -> void:
 	position = Vector3(RoadLayout.x_of(lateral_u), 0.0, 0.0)
-	var lit: bool = false
-	if vehicle.signal_dir != VehicleState.Dir.NONE:
-		var phase: float = fmod((time_s - vehicle.signal_on_since_s) * view.signal_blink_hz, 1.0)
-		lit = phase < 0.5
+	var lit: bool = SignalBlink.is_lit(vehicle, time_s, view.signal_blink_hz)
 	signal_left.visible = lit and vehicle.signal_dir == VehicleState.Dir.LEFT
 	signal_right.visible = lit and vehicle.signal_dir == VehicleState.Dir.RIGHT
 

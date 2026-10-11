@@ -1,0 +1,102 @@
+extends GdUnitTestSuite
+## Session flow: 3-2-1 intro, then a timed drive that ends after the configured
+## session length (issue #8 acceptance criteria, spec Phase 3 step 3).
+
+const DT: float = 1.0 / 60.0
+
+var _config: SimConfig
+var _session: SessionManager
+
+
+func before_test() -> void:
+	_config = load("res://config/sim_config.tres") as SimConfig
+	_session = auto_free(SessionManager.new()) as SessionManager
+	_session.setup(load("res://config/road_profiles/motorway.tres") as RoadProfile, _config)
+
+
+func _steps_for(duration_s: float) -> int:
+	return roundi(duration_s / DT)
+
+
+func _step(steps: int, commands: PlayerCommands = null) -> void:
+	for i: int in steps:
+		_session.step(DT, commands)
+
+
+func _accelerate() -> PlayerCommands:
+	var commands: PlayerCommands = PlayerCommands.new()
+	commands.longitudinal = VehicleState.Longitudinal.ACCELERATE
+	return commands
+
+
+func test_session_length_is_ninety_seconds_after_a_three_second_countdown() -> void:
+	assert_float(_config.session_length_s).is_equal(90.0)
+	assert_float(_config.countdown_s).is_equal(3.0)
+
+
+func test_player_starts_on_the_right_lane_at_the_start_speed() -> void:
+	assert_int(_session.state).is_equal(SessionManager.State.INTRO)
+	assert_object(_session.sim.player).is_same(_session.player)
+	assert_int(_session.player.lane).is_equal(0)
+	assert_float(_session.player.speed_mps * TrafficSim.KMH_PER_MPS).is_equal_approx(_config.start_speed_kmh, 1e-6)
+
+
+func test_countdown_runs_before_the_session_timer_starts() -> void:
+	var started: Array[bool] = [false]
+	_session.session_started.connect(func() -> void: started[0] = true)
+	assert_float(_session.countdown_left_s()).is_equal(_config.countdown_s)
+	_step(_steps_for(_config.countdown_s) - 1, _accelerate())
+	# Still counting down: the timer has not started, the car is frozen, input dropped.
+	assert_int(_session.state).is_equal(SessionManager.State.INTRO)
+	assert_bool(started[0]).is_false()
+	assert_float(_session.countdown_left_s()).is_greater(0.0)
+	assert_float(_session.elapsed_s).is_equal(0.0)
+	assert_float(_session.time_left_s()).is_equal(_config.session_length_s)
+	assert_float(_session.sim.time_s).is_equal(0.0)
+	assert_float(_session.player.s).is_equal(0.0)
+	assert_float(_session.player.speed_mps * TrafficSim.KMH_PER_MPS).is_equal_approx(_config.start_speed_kmh, 1e-6)
+	assert_int(_session.sim.input_log.size()).is_equal(0)
+
+	_step(1)
+	assert_int(_session.state).is_equal(SessionManager.State.DRIVING)
+	assert_bool(started[0]).is_true()
+	assert_float(_session.countdown_left_s()).is_equal(0.0)
+
+
+func test_driving_steps_the_sim_and_runs_the_timer() -> void:
+	_step(_steps_for(_config.countdown_s))
+	_step(60, _accelerate())
+	assert_float(_session.elapsed_s).is_equal_approx(1.0, 1e-9)
+	assert_float(_session.time_left_s()).is_equal_approx(_config.session_length_s - 1.0, 1e-9)
+	assert_float(_session.sim.time_s).is_equal_approx(1.0, 1e-9)
+	assert_float(_session.player.s).is_greater(0.0)
+	assert_float(_session.player.speed_mps * TrafficSim.KMH_PER_MPS).is_greater(_config.start_speed_kmh)
+
+
+func test_session_ends_after_ninety_seconds_of_simulated_time() -> void:
+	var ended: Array[int] = [0]
+	_session.session_ended.connect(func() -> void: ended[0] += 1)
+	_step(_steps_for(_config.countdown_s))
+	_step(_steps_for(_config.session_length_s) - 1)
+	assert_int(_session.state).is_equal(SessionManager.State.DRIVING)
+	assert_int(ended[0]).is_equal(0)
+
+	_step(1)
+	assert_int(_session.state).is_equal(SessionManager.State.ENDED)
+	assert_int(ended[0]).is_equal(1)
+	assert_float(_session.sim.time_s).is_equal_approx(_config.session_length_s, 1e-6)
+	assert_float(_session.time_left_s()).is_equal(0.0)
+
+
+func test_nothing_advances_after_the_end() -> void:
+	var ended: Array[int] = [0]
+	_session.session_ended.connect(func() -> void: ended[0] += 1)
+	_step(_steps_for(_config.countdown_s + _config.session_length_s))
+	var s_at_end: float = _session.player.s
+	var time_at_end: float = _session.sim.time_s
+	_step(120, _accelerate())
+	assert_int(_session.state).is_equal(SessionManager.State.ENDED)
+	assert_int(ended[0]).is_equal(1)
+	assert_float(_session.player.s).is_equal(s_at_end)
+	assert_float(_session.sim.time_s).is_equal(time_at_end)
+	assert_float(_session.time_left_s()).is_equal(0.0)
