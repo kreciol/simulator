@@ -8,13 +8,13 @@ The source of truth for scope and behaviour is [`wymagania-symulator-autostrady.
 
 **Decisions take precedence:** the MVP spec [`.ai/specs/2026-10-11-highway-driving-simulator-mvp.md`](.ai/specs/2026-10-11-highway-driving-simulator-mvp.md) resolves the requirements doc's [OTWARTE] items in its *Decisions* table and defines the architecture and phasing. Where the two disagree, the spec wins; use `# TODO(open):` only for questions neither document settles.
 
-> Status: no Godot project exists yet. Paths below follow the planned layout (requirements §15.1); update this file when the skeleton lands.
+> Status: Phase 1 skeleton in place — Godot **4.7.2** project, gdUnit4 gate, CI with GitHub Pages deploy. The §15.1 directories exist but stay empty (`.gitkeep`) until their phase lands; entries still marked (planned) have no code yet.
 
 ## Task routing
 
 | When the task involves… | Read first | Key rules |
 |---|---|---|
-| Project skeleton, `project.godot`, export, CI | requirements §3, §17 step 1; `.github/workflows/` (planned) | Renderer **Compatibility** (WebGL 2) only — no Forward+/Mobile-only features. Single-threaded web export (no COOP/COEP, no `SharedArrayBuffer`). Pin the Godot version in `project.godot` and README. `.tscn`/`.tres` in text format. |
+| Project skeleton, `project.godot`, export, CI | requirements §3, §17 step 1; `project.godot`, `export_presets.cfg`, `.github/workflows/ci.yml` | Renderer **Compatibility** (WebGL 2) only — no Forward+/Mobile-only features. Single-threaded web export (no COOP/COEP, no `SharedArrayBuffer`). Pin the Godot version in `project.godot` and README. `.tscn`/`.tres` in text format. |
 | Simulation core: vehicles, lanes, lane queries | requirements §4.3, §8.4, §15.2; `core/sim/` (planned) | Pure GDScript classes with **no scene or rendering dependencies**. Logical coordinates only (longitudinal `s` in metres, lane index / lateral offset). Fixed-step `_physics_process`; seeded RNG stored in the session. The player is a `VehicleState` like any AI car. |
 | Traffic AI | requirements §7; `core/ai/` (planned) | IDM-style car-following, simplified MOBIL lane changes. AI uses the **same** `is_lane_free` / `min_gap` functions as scoring. Never spawn into or near a collision. Object pooling, no create/free churn. |
 | Scoring and event log | requirements §8, §16 (Ocenianie); `core/scoring/`, `config/scoring.tres` (planned) | Scoring **observes** the simulation, never mutates it. Every rule K1–K4 / N1–N3 has unit tests mirroring the acceptance criteria. Continuous events are aggregated into segments, not logged per frame. |
@@ -23,7 +23,7 @@ The source of truth for scope and behaviour is [`wymagania-symulator-autostrady.
 | Input | requirements §6 | Actions defined in the Godot **Input Map**, never hard-coded keys. |
 | Persistence and history | requirements §13; `persistence/` (planned) | `user://` (IndexedDB on web). Every saved record carries `schema_version`; changing the format needs a migration. |
 | Tunable numbers | requirements §0, §14 (Konfigurowalność); `config/` (planned) | Every **[PARAM]** lives in a `.tres` resource or the single config file — never a literal in code. Road profiles and difficulty levels are `Resource`s. |
-| Tests | requirements §14 (Testowalność); `tests/` (planned) | gdUnit4. Logic in `core/` is fully unit-tested; tests run headless. |
+| Tests | requirements §14 (Testowalność); `tests/`, `addons/gdUnit4/` (vendored, v6.2.2) | gdUnit4. Logic in `core/` is fully unit-tested; tests run headless. |
 
 ## Code conventions
 
@@ -34,7 +34,7 @@ The source of truth for scope and behaviour is [`wymagania-symulator-autostrady.
 
 ## Validation gate
 
-Run in order; any non-zero exit fails the gate (the commands start working once the skeleton PR adds the project and gdUnit4):
+Run in order; any non-zero exit fails the gate (CI runs the same two commands on every PR):
 
 ```bash
 godot --headless --path . --import
