@@ -72,10 +72,19 @@ func test_attach_needs_a_player() -> void:
 			load(MOTORWAY) as RoadProfile,
 			load("res://config/sim_config.tres") as SimConfig)
 	var spawner: Spawner = Spawner.new(_level(1))
-	await assert_error(func() -> void: spawner.attach(sim)) \
+	assert_error(func() -> void: spawner.attach(sim)) \
 			.is_push_error("Spawner: the sim needs a player to place traffic around")
 	assert_object(sim.spawner).is_null()
 	assert_array(sim.vehicles).is_empty()
+
+
+func test_attaching_twice_changes_nothing() -> void:
+	_new_sim()
+	_attach(2)
+	var count: int = _sim.vehicles.size()
+	_spawner.attach(_sim)
+	assert_int(_sim.vehicles.size()).is_equal(count)
+	assert_int(_sim.collision.get_connections().size()).is_equal(1)
 
 
 func test_placed_vehicles_keep_legal_gaps() -> void:

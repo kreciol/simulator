@@ -42,6 +42,8 @@ func attach(sim: TrafficSim) -> void:
 	if sim.player == null:
 		push_error("Spawner: the sim needs a player to place traffic around")
 		return
+	if sim.spawner == self:
+		return
 	sim.spawner = self
 	# The sim only holds this spawner; the connection does not keep the sim alive.
 	sim.collision.connect(_on_collision)

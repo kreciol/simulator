@@ -87,7 +87,7 @@ func test_a_pooled_ai_vehicle_added_as_a_plain_vehicle_has_no_driver() -> void:
 func test_the_player_cannot_be_removed() -> void:
 	var player: VehicleState = _sim.add_vehicle(0.0, 0, 30.0)
 	_sim.player = player
-	await assert_error(func() -> void: _sim.remove_vehicle(player)) \
+	assert_error(func() -> void: _sim.remove_vehicle(player)) \
 			.is_push_error("TrafficSim: the player cannot be removed")
 	assert_array(_sim.vehicles).contains([player])
 	assert_array(_removed).is_empty()
