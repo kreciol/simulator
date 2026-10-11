@@ -152,3 +152,15 @@ func test_unmapped_key_does_nothing_to_the_vehicle() -> void:
 	assert_int(_player().signal_dir).is_equal(VehicleState.Dir.NONE)
 	_runner.simulate_key_release(KEY_SPACE)
 	await _runner.await_input_processed()
+
+
+func test_scene_starts_from_the_dev_launcher_defaults_without_params() -> void:
+	# The headless test run passes no user args, so every launch option is a default.
+	var launcher: DevLauncherConfig = _main.launcher_config
+	var options: LaunchOptions = _main.session.options
+	assert_object(options).is_same(_main.launch_options)
+	assert_str(options.mode).is_equal(launcher.default_mode)
+	assert_int(options.level).is_equal(launcher.default_level)
+	assert_object(_main.road_profile).is_same(launcher.find_profile(launcher.default_profile))
+	assert_object(_main.sim.road).is_same(_main.road_profile)
+	assert_int(_main.sim.rng_seed).is_equal(options.seed_value)
