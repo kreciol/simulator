@@ -55,4 +55,4 @@ Traffic around the player follows the chosen difficulty level: the spawner keeps
 - [x] 2.1 DifficultyLevel resources and spawner params — e71cc2e
 - [x] 2.2 Spawner with safe placement, despawn and pooling — f988275
 - [x] 2.3 Teachable-moment guarantee — 76c8e6d
-- [ ] 2.4 Long seeded run per level and profile, docs
+- [x] 2.4 Long seeded run per level and profile, docs — 1745242
