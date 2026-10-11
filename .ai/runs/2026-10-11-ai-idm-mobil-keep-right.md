@@ -36,9 +36,12 @@ AI cars drive like disciplined motorway drivers: IDM car-following that keeps at
 
 - MOBIL tuning: the spec defaults may cause signal flicker or late returns; decisions use a hysteresis (start above threshold, keep while still beneficial) and the tests assert behaviour, not exact timings.
 - Sequential per-vehicle decisions within a step: deterministic (vehicle order), and a started change immediately occupies the target lane for later vehicles' checks.
+- Neighbour lookups are linear scans, about 10 per AI car per step (O(n²)): fine at test scale; at the spec's ~80 vehicles revisit with lane-sorted lookups or a decision interval when the spawner lands (#12) — review finding, deferred.
 - No passing on the right is enforced only in the lane decision (moving right never gains speed over the left-lane leader); car-following on the right lane does not look left, so a car already on the right may still pass a slower left-lane car. Rare while AI keeps right; revisit with scoring (Q5) if it shows up.
 
 ## Progress
+
+PR: #20
 
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
