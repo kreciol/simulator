@@ -43,6 +43,8 @@ Traffic around the player follows the chosen difficulty level: the spawner keeps
 
 ## Progress
 
+PR: #22
+
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: Lane index and pooled vehicles
