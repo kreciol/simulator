@@ -20,6 +20,9 @@ extends Resource
 ## Default body size of a vehicle; `s` is the body's centre (spec Coordinates).
 @export var vehicle_length_m: float
 @export var vehicle_width_m: float
+## Body size of a truck (`VehicleState.Kind.TRUCK`).
+@export var truck_length_m: float
+@export var truck_width_m: float
 ## Minimum time a signal must be on before a lane change starts to count as given
 ## in time (requirements §6.5); shorter is LATE.
 @export var signal_min_on_s: float
@@ -51,3 +54,41 @@ extends Resource
 @export var ai_signal_lead_s: float
 ## Clearance beyond its own body an AI car needs on the target lane, ahead and behind.
 @export var ai_lane_change_clearance_m: float
+## How often an AI car weighs a new lane change; in between it only follows. Keeps the
+## MOBIL cost per step low with many cars (spec Risks: web performance).
+@export var ai_lane_decision_interval_s: float
+## AI cars cruise around the road's limit plus this (negative: below the limit),
+## spread by the level's `ai_speed_spread_kmh` (requirements §7.1).
+@export var ai_car_speed_offset_kmh: float
+## Range truck desired speeds are drawn from (requirements §7.1: ≈ 80–90 km/h).
+@export var truck_speed_min_kmh: float
+@export var truck_speed_max_kmh: float
+
+## Traffic spawner (requirements §7.3, spec Architecture: Spawner). Traffic is kept
+## at the level's density within this window around the player.
+@export var spawn_window_ahead_m: float
+@export var spawn_window_behind_m: float
+## During a session vehicles appear only with their whole body at least this far
+## ahead of / behind the player: beyond the draw distance ahead and the mirrors'
+## useful range behind (requirements §7.3).
+@export var spawn_hidden_ahead_m: float
+@export var spawn_hidden_behind_m: float
+## Vehicles are despawned this far beyond the window, so they do not flicker at its edge.
+@export var despawn_margin_m: float
+## Safety margin around the player: no vehicle is ever placed with its body closer.
+@export var spawn_player_clearance_m: float
+## Free road a new vehicle needs beyond its body, on top of the legal gaps to its
+## leader and follower.
+@export var spawn_clearance_m: float
+## How often the spawner tops up and despawns traffic.
+@export var spawn_interval_s: float
+## Most spawn attempts per update; a failed attempt is skipped, not forced.
+@export var spawn_attempts_per_update: int
+
+## Teachable-moment guarantee (spec Research): at least this many slow vehicles
+## appear ahead of the player in the right lane per session.
+@export var min_overtake_opportunities: int
+## The next guaranteed slow vehicle is due this long after the previous one.
+@export var overtake_opportunity_interval_s: float
+## A vehicle counts as slow when it cruises at least this far below the limit.
+@export var overtake_opportunity_margin_kmh: float

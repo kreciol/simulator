@@ -8,6 +8,7 @@ const NO_DIR: VehicleState.Dir = VehicleState.Dir.NONE
 const LENGTH: float = 4.0
 const AHEAD: float = 50.0
 const BEHIND: float = 30.0
+const LANE_COUNT: int = 2
 
 
 func _vehicle(s: float, lane: int, speed_mps: float = 30.0, change_to: int = -99) -> VehicleState:
@@ -23,6 +24,10 @@ func _vehicle(s: float, lane: int, speed_mps: float = 30.0, change_to: int = -99
 		vehicle.lane_change_to = change_to
 		vehicle.lane_change_progress = 0.5
 	return vehicle
+
+
+func _lanes(vehicles: Array[VehicleState]) -> LaneIndex:
+	return LaneIndex.from_vehicles(vehicles, LANE_COUNT)
 
 
 func _vehicles(entries: Array) -> Array[VehicleState]:
@@ -58,14 +63,14 @@ func test_is_lane_free(
 			["vehicle changing out of the lane", [[100.0, 1, 0]], false],
 		]) -> void:
 	var vehicles: Array[VehicleState] = _vehicles(entries)
-	assert_bool(LaneQuery.is_lane_free(vehicles, 1, 100.0, AHEAD, BEHIND)).override_failure_message(case_name).is_equal(expected)
+	assert_bool(LaneQuery.is_lane_free(_lanes(vehicles), 1, 100.0, AHEAD, BEHIND)).override_failure_message(case_name).is_equal(expected)
 
 
 func test_is_lane_free_ignores_the_querying_vehicle() -> void:
 	var me: VehicleState = _vehicle(100.0, 1)
 	var vehicles: Array[VehicleState] = [me]
-	assert_bool(LaneQuery.is_lane_free(vehicles, 1, 100.0, AHEAD, BEHIND, me)).is_true()
-	assert_bool(LaneQuery.is_lane_free(vehicles, 1, 100.0, AHEAD, BEHIND)).is_false()
+	assert_bool(LaneQuery.is_lane_free(_lanes(vehicles), 1, 100.0, AHEAD, BEHIND, me)).is_true()
+	assert_bool(LaneQuery.is_lane_free(_lanes(vehicles), 1, 100.0, AHEAD, BEHIND)).is_false()
 
 
 ## The ego vehicle is at s = 0 on lane 0; gaps are bumper to bumper.
@@ -84,7 +89,7 @@ func test_gap_to_leader(
 	var me: VehicleState = _vehicle(0.0, 0)
 	var vehicles: Array[VehicleState] = _vehicles(entries)
 	vehicles.append(me)
-	assert_float(LaneQuery.gap_to_leader(me, vehicles)).override_failure_message(case_name).is_equal(expected)
+	assert_float(LaneQuery.gap_to_leader(me, _lanes(vehicles))).override_failure_message(case_name).is_equal(expected)
 
 
 ## Neighbours of s = 0 on lane 1, as indices into `entries`; -1 means none.
@@ -102,8 +107,9 @@ func test_leader_and_follower_in_lane(
 			["alongside is neither", [[0.0, 1]], -1, -1],
 		]) -> void:
 	var vehicles: Array[VehicleState] = _vehicles(entries)
-	var leader: VehicleState = LaneQuery.leader_in_lane(vehicles, 1, 0.0)
-	var follower: VehicleState = LaneQuery.follower_in_lane(vehicles, 1, 0.0)
+	var lanes: LaneIndex = _lanes(vehicles)
+	var leader: VehicleState = LaneQuery.leader_in_lane(lanes, 1, 0.0)
+	var follower: VehicleState = LaneQuery.follower_in_lane(lanes, 1, 0.0)
 	assert_int(vehicles.find(leader)).override_failure_message(case_name + ": leader").is_equal(expected_leader)
 	assert_int(vehicles.find(follower)).override_failure_message(case_name + ": follower").is_equal(expected_follower)
 
@@ -111,9 +117,10 @@ func test_leader_and_follower_in_lane(
 func test_neighbour_queries_skip_the_ignored_vehicle() -> void:
 	var me: VehicleState = _vehicle(10.0, 1)
 	var vehicles: Array[VehicleState] = [me]
-	assert_object(LaneQuery.leader_in_lane(vehicles, 1, 0.0, me)).is_null()
-	assert_object(LaneQuery.follower_in_lane(vehicles, 1, 20.0, me)).is_null()
-	assert_object(LaneQuery.leader_in_lane(vehicles, 1, 0.0)).is_same(me)
+	var lanes: LaneIndex = _lanes(vehicles)
+	assert_object(LaneQuery.leader_in_lane(lanes, 1, 0.0, me)).is_null()
+	assert_object(LaneQuery.follower_in_lane(lanes, 1, 20.0, me)).is_null()
+	assert_object(LaneQuery.leader_in_lane(lanes, 1, 0.0)).is_same(me)
 
 
 ## The ego vehicle drives 30 m/s; `right` is the vehicle on the lane to its right.
@@ -137,7 +144,7 @@ func test_is_overtaking(
 	var me: VehicleState = _vehicle(0.0, my_lane, 30.0, my_change_to)
 	var right: VehicleState = _vehicle(right_s, maxi(my_lane - 1, 0), right_speed_mps)
 	var vehicles: Array[VehicleState] = [me, right]
-	assert_bool(LaneQuery.is_overtaking(me, vehicles, AHEAD)).override_failure_message(case_name).is_equal(expected)
+	assert_bool(LaneQuery.is_overtaking(me, _lanes(vehicles), AHEAD)).override_failure_message(case_name).is_equal(expected)
 
 
 func test_signal_valid(

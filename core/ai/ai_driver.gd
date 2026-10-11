@@ -16,23 +16,31 @@ var desired_speed_mps: float
 var discipline: float
 ## Acceleration chosen for the coming step.
 var accel_mps2: float = 0.0
+## Sim time this driver next weighs a new lane change.
+var next_lane_decision_s: float = 0.0
 
 
-func _init(desired_speed: float, driver_discipline: float) -> void:
+## Prepares this driver, new or from the pool, for a fresh car.
+func setup(desired_speed: float, driver_discipline: float, first_lane_decision_s: float) -> void:
 	desired_speed_mps = desired_speed
 	discipline = clampf(driver_discipline, 0.0, 1.0)
+	accel_mps2 = 0.0
+	next_lane_decision_s = first_lane_decision_s
 
 
 ## Chooses this step's acceleration for `vehicle`, which this driver controls, and
-## signals, starts or abandons a lane change.
+## signals, starts or abandons a lane change. A new lane change is weighed every
+## `ai_lane_decision_interval_s`, like a driver glancing at the mirrors; a signalled
+## one is re-checked every step until it starts.
 func decide(sim: TrafficSim, vehicle: VehicleState) -> void:
 	accel_mps2 = _following_acceleration(sim, vehicle)
 	if vehicle.lane_change_active or vehicle.off_road:
 		return
-	if vehicle.signal_dir == VehicleState.Dir.NONE:
-		_consider_lane_change(sim, vehicle)
-	else:
+	if vehicle.signal_dir != VehicleState.Dir.NONE:
 		_continue_signalled_change(sim, vehicle)
+	elif sim.time_s + LaneQuery.TIME_EPSILON >= next_lane_decision_s:
+		next_lane_decision_s = sim.time_s + sim.config.ai_lane_decision_interval_s
+		_consider_lane_change(sim, vehicle)
 
 
 ## MOBIL incentive of moving `vehicle` one lane in `dir`, in m/s², in the asymmetric
@@ -51,10 +59,10 @@ func lane_change_incentive(sim: TrafficSim, vehicle: VehicleState, dir: VehicleS
 	if not sim.road.is_lane_on_road(target):
 		return -INF
 	var reach: float = vehicle.length_m / 2.0 + config.ai_lane_change_clearance_m
-	if not LaneQuery.is_lane_free(sim.vehicles, target, vehicle.s, reach, reach, vehicle):
+	if not LaneQuery.is_lane_free(sim.lanes, target, vehicle.s, reach, reach, vehicle):
 		return -INF
-	var new_leader: VehicleState = LaneQuery.leader_in_lane(sim.vehicles, target, vehicle.s, vehicle)
-	var new_follower: VehicleState = LaneQuery.follower_in_lane(sim.vehicles, target, vehicle.s, vehicle)
+	var new_leader: VehicleState = LaneQuery.leader_in_lane(sim.lanes, target, vehicle.s, vehicle)
+	var new_follower: VehicleState = LaneQuery.follower_in_lane(sim.lanes, target, vehicle.s, vehicle)
 	var new_follower_gain: float = 0.0
 	if new_follower != null:
 		var new_follower_after: float = acceleration_behind(sim, new_follower, vehicle)
@@ -66,8 +74,8 @@ func lane_change_incentive(sim: TrafficSim, vehicle: VehicleState, dir: VehicleS
 	var bias: float = config.mobil_keep_right_bias_mps2 * discipline
 	if dir == VehicleState.Dir.LEFT:
 		return own_after - accel_mps2 - bias
-	var old_leader: VehicleState = LaneQuery.leader_in_lane(sim.vehicles, vehicle.lane, vehicle.s, vehicle)
-	var old_follower: VehicleState = LaneQuery.follower_in_lane(sim.vehicles, vehicle.lane, vehicle.s, vehicle)
+	var old_leader: VehicleState = LaneQuery.leader_in_lane(sim.lanes, vehicle.lane, vehicle.s, vehicle)
+	var old_follower: VehicleState = LaneQuery.follower_in_lane(sim.lanes, vehicle.lane, vehicle.s, vehicle)
 	var old_follower_gain: float = 0.0
 	if old_follower != null:
 		old_follower_gain = acceleration_behind(sim, old_follower, old_leader) - acceleration_behind(sim, old_follower, vehicle)
@@ -100,9 +108,9 @@ static func acceleration_behind(sim: TrafficSim, follower: VehicleState, leader:
 ## Follows the leader on the current lane and, while changing lanes, also the one on
 ## the target lane.
 func _following_acceleration(sim: TrafficSim, vehicle: VehicleState) -> float:
-	var accel: float = acceleration_behind(sim, vehicle, LaneQuery.leader_in_lane(sim.vehicles, vehicle.lane, vehicle.s, vehicle))
+	var accel: float = acceleration_behind(sim, vehicle, LaneQuery.leader_in_lane(sim.lanes, vehicle.lane, vehicle.s, vehicle))
 	if vehicle.lane_change_active:
-		var target_leader: VehicleState = LaneQuery.leader_in_lane(sim.vehicles, vehicle.lane_change_to, vehicle.s, vehicle)
+		var target_leader: VehicleState = LaneQuery.leader_in_lane(sim.lanes, vehicle.lane_change_to, vehicle.s, vehicle)
 		accel = minf(accel, acceleration_behind(sim, vehicle, target_leader))
 	return accel
 

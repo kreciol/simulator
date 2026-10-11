@@ -6,13 +6,17 @@ extends RefCounted
 ## Lateral direction, valued as the lane index delta (lane 0 is the rightmost).
 enum Dir { RIGHT = -1, NONE = 0, LEFT = 1 }
 enum Longitudinal { NONE, ACCELERATE, BRAKE }
+## Body type; trucks are larger (sizes in `SimConfig`) and drive slower.
+enum Kind { CAR, TRUCK }
 
+## Unique within a sim; a pooled vehicle gets a new id each time it is added.
 var id: int
+var kind: Kind = Kind.CAR
 ## Distance along the road to the centre of the body, metres.
 var s: float
 var lane: int
 var speed_mps: float
-## Body size; set from `SimConfig` on spawn.
+## Body size; set from `SimConfig` by kind when added.
 var length_m: float
 var width_m: float
 ## Current throttle/brake decision, held until the next command.
@@ -35,6 +39,19 @@ var off_road: bool = false
 ## Decision source of an AI car; null for the player and scripted vehicles, which
 ## follow `longitudinal`.
 var ai: AiDriver = null
+
+
+## Clears everything left from a previous drive, for reuse from the pool.
+func reset() -> void:
+	longitudinal = Longitudinal.NONE
+	lane_change_active = false
+	lane_change_from = 0
+	lane_change_to = 0
+	lane_change_progress = 0.0
+	signal_dir = Dir.NONE
+	signal_on_since_s = 0.0
+	off_road = false
+	ai = null
 
 
 func lane_change_dir() -> Dir:

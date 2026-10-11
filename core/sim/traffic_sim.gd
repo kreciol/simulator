@@ -8,16 +8,25 @@ signal lane_change_finished(vehicle_id: int, lane: int)
 signal offroad(vehicle_id: int)
 ## Emitted once when two bodies start to overlap; again only after they separate.
 signal collision(vehicle_id: int, other_id: int)
+signal vehicle_added(vehicle_id: int)
+## Emitted after the vehicle left `vehicles`; its object goes back to the pool.
+signal vehicle_removed(vehicle_id: int)
 
 const KMH_PER_MPS: float = 3.6
 ## Absorbs float drift when per-step progress increments should sum to exactly 1.
 const PROGRESS_EPSILON: float = 1e-6
+## Spreads AI cars' first lane decisions over the decision interval by id (golden-ratio
+## fractions, so consecutive ids land far apart and decisions do not bunch in a step).
+const DECISION_PHASE_STEP: float = 0.618034
 
 var road: RoadProfile
 var config: SimConfig
 ## Simulated time since the start, seconds.
 var time_s: float = 0.0
 var vehicles: Array[VehicleState] = []
+## `vehicles` by lane, sorted by `s`, for `LaneQuery` neighbour lookups. Current
+## whenever vehicles change lanes through the sim; re-sorted every step.
+var lanes: LaneIndex
 ## Seed of `rng`; with `input_log` it reproduces a session exactly.
 var rng_seed: int
 ## The sim's only source of randomness; nothing else may draw random numbers.
@@ -26,8 +35,14 @@ var rng: RandomNumberGenerator = RandomNumberGenerator.new()
 var player: VehicleState
 ## Commands passed to `step` for the player, one entry per step.
 var input_log: InputLog = InputLog.new()
+## Keeps traffic at the level's density at the end of every step; null for no
+## managed traffic. Set by `Spawner.attach`.
+var spawner: Spawner = null
 
 var _next_id: int = 0
+## Removed vehicles and drivers, reused by later adds (no create/free churn).
+var _vehicle_pool: Array[VehicleState] = []
+var _driver_pool: Array[AiDriver] = []
 ## Pairs currently in contact, keyed by Vector2i(lower id, higher id).
 var _contacts: Dictionary[Vector2i, bool] = {}
 ## Scratch buffer swapped with `_contacts` each step, so detection does not allocate.
@@ -37,29 +52,77 @@ var _next_contacts: Dictionary[Vector2i, bool] = {}
 func _init(road_profile: RoadProfile, sim_config: SimConfig, seed_value: int = 0) -> void:
 	road = road_profile
 	config = sim_config
+	lanes = LaneIndex.new(road.lane_count)
 	rng_seed = seed_value
 	rng.seed = seed_value
 
 
-func add_vehicle(s: float, lane: int, speed_mps: float) -> VehicleState:
-	var vehicle: VehicleState = VehicleState.new()
-	vehicle.id = _next_id
-	_next_id += 1
-	vehicle.s = s
-	vehicle.lane = lane
-	vehicle.speed_mps = clampf(speed_mps, 0.0, max_speed_mps())
-	vehicle.length_m = config.vehicle_length_m
-	vehicle.width_m = config.vehicle_width_m
-	vehicles.append(vehicle)
-	return vehicle
+func add_vehicle(s: float, lane: int, speed_mps: float, kind: VehicleState.Kind = VehicleState.Kind.CAR) -> VehicleState:
+	return _add(s, lane, speed_mps, kind, null)
 
 
 ## Adds a vehicle driven by an `AiDriver` that cruises at `desired_speed_mps` with
 ## `discipline` in [0, 1] (requirements §7.2).
-func add_ai_vehicle(s: float, lane: int, speed_mps: float, desired_speed_mps: float, discipline: float) -> VehicleState:
-	var vehicle: VehicleState = add_vehicle(s, lane, speed_mps)
-	vehicle.ai = AiDriver.new(desired_speed_mps, discipline)
+func add_ai_vehicle(
+		s: float,
+		lane: int,
+		speed_mps: float,
+		desired_speed_mps: float,
+		discipline: float,
+		kind: VehicleState.Kind = VehicleState.Kind.CAR) -> VehicleState:
+	var driver: AiDriver = AiDriver.new() if _driver_pool.is_empty() else _driver_pool.pop_back()
+	var phase: float = fposmod(_next_id * DECISION_PHASE_STEP, 1.0)
+	driver.setup(desired_speed_mps, discipline, time_s + phase * config.ai_lane_decision_interval_s)
+	return _add(s, lane, speed_mps, kind, driver)
+
+
+## Takes a vehicle from the pool, sets it up completely, then announces it.
+func _add(s: float, lane: int, speed_mps: float, kind: VehicleState.Kind, driver: AiDriver) -> VehicleState:
+	var vehicle: VehicleState = VehicleState.new() if _vehicle_pool.is_empty() else _vehicle_pool.pop_back()
+	vehicle.reset()
+	vehicle.id = _next_id
+	_next_id += 1
+	vehicle.kind = kind
+	vehicle.s = s
+	vehicle.lane = lane
+	vehicle.speed_mps = clampf(speed_mps, 0.0, max_speed_mps())
+	if kind == VehicleState.Kind.TRUCK:
+		vehicle.length_m = config.truck_length_m
+		vehicle.width_m = config.truck_width_m
+	else:
+		vehicle.length_m = config.vehicle_length_m
+		vehicle.width_m = config.vehicle_width_m
+	vehicle.ai = driver
+	vehicles.append(vehicle)
+	lanes.add(vehicle)
+	vehicle_added.emit(vehicle.id)
 	return vehicle
+
+
+## Takes `vehicle` off the road and keeps it, with its driver, for reuse. The player
+## cannot be removed.
+func remove_vehicle(vehicle: VehicleState) -> void:
+	if vehicle == player:
+		push_error("TrafficSim: the player cannot be removed")
+		return
+	var index: int = vehicles.find(vehicle)
+	if index < 0:
+		return
+	vehicles.remove_at(index)
+	lanes.remove(vehicle)
+	if vehicle.ai != null:
+		_driver_pool.append(vehicle.ai)
+		vehicle.ai = null
+	_vehicle_pool.append(vehicle)
+	vehicle_removed.emit(vehicle.id)
+
+
+## The vehicle on the road with `vehicle_id`, or null.
+func find_vehicle(vehicle_id: int) -> VehicleState:
+	for vehicle: VehicleState in vehicles:
+		if vehicle.id == vehicle_id:
+			return vehicle
+	return null
 
 
 func max_speed_mps() -> float:
@@ -98,6 +161,7 @@ func request_lane_change(vehicle: VehicleState, dir: VehicleState.Dir) -> bool:
 	vehicle.lane_change_from = vehicle.lane
 	vehicle.lane_change_to = vehicle.lane + dir
 	vehicle.lane_change_progress = 0.0
+	lanes.insert(vehicle, vehicle.lane_change_to)
 	lane_change_started.emit(vehicle.id, vehicle.lane_change_from, vehicle.lane_change_to)
 	return true
 
@@ -114,8 +178,10 @@ func lateral_position(vehicle: VehicleState) -> float:
 ## Advances the sim by one fixed step. With a player set, `player_commands` (null
 ## for none) is recorded in `input_log` and applied before integration. AI drivers
 ## then decide in vehicle order; a lane change one of them starts is visible to the
-## next.
+## next. Last, the spawner (if any) despawns and tops up traffic.
 func step(dt: float, player_commands: PlayerCommands = null) -> void:
+	# Callers may have moved vehicles since the last step.
+	lanes.sort()
 	if player != null:
 		input_log.append(player_commands)
 		if player_commands != null:
@@ -127,7 +193,10 @@ func step(dt: float, player_commands: PlayerCommands = null) -> void:
 	for vehicle: VehicleState in vehicles:
 		_integrate_longitudinal(vehicle, dt)
 		_advance_lane_change(vehicle, dt)
+	lanes.sort()
 	_detect_collisions()
+	if spawner != null:
+		spawner.update(self)
 
 
 ## Re-runs `recorded` step by step; on a sim built with the same seed and vehicles as the
@@ -196,6 +265,7 @@ func _advance_lane_change(vehicle: VehicleState, dt: float) -> void:
 	var dir: VehicleState.Dir = vehicle.lane_change_dir()
 	vehicle.lane_change_progress = 1.0
 	vehicle.lane_change_active = false
+	lanes.erase(vehicle, vehicle.lane_change_from)
 	vehicle.lane = vehicle.lane_change_to
 	# Self-cancelling signal, like a steering-column return (requirements §6.5).
 	if vehicle.signal_dir == dir:
@@ -206,18 +276,29 @@ func _advance_lane_change(vehicle: VehicleState, dt: float) -> void:
 		offroad.emit(vehicle.id)
 
 
+## Overlapping bodies always share a lane in `lanes`: a body lies laterally between
+## the centres of the lanes it occupies, and lanes are wider than any body. So only
+## neighbours along each lane, close enough in `s` to touch, are compared.
 func _detect_collisions() -> void:
 	_next_contacts.clear()
-	for i: int in vehicles.size():
-		for j: int in range(i + 1, vehicles.size()):
-			var a: VehicleState = vehicles[i]
-			var b: VehicleState = vehicles[j]
-			if not vehicles_overlap(a, b):
-				continue
-			var key: Vector2i = Vector2i(mini(a.id, b.id), maxi(a.id, b.id))
-			_next_contacts[key] = true
-			if not _contacts.has(key):
-				collision.emit(key.x, key.y)
+	for lane: int in range(lanes.first_lane(), lanes.end_lane()):
+		var on_lane: Array[VehicleState] = lanes.on_lane(lane)
+		for i: int in on_lane.size():
+			var a: VehicleState = on_lane[i]
+			var reach: float = (a.length_m + lanes.max_length_m) / 2.0
+			for j: int in range(i + 1, on_lane.size()):
+				var b: VehicleState = on_lane[j]
+				if b.s - a.s >= reach:
+					break
+				if not vehicles_overlap(a, b):
+					continue
+				var key: Vector2i = Vector2i(mini(a.id, b.id), maxi(a.id, b.id))
+				# Two vehicles changing lanes can meet on both lanes.
+				if _next_contacts.has(key):
+					continue
+				_next_contacts[key] = true
+				if not _contacts.has(key):
+					collision.emit(key.x, key.y)
 	var previous: Dictionary[Vector2i, bool] = _contacts
 	_contacts = _next_contacts
 	_next_contacts = previous
