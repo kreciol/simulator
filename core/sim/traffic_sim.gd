@@ -54,6 +54,14 @@ func add_vehicle(s: float, lane: int, speed_mps: float) -> VehicleState:
 	return vehicle
 
 
+## Adds a vehicle driven by an `AiDriver` that cruises at `desired_speed_mps` with
+## `discipline` in [0, 1] (requirements §7.2).
+func add_ai_vehicle(s: float, lane: int, speed_mps: float, desired_speed_mps: float, discipline: float) -> VehicleState:
+	var vehicle: VehicleState = add_vehicle(s, lane, speed_mps)
+	vehicle.ai = AiDriver.new(desired_speed_mps, discipline)
+	return vehicle
+
+
 func max_speed_mps() -> float:
 	return config.max_speed_kmh / KMH_PER_MPS
 
@@ -104,12 +112,17 @@ func lateral_position(vehicle: VehicleState) -> float:
 
 
 ## Advances the sim by one fixed step. With a player set, `player_commands` (null
-## for none) is recorded in `input_log` and applied before integration.
+## for none) is recorded in `input_log` and applied before integration. AI drivers
+## then decide in vehicle order; a lane change one of them starts is visible to the
+## next.
 func step(dt: float, player_commands: PlayerCommands = null) -> void:
 	if player != null:
 		input_log.append(player_commands)
 		if player_commands != null:
 			apply_commands(player, player_commands)
+	for vehicle: VehicleState in vehicles:
+		if vehicle.ai != null:
+			vehicle.ai.decide(self, vehicle)
 	time_s += dt
 	for vehicle: VehicleState in vehicles:
 		_integrate_longitudinal(vehicle, dt)
@@ -159,14 +172,19 @@ func snapshot() -> Dictionary:
 
 
 func _integrate_longitudinal(vehicle: VehicleState, dt: float) -> void:
+	var accel: float = vehicle.ai.accel_mps2 if vehicle.ai != null else _command_acceleration(vehicle)
+	vehicle.speed_mps = clampf(vehicle.speed_mps + accel * dt, 0.0, max_speed_mps())
+	vehicle.s += vehicle.speed_mps * dt
+
+
+func _command_acceleration(vehicle: VehicleState) -> float:
 	var accel: float = 0.0
 	match vehicle.longitudinal:
 		VehicleState.Longitudinal.ACCELERATE:
 			accel = config.acceleration_mps2
 		VehicleState.Longitudinal.BRAKE:
 			accel = -config.braking_mps2
-	vehicle.speed_mps = clampf(vehicle.speed_mps + accel * dt, 0.0, max_speed_mps())
-	vehicle.s += vehicle.speed_mps * dt
+	return accel
 
 
 func _advance_lane_change(vehicle: VehicleState, dt: float) -> void:

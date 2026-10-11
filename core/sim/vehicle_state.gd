@@ -32,6 +32,10 @@ var signal_on_since_s: float = 0.0
 ## Set when a lane change ended beyond the outermost lane (requirements §9.2).
 var off_road: bool = false
 
+## Decision source of an AI car; null for the player and scripted vehicles, which
+## follow `longitudinal`.
+var ai: AiDriver = null
+
 
 func lane_change_dir() -> Dir:
 	if not lane_change_active:
