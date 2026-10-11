@@ -87,6 +87,35 @@ func test_gap_to_leader(
 	assert_float(LaneQuery.gap_to_leader(me, vehicles)).override_failure_message(case_name).is_equal(expected)
 
 
+## Neighbours of s = 0 on lane 1, as indices into `entries`; -1 means none.
+func test_leader_and_follower_in_lane(
+		case_name: String,
+		entries: Array,
+		expected_leader: int,
+		expected_follower: int,
+		test_parameters: Array = [
+			["empty road", [], -1, -1],
+			["one ahead, one behind", [[40.0, 1], [-25.0, 1]], 0, 1],
+			["nearest of each", [[90.0, 1], [40.0, 1], [-60.0, 1], [-25.0, 1]], 1, 3],
+			["other lane ignored", [[40.0, 0], [-25.0, 0]], -1, -1],
+			["changing into the lane counts", [[30.0, 0, 1], [-20.0, 2, 1]], 0, 1],
+			["alongside is neither", [[0.0, 1]], -1, -1],
+		]) -> void:
+	var vehicles: Array[VehicleState] = _vehicles(entries)
+	var leader: VehicleState = LaneQuery.leader_in_lane(vehicles, 1, 0.0)
+	var follower: VehicleState = LaneQuery.follower_in_lane(vehicles, 1, 0.0)
+	assert_int(vehicles.find(leader)).override_failure_message(case_name + ": leader").is_equal(expected_leader)
+	assert_int(vehicles.find(follower)).override_failure_message(case_name + ": follower").is_equal(expected_follower)
+
+
+func test_neighbour_queries_skip_the_ignored_vehicle() -> void:
+	var me: VehicleState = _vehicle(10.0, 1)
+	var vehicles: Array[VehicleState] = [me]
+	assert_object(LaneQuery.leader_in_lane(vehicles, 1, 0.0, me)).is_null()
+	assert_object(LaneQuery.follower_in_lane(vehicles, 1, 20.0, me)).is_null()
+	assert_object(LaneQuery.leader_in_lane(vehicles, 1, 0.0)).is_same(me)
+
+
 ## The ego vehicle drives 30 m/s; `right` is the vehicle on the lane to its right.
 func test_is_overtaking(
 		case_name: String,
