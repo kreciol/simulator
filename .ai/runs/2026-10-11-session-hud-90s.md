@@ -40,6 +40,8 @@ Give every drive a bounded session and basic driving information: a 3-2-1 countd
 
 ## Progress
 
+PR: #21
+
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: Session flow
@@ -49,5 +51,5 @@ Give every drive a bounded session and basic driving information: a 3-2-1 countd
 
 ### Phase 2: HUD
 
-- [ ] 2.1 Translations and shared signal blink
-- [ ] 2.2 HUD speed, limit, signals, time, countdown and end overlay
+- [x] 2.1 Translations and shared signal blink — c964824
+- [x] 2.2 HUD speed, limit, signals, time, countdown and end overlay — 43c5caa
