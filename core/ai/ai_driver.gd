@@ -16,23 +16,31 @@ var desired_speed_mps: float
 var discipline: float
 ## Acceleration chosen for the coming step.
 var accel_mps2: float = 0.0
+## Sim time this driver next weighs a new lane change.
+var next_lane_decision_s: float = 0.0
 
 
-func _init(desired_speed: float, driver_discipline: float) -> void:
+## Prepares this driver, new or from the pool, for a fresh car.
+func setup(desired_speed: float, driver_discipline: float, first_lane_decision_s: float) -> void:
 	desired_speed_mps = desired_speed
 	discipline = clampf(driver_discipline, 0.0, 1.0)
+	accel_mps2 = 0.0
+	next_lane_decision_s = first_lane_decision_s
 
 
 ## Chooses this step's acceleration for `vehicle`, which this driver controls, and
-## signals, starts or abandons a lane change.
+## signals, starts or abandons a lane change. A new lane change is weighed every
+## `ai_lane_decision_interval_s`, like a driver glancing at the mirrors; a signalled
+## one is re-checked every step until it starts.
 func decide(sim: TrafficSim, vehicle: VehicleState) -> void:
 	accel_mps2 = _following_acceleration(sim, vehicle)
 	if vehicle.lane_change_active or vehicle.off_road:
 		return
-	if vehicle.signal_dir == VehicleState.Dir.NONE:
-		_consider_lane_change(sim, vehicle)
-	else:
+	if vehicle.signal_dir != VehicleState.Dir.NONE:
 		_continue_signalled_change(sim, vehicle)
+	elif sim.time_s + LaneQuery.TIME_EPSILON >= next_lane_decision_s:
+		next_lane_decision_s = sim.time_s + sim.config.ai_lane_decision_interval_s
+		_consider_lane_change(sim, vehicle)
 
 
 ## MOBIL incentive of moving `vehicle` one lane in `dir`, in m/s², in the asymmetric

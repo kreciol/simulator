@@ -16,6 +16,9 @@ extends Resource
 ## Default body size of a vehicle; `s` is the body's centre (spec Coordinates).
 @export var vehicle_length_m: float
 @export var vehicle_width_m: float
+## Body size of a truck (`VehicleState.Kind.TRUCK`).
+@export var truck_length_m: float
+@export var truck_width_m: float
 ## Minimum time a signal must be on before a lane change starts to count as given
 ## in time (requirements §6.5); shorter is LATE.
 @export var signal_min_on_s: float
@@ -47,3 +50,6 @@ extends Resource
 @export var ai_signal_lead_s: float
 ## Clearance beyond its own body an AI car needs on the target lane, ahead and behind.
 @export var ai_lane_change_clearance_m: float
+## How often an AI car weighs a new lane change; in between it only follows. Keeps the
+## MOBIL cost per step low with many cars (spec Risks: web performance).
+@export var ai_lane_decision_interval_s: float

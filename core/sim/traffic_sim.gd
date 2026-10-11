@@ -8,10 +8,16 @@ signal lane_change_finished(vehicle_id: int, lane: int)
 signal offroad(vehicle_id: int)
 ## Emitted once when two bodies start to overlap; again only after they separate.
 signal collision(vehicle_id: int, other_id: int)
+signal vehicle_added(vehicle_id: int)
+## Emitted after the vehicle left `vehicles`; its object goes back to the pool.
+signal vehicle_removed(vehicle_id: int)
 
 const KMH_PER_MPS: float = 3.6
 ## Absorbs float drift when per-step progress increments should sum to exactly 1.
 const PROGRESS_EPSILON: float = 1e-6
+## Spreads AI cars' first lane decisions over the decision interval by id (golden-ratio
+## fractions, so consecutive ids land far apart and decisions do not bunch in a step).
+const DECISION_PHASE_STEP: float = 0.618034
 
 var road: RoadProfile
 var config: SimConfig
@@ -31,6 +37,9 @@ var player: VehicleState
 var input_log: InputLog = InputLog.new()
 
 var _next_id: int = 0
+## Removed vehicles and drivers, reused by later adds (no create/free churn).
+var _vehicle_pool: Array[VehicleState] = []
+var _driver_pool: Array[AiDriver] = []
 ## Pairs currently in contact, keyed by Vector2i(lower id, higher id).
 var _contacts: Dictionary[Vector2i, bool] = {}
 ## Scratch buffer swapped with `_contacts` each step, so detection does not allocate.
@@ -45,26 +54,68 @@ func _init(road_profile: RoadProfile, sim_config: SimConfig, seed_value: int = 0
 	rng.seed = seed_value
 
 
-func add_vehicle(s: float, lane: int, speed_mps: float) -> VehicleState:
-	var vehicle: VehicleState = VehicleState.new()
+func add_vehicle(s: float, lane: int, speed_mps: float, kind: VehicleState.Kind = VehicleState.Kind.CAR) -> VehicleState:
+	var vehicle: VehicleState = VehicleState.new() if _vehicle_pool.is_empty() else _vehicle_pool.pop_back()
+	vehicle.reset()
 	vehicle.id = _next_id
 	_next_id += 1
+	vehicle.kind = kind
 	vehicle.s = s
 	vehicle.lane = lane
 	vehicle.speed_mps = clampf(speed_mps, 0.0, max_speed_mps())
-	vehicle.length_m = config.vehicle_length_m
-	vehicle.width_m = config.vehicle_width_m
+	if kind == VehicleState.Kind.TRUCK:
+		vehicle.length_m = config.truck_length_m
+		vehicle.width_m = config.truck_width_m
+	else:
+		vehicle.length_m = config.vehicle_length_m
+		vehicle.width_m = config.vehicle_width_m
 	vehicles.append(vehicle)
 	lanes.add(vehicle)
+	vehicle_added.emit(vehicle.id)
 	return vehicle
 
 
 ## Adds a vehicle driven by an `AiDriver` that cruises at `desired_speed_mps` with
 ## `discipline` in [0, 1] (requirements §7.2).
-func add_ai_vehicle(s: float, lane: int, speed_mps: float, desired_speed_mps: float, discipline: float) -> VehicleState:
-	var vehicle: VehicleState = add_vehicle(s, lane, speed_mps)
-	vehicle.ai = AiDriver.new(desired_speed_mps, discipline)
+func add_ai_vehicle(
+		s: float,
+		lane: int,
+		speed_mps: float,
+		desired_speed_mps: float,
+		discipline: float,
+		kind: VehicleState.Kind = VehicleState.Kind.CAR) -> VehicleState:
+	var driver: AiDriver = AiDriver.new() if _driver_pool.is_empty() else _driver_pool.pop_back()
+	var phase: float = fposmod(_next_id * DECISION_PHASE_STEP, 1.0)
+	driver.setup(desired_speed_mps, discipline, time_s + phase * config.ai_lane_decision_interval_s)
+	var vehicle: VehicleState = add_vehicle(s, lane, speed_mps, kind)
+	vehicle.ai = driver
 	return vehicle
+
+
+## Takes `vehicle` off the road and keeps it, with its driver, for reuse. The player
+## cannot be removed.
+func remove_vehicle(vehicle: VehicleState) -> void:
+	if vehicle == player:
+		push_error("TrafficSim: the player cannot be removed")
+		return
+	var index: int = vehicles.find(vehicle)
+	if index < 0:
+		return
+	vehicles.remove_at(index)
+	lanes.remove(vehicle)
+	if vehicle.ai != null:
+		_driver_pool.append(vehicle.ai)
+		vehicle.ai = null
+	_vehicle_pool.append(vehicle)
+	vehicle_removed.emit(vehicle.id)
+
+
+## The vehicle on the road with `vehicle_id`, or null.
+func find_vehicle(vehicle_id: int) -> VehicleState:
+	for vehicle: VehicleState in vehicles:
+		if vehicle.id == vehicle_id:
+			return vehicle
+	return null
 
 
 func max_speed_mps() -> float:

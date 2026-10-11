@@ -118,7 +118,11 @@ func test_no_lane_change_ahead_of_a_fast_approaching_car() -> void:
 func test_signalled_change_is_abandoned_when_the_gap_closes() -> void:
 	_sim.add_vehicle(40.0, 0, 80.0 * KMH)
 	var car: VehicleState = _sim.add_ai_vehicle(0.0, 0, 80.0 * KMH, 130.0 * KMH, 1.0)
-	_sim.step(DT)
+	# The first lane decision comes within one decision interval.
+	for i: int in roundi(_sim.config.ai_lane_decision_interval_s / DT) + 1:
+		if car.signal_dir != NO_DIR:
+			break
+		_sim.step(DT)
 	assert_int(car.signal_dir).is_equal(LEFT)
 	_sim.add_vehicle(car.s - 50.0, 1, 160.0 * KMH)
 	_sim.step(DT)
