@@ -9,6 +9,8 @@ extends Resource
 @export var braking_mps2: float
 ## Vehicle top speed; the player may exceed the road's limit up to this (Q4).
 @export var max_speed_kmh: float
+## Speed the player starts the session with (requirements §9.3).
+@export var start_speed_kmh: float
 ## Duration of the discrete animated lane change (Q12).
 @export var lane_change_duration_s: float
 ## Default body size of a vehicle; `s` is the body's centre (spec Coordinates).
