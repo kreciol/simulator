@@ -14,3 +14,23 @@ var lane: int
 var speed_mps: float
 ## Current throttle/brake decision, held until the next command.
 var longitudinal: Longitudinal = Longitudinal.NONE
+
+## Lane change in progress: `lane` keeps the origin lane until the change completes.
+var lane_change_active: bool = false
+var lane_change_from: int
+var lane_change_to: int
+## 0 at the start of the change, 1 when it completes.
+var lane_change_progress: float = 0.0
+
+var signal_dir: Dir = Dir.NONE
+## Sim time the current signal was turned on; meaningful while `signal_dir` is set.
+var signal_on_since_s: float = 0.0
+
+## Set when a lane change ended beyond the outermost lane (requirements §9.2).
+var off_road: bool = false
+
+
+func lane_change_dir() -> Dir:
+	if not lane_change_active:
+		return Dir.NONE
+	return Dir.LEFT if lane_change_to > lane_change_from else Dir.RIGHT
