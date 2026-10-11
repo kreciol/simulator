@@ -6,6 +6,8 @@ extends RefCounted
 signal lane_change_started(vehicle_id: int, from_lane: int, to_lane: int)
 signal lane_change_finished(vehicle_id: int, lane: int)
 signal offroad(vehicle_id: int)
+## Emitted once when two bodies start to overlap; again only after they separate.
+signal collision(vehicle_id: int, other_id: int)
 
 const KMH_PER_MPS: float = 3.6
 ## Absorbs float drift when per-step progress increments should sum to exactly 1.
@@ -16,13 +18,27 @@ var config: SimConfig
 ## Simulated time since the start, seconds.
 var time_s: float = 0.0
 var vehicles: Array[VehicleState] = []
+## Seed of `rng`; with `input_log` it reproduces a session exactly.
+var rng_seed: int
+## The sim's only source of randomness; nothing else may draw random numbers.
+var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+## The vehicle driven by `PlayerCommands` passed to `step`; null without a player.
+var player: VehicleState
+## Commands passed to `step` for the player, one entry per step.
+var input_log: InputLog = InputLog.new()
 
 var _next_id: int = 0
+## Pairs currently in contact, keyed by Vector2i(lower id, higher id).
+var _contacts: Dictionary[Vector2i, bool] = {}
+## Scratch buffer swapped with `_contacts` each step, so detection does not allocate.
+var _next_contacts: Dictionary[Vector2i, bool] = {}
 
 
-func _init(road_profile: RoadProfile, sim_config: SimConfig) -> void:
+func _init(road_profile: RoadProfile, sim_config: SimConfig, seed_value: int = 0) -> void:
 	road = road_profile
 	config = sim_config
+	rng_seed = seed_value
+	rng.seed = seed_value
 
 
 func add_vehicle(s: float, lane: int, speed_mps: float) -> VehicleState:
@@ -32,6 +48,8 @@ func add_vehicle(s: float, lane: int, speed_mps: float) -> VehicleState:
 	vehicle.s = s
 	vehicle.lane = lane
 	vehicle.speed_mps = clampf(speed_mps, 0.0, max_speed_mps())
+	vehicle.length_m = config.vehicle_length_m
+	vehicle.width_m = config.vehicle_width_m
 	vehicles.append(vehicle)
 	return vehicle
 
@@ -85,11 +103,59 @@ func lateral_position(vehicle: VehicleState) -> float:
 	return lerpf(road.lane_center(vehicle.lane_change_from), road.lane_center(vehicle.lane_change_to), weight)
 
 
-func step(dt: float) -> void:
+## Advances the sim by one fixed step. With a player set, `player_commands` (null
+## for none) is recorded in `input_log` and applied before integration.
+func step(dt: float, player_commands: PlayerCommands = null) -> void:
+	if player != null:
+		input_log.append(player_commands)
+		if player_commands != null:
+			apply_commands(player, player_commands)
 	time_s += dt
 	for vehicle: VehicleState in vehicles:
 		_integrate_longitudinal(vehicle, dt)
 		_advance_lane_change(vehicle, dt)
+	_detect_collisions()
+
+
+## Re-runs `recorded` step by step; on a sim built with the same seed and vehicles as the
+## recorded one, this reproduces its final state.
+func replay(recorded: InputLog, dt: float) -> void:
+	for i: int in recorded.size():
+		step(dt, recorded.at(i))
+
+
+## Whether the bodies of `a` and `b` overlap as axis-aligned boxes in
+## (s, lateral) space; touching edges do not count.
+func vehicles_overlap(a: VehicleState, b: VehicleState) -> bool:
+	var longitudinal_reach: float = (a.length_m + b.length_m) / 2.0
+	var lateral_reach: float = (a.width_m + b.width_m) / 2.0
+	return absf(a.s - b.s) < longitudinal_reach 			and absf(lateral_position(a) - lateral_position(b)) < lateral_reach
+
+
+## Full state as plain data, for comparing runs.
+func snapshot() -> Dictionary:
+	var vehicle_states: Array[Dictionary] = []
+	for vehicle: VehicleState in vehicles:
+		vehicle_states.append({
+			"id": vehicle.id,
+			"s": vehicle.s,
+			"lane": vehicle.lane,
+			"speed_mps": vehicle.speed_mps,
+			"longitudinal": vehicle.longitudinal,
+			"lane_change_active": vehicle.lane_change_active,
+			"lane_change_from": vehicle.lane_change_from,
+			"lane_change_to": vehicle.lane_change_to,
+			"lane_change_progress": vehicle.lane_change_progress,
+			"signal_dir": vehicle.signal_dir,
+			"signal_on_since_s": vehicle.signal_on_since_s,
+			"off_road": vehicle.off_road,
+		})
+	return {
+		"time_s": time_s,
+		"rng_state": rng.state,
+		"contacts": _contacts.keys(),
+		"vehicles": vehicle_states,
+	}
 
 
 func _integrate_longitudinal(vehicle: VehicleState, dt: float) -> void:
@@ -120,3 +186,20 @@ func _advance_lane_change(vehicle: VehicleState, dt: float) -> void:
 	if not road.is_lane_on_road(vehicle.lane):
 		vehicle.off_road = true
 		offroad.emit(vehicle.id)
+
+
+func _detect_collisions() -> void:
+	_next_contacts.clear()
+	for i: int in vehicles.size():
+		for j: int in range(i + 1, vehicles.size()):
+			var a: VehicleState = vehicles[i]
+			var b: VehicleState = vehicles[j]
+			if not vehicles_overlap(a, b):
+				continue
+			var key: Vector2i = Vector2i(mini(a.id, b.id), maxi(a.id, b.id))
+			_next_contacts[key] = true
+			if not _contacts.has(key):
+				collision.emit(key.x, key.y)
+	var previous: Dictionary[Vector2i, bool] = _contacts
+	_contacts = _next_contacts
+	_next_contacts = previous

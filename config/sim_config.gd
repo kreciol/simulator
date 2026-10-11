@@ -11,3 +11,9 @@ extends Resource
 @export var max_speed_kmh: float
 ## Duration of the discrete animated lane change (Q12).
 @export var lane_change_duration_s: float
+## Default body size of a vehicle; `s` is the body's centre (spec Coordinates).
+@export var vehicle_length_m: float
+@export var vehicle_width_m: float
+## Minimum time a signal must be on before a lane change starts to count as given
+## in time (requirements §6.5); shorter is LATE.
+@export var signal_min_on_s: float
