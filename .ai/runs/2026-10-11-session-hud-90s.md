@@ -44,8 +44,8 @@ Give every drive a bounded session and basic driving information: a 3-2-1 countd
 
 ### Phase 1: Session flow
 
-- [ ] 1.1 Session params and SessionManager state machine
-- [ ] 1.2 Main scene drives the session
+- [x] 1.1 Session params and SessionManager state machine — 7084a97
+- [x] 1.2 Main scene drives the session — 417ada6
 
 ### Phase 2: HUD
 
