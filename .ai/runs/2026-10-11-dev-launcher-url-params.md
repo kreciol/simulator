@@ -42,7 +42,7 @@ Until the Phase 10 menus exist, a tester can start any mode, road profile, diffi
 
 ### Phase 1: Parse and validate
 
-- [ ] 1.1 DevLauncher parsing and validation with defaults
+- [x] 1.1 DevLauncher parsing and validation with defaults — 5fa3fde
 
 ### Phase 2: Wire into the session
 
