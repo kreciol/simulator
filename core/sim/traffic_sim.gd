@@ -32,6 +32,8 @@ func add_vehicle(s: float, lane: int, speed_mps: float) -> VehicleState:
 	vehicle.s = s
 	vehicle.lane = lane
 	vehicle.speed_mps = clampf(speed_mps, 0.0, max_speed_mps())
+	vehicle.length_m = config.vehicle_length_m
+	vehicle.width_m = config.vehicle_width_m
 	vehicles.append(vehicle)
 	return vehicle
 
