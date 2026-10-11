@@ -1,8 +1,7 @@
 extends Node3D
 ## Drivable scene (spec Phase 3): the player's vehicle in the simulation, driven by
-## the keyboard, seen from the cockpit on the endless road. This node only drives the
-## sim and hands its state to the views; `SessionManager` takes over the session
-## flow (countdown, timer, start speed) in Phase 3 step 3.
+## the keyboard, seen from the cockpit on the endless road. `SessionManager` runs the
+## session flow and the sim; this node feeds it input and hands its state to the views.
 
 @export var road_profile: RoadProfile
 @export var sim_config: SimConfig
@@ -13,16 +12,16 @@ var player: VehicleState
 
 var _input: PlayerInput = PlayerInput.new()
 
+@onready var session: SessionManager = $SessionManager
 @onready var _road_view: RoadView = $RoadView
 @onready var _player_view: PlayerView = $PlayerView
 @onready var _world_environment: WorldEnvironment = $WorldEnvironment
 
 
 func _ready() -> void:
-	sim = TrafficSim.new(road_profile, sim_config)
-	# Right lane at the start speed (requirements §9.3).
-	player = sim.add_vehicle(0.0, 0, sim_config.start_speed_kmh / TrafficSim.KMH_PER_MPS)
-	sim.player = player
+	session.setup(road_profile, sim_config)
+	sim = session.sim
+	player = session.player
 	_road_view.setup(road_profile, view_config)
 	_player_view.setup(view_config)
 	# Fog fades the road out by the draw distance, hiding where it ends.
@@ -36,7 +35,8 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _physics_process(delta: float) -> void:
-	sim.step(delta, _input.consume())
+	# Consumed every step, so presses during the countdown are dropped, not queued.
+	session.step(delta, _input.consume())
 
 
 func _process(_delta: float) -> void:
