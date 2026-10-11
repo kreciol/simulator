@@ -1,7 +1,8 @@
 extends Node3D
 ## Drivable scene (spec Phase 3): the player's vehicle in the simulation, driven by
 ## the keyboard, seen from the cockpit on the endless road. `SessionManager` runs the
-## session flow and the sim; this node feeds it input and hands its state to the views.
+## session flow and the sim; this node feeds it input and hands its state to the views
+## and the HUD.
 
 @export var road_profile: RoadProfile
 @export var sim_config: SimConfig
@@ -15,6 +16,7 @@ var _input: PlayerInput = PlayerInput.new()
 @onready var session: SessionManager = $SessionManager
 @onready var _road_view: RoadView = $RoadView
 @onready var _player_view: PlayerView = $PlayerView
+@onready var _hud: Hud = $Hud
 @onready var _world_environment: WorldEnvironment = $WorldEnvironment
 
 
@@ -24,6 +26,7 @@ func _ready() -> void:
 	player = session.player
 	_road_view.setup(road_profile, view_config)
 	_player_view.setup(view_config)
+	_hud.setup(view_config)
 	# Fog fades the road out by the draw distance, hiding where it ends.
 	_world_environment.environment.fog_depth_end = view_config.draw_distance_m()
 	_update_views()
@@ -52,3 +55,4 @@ func _notification(what: int) -> void:
 func _update_views() -> void:
 	_road_view.update(player.s)
 	_player_view.update(player, sim.lateral_position(player), sim.time_s)
+	_hud.update(session)

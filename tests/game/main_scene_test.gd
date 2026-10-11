@@ -58,6 +58,9 @@ func test_countdown_runs_first_and_holds_the_car() -> void:
 	var main: Node3D = runner.scene() as Node3D
 	var session: SessionManager = main.session
 	assert_int(session.state).is_equal(SessionManager.State.INTRO)
+	var hud: Hud = main.get_node("Hud") as Hud
+	assert_bool(hud.countdown_label.visible).is_true()
+	assert_str(hud.time_label.text).is_equal("1:30")
 	runner.simulate_key_press(KEY_A)
 	runner.simulate_key_release(KEY_A)
 	await runner.await_input_processed()
