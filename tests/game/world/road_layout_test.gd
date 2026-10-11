@@ -101,6 +101,28 @@ func test_segment_mesh_spans_exactly_one_segment() -> void:
 		assert_object(mesh.surface_get_material(surface)).is_not_null()
 
 
+func test_every_triangle_faces_its_normal() -> void:
+	# Godot culls counter-clockwise triangles; a reversed one (as mirroring produces)
+	# would be invisible from its lit side.
+	var mesh: ArrayMesh = RoadSegmentMesh.build(_layout)
+	var reversed: int = 0
+	for surface: int in mesh.get_surface_count():
+		var arrays: Array = mesh.surface_get_arrays(surface)
+		var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+		var normals: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL]
+		var indices: PackedInt32Array = arrays[Mesh.ARRAY_INDEX] if arrays[Mesh.ARRAY_INDEX] != null else PackedInt32Array()
+		var count: int = indices.size() if not indices.is_empty() else vertices.size()
+		for i: int in range(0, count, 3):
+			var ids: Array[int] = [i, i + 1, i + 2]
+			if not indices.is_empty():
+				ids = [indices[i], indices[i + 1], indices[i + 2]]
+			var geometric: Vector3 = (vertices[ids[1]] - vertices[ids[0]]).cross(vertices[ids[2]] - vertices[ids[0]])
+			# Clockwise as seen from the normal's side: the cross product points against it.
+			if geometric.dot(normals[ids[0]]) >= 0.0:
+				reversed += 1
+	assert_int(reversed).is_equal(0)
+
+
 func test_dashes_repeat_with_the_configured_period() -> void:
 	var mesh: ArrayMesh = RoadSegmentMesh.build(_layout)
 	var paint: int = RoadSegmentMesh.COLORS.keys().find(RoadLayout.Surface.PAINT)

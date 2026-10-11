@@ -43,8 +43,6 @@ static func _material(color: Color) -> StandardMaterial3D:
 	var material: StandardMaterial3D = StandardMaterial3D.new()
 	material.albedo_color = color
 	material.roughness = 0.9
-	# Strips are seen from above and barriers from both sides; skip winding concerns.
-	material.cull_mode = BaseMaterial3D.CULL_DISABLED
 	return material
 
 
@@ -70,7 +68,12 @@ static func _add_box(tool: SurfaceTool, strip: RoadLayout.Strip, from_s: float, 
 				Vector3(x, 0.0, -to_s))
 
 
+## Quad a-b-c-d facing `normal`. Godot treats clockwise triangles as front faces,
+## so the order is flipped when a-b-c would face away (e.g. in a mirrored strip).
 static func _add_quad(tool: SurfaceTool, normal: Vector3, a: Vector3, b: Vector3, c: Vector3, d: Vector3) -> void:
+	var order: Array[Vector3] = [a, b, c, a, c, d]
+	if (b - a).cross(c - a).dot(normal) > 0.0:
+		order = [a, c, b, a, d, c]
 	tool.set_normal(normal)
-	for vertex: Vector3 in [a, b, c, a, c, d]:
+	for vertex: Vector3 in order:
 		tool.add_vertex(vertex)
