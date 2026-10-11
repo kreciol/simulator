@@ -47,14 +47,14 @@ Land the empty Godot 4.7.2 project, a working headless validation gate (import +
 
 ### Phase 1: Project skeleton
 
-- [ ] 1.1 project.godot, Input Map, layout, gitattributes, gitignore, hello scene
+- [x] 1.1 project.godot, Input Map, layout, gitattributes, gitignore, hello scene — 0fd70c8
 
 ### Phase 2: Test gate
 
-- [ ] 2.1 Vendor gdUnit4 and add a trivial test
+- [x] 2.1 Vendor gdUnit4 and add a trivial test — 61068cf
 
 ### Phase 3: Delivery pipeline
 
-- [ ] 3.1 Single-threaded Web export preset
-- [ ] 3.2 GitHub Actions workflow with Pages deploy
-- [ ] 3.3 README and AGENTS.md status
+- [x] 3.1 Single-threaded Web export preset — c894ad9
+- [x] 3.2 GitHub Actions workflow with Pages deploy — 6dd9e55
+- [x] 3.3 README and AGENTS.md status — 0e4d8d9
