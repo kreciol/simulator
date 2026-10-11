@@ -1,0 +1,62 @@
+name: Setup Godot
+description: Install a pinned headless-capable Godot editor binary, and optionally its Web export templates.
+
+inputs:
+  version:
+    description: Godot version without the "-stable" suffix (e.g. 4.7.2).
+    required: true
+  export-templates:
+    description: Also install the Web export templates.
+    required: false
+    default: "false"
+
+runs:
+  using: composite
+  steps:
+    - name: Install Godot ${{ inputs.version }}
+      shell: bash
+      env:
+        GODOT_VERSION: ${{ inputs.version }}
+      run: |
+        set -euo pipefail
+        base="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable"
+        archive="Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+        dir="$RUNNER_TEMP/godot"
+        mkdir -p "$dir/bin"
+        cd "$dir"
+        curl -fsSL -o SHA512-SUMS.txt "$base/SHA512-SUMS.txt"
+        curl -fsSL -o "$archive" "$base/$archive"
+        grep " ${archive}\$" SHA512-SUMS.txt | sha512sum -c -
+        unzip -q "$archive"
+        mv "Godot_v${GODOT_VERSION}-stable_linux.x86_64" bin/godot
+        chmod +x bin/godot
+        echo "$dir/bin" >> "$GITHUB_PATH"
+        "$dir/bin/godot" --version
+
+    - name: Cache Web export templates
+      if: inputs.export-templates == 'true'
+      id: templates-cache
+      uses: actions/cache@v6
+      with:
+        path: ~/.local/share/godot/export_templates/${{ inputs.version }}.stable
+        key: godot-web-templates-${{ inputs.version }}
+
+    - name: Install Web export templates
+      if: inputs.export-templates == 'true' && steps.templates-cache.outputs.cache-hit != 'true'
+      shell: bash
+      env:
+        GODOT_VERSION: ${{ inputs.version }}
+      run: |
+        set -euo pipefail
+        base="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable"
+        archive="Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+        cd "$RUNNER_TEMP"
+        curl -fsSL -o SHA512-SUMS.txt "$base/SHA512-SUMS.txt"
+        curl -fsSL -o "$archive" "$base/$archive"
+        grep " ${archive}\$" SHA512-SUMS.txt | sha512sum -c -
+        target="$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
+        mkdir -p "$target"
+        # Keep only the Web templates; the full archive is ~1.3 GB.
+        unzip -q -j "$archive" "templates/version.txt" "templates/web_*.zip" -d "$target"
+        rm "$archive"
+        ls -la "$target"
