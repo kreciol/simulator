@@ -20,7 +20,8 @@ var _input: PlayerInput = PlayerInput.new()
 
 func _ready() -> void:
 	sim = TrafficSim.new(road_profile, sim_config)
-	player = sim.add_vehicle(0.0, 0, 0.0)
+	# Right lane at the start speed (requirements §9.3).
+	player = sim.add_vehicle(0.0, 0, sim_config.start_speed_kmh / TrafficSim.KMH_PER_MPS)
 	sim.player = player
 	_road_view.setup(road_profile, view_config)
 	_player_view.setup(view_config)

@@ -43,9 +43,10 @@ func handle_event(event: InputEvent) -> bool:
 ## Braking wins when both accelerate and brake are held.
 func consume() -> PlayerCommands:
 	var longitudinal: VehicleState.Longitudinal = VehicleState.Longitudinal.NONE
-	if _held.values().has(&"brake"):
-		longitudinal = VehicleState.Longitudinal.BRAKE
-	elif _held.values().has(&"accelerate"):
+	for key: Key in _held:
+		if _held[key] == &"brake":
+			longitudinal = VehicleState.Longitudinal.BRAKE
+			break
 		longitudinal = VehicleState.Longitudinal.ACCELERATE
 	var commands: PlayerCommands = PlayerCommands.create(longitudinal, _lane_change, _signal_toggle)
 	_lane_change = VehicleState.Dir.NONE

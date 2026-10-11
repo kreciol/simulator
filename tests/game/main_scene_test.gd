@@ -41,6 +41,11 @@ func test_scene_shows_road_and_cockpit_camera() -> void:
 	assert_int(_player().lane).is_equal(0)
 
 
+func test_player_starts_on_the_right_lane_at_the_start_speed() -> void:
+	assert_int(_player().lane).is_equal(0)
+	assert_float(_player().speed_mps * TrafficSim.KMH_PER_MPS).is_equal_approx(_main.sim_config.start_speed_kmh, 1e-6)
+
+
 func test_holding_w_accelerates_smoothly_and_moves_the_road() -> void:
 	var segment: MeshInstance3D = _road_view().segments()[0]
 	var z_before: float = segment.position.z
@@ -105,16 +110,17 @@ func test_q_and_e_toggle_the_signal() -> void:
 
 
 func test_unmapped_key_does_nothing_to_the_vehicle() -> void:
-	_drive(1)
-	var before: Dictionary = _main.sim.snapshot()
+	var speed: float = _player().speed_mps
 	_runner.simulate_key_press(KEY_X)
 	_runner.simulate_key_release(KEY_X)
 	_runner.simulate_key_press(KEY_SPACE)
 	await _runner.await_input_processed()
-	_drive(1)
-	var after: Dictionary = _main.sim.snapshot()
-	var vehicle_before: Dictionary = (before["vehicles"] as Array)[0]
-	var vehicle_after: Dictionary = (after["vehicles"] as Array)[0]
-	assert_dict(vehicle_after).is_equal(vehicle_before)
+	_drive(30)
+	# The car just cruises on: same speed, lane and signal state.
+	assert_int(_player().longitudinal).is_equal(VehicleState.Longitudinal.NONE)
+	assert_float(_player().speed_mps).is_equal(speed)
+	assert_int(_player().lane).is_equal(0)
+	assert_bool(_player().lane_change_active).is_false()
+	assert_int(_player().signal_dir).is_equal(VehicleState.Dir.NONE)
 	_runner.simulate_key_release(KEY_SPACE)
 	await _runner.await_input_processed()
