@@ -41,6 +41,8 @@ Let a player drive the simulation from the driver's seat on an endless dual-carr
 
 ## Progress
 
+PR: #19
+
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: Road view
@@ -50,6 +52,6 @@ Let a player drive the simulation from the driver's seat on an endless dual-carr
 
 ### Phase 2: Player
 
-- [ ] 2.1 PlayerInput mapping
-- [ ] 2.2 PlayerView cockpit rig
-- [ ] 2.3 Main scene wiring
+- [x] 2.1 PlayerInput mapping — 4a641a0
+- [x] 2.2 PlayerView cockpit rig — db67ae9
+- [x] 2.3 Main scene wiring — a4efc1c
