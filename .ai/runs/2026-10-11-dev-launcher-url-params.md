@@ -38,6 +38,8 @@ Until the Phase 10 menus exist, a tester can start any mode, road profile, diffi
 
 ## Progress
 
+PR: #23
+
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: Parse and validate
@@ -46,4 +48,4 @@ Until the Phase 10 menus exist, a tester can start any mode, road profile, diffi
 
 ### Phase 2: Wire into the session
 
-- [ ] 2.1 Session and main scene start from launch options
+- [x] 2.1 Session and main scene start from launch options — 680fc5c
