@@ -35,6 +35,9 @@ var rng: RandomNumberGenerator = RandomNumberGenerator.new()
 var player: VehicleState
 ## Commands passed to `step` for the player, one entry per step.
 var input_log: InputLog = InputLog.new()
+## Keeps traffic at the level's density at the end of every step; null for no
+## managed traffic. Set by `Spawner.attach`.
+var spawner: Spawner = null
 
 var _next_id: int = 0
 ## Removed vehicles and drivers, reused by later adds (no create/free churn).
@@ -171,7 +174,7 @@ func lateral_position(vehicle: VehicleState) -> float:
 ## Advances the sim by one fixed step. With a player set, `player_commands` (null
 ## for none) is recorded in `input_log` and applied before integration. AI drivers
 ## then decide in vehicle order; a lane change one of them starts is visible to the
-## next.
+## next. Last, the spawner (if any) despawns and tops up traffic.
 func step(dt: float, player_commands: PlayerCommands = null) -> void:
 	# Callers may have moved vehicles since the last step.
 	lanes.sort()
@@ -188,6 +191,8 @@ func step(dt: float, player_commands: PlayerCommands = null) -> void:
 		_advance_lane_change(vehicle, dt)
 	lanes.sort()
 	_detect_collisions()
+	if spawner != null:
+		spawner.update(self)
 
 
 ## Re-runs `recorded` step by step; on a sim built with the same seed and vehicles as the
