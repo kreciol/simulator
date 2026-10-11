@@ -6,6 +6,8 @@ A lightweight browser game that teaches inexperienced drivers correct motorway a
 
 The source of truth for scope and behaviour is [`wymagania-symulator-autostrady.md`](wymagania-symulator-autostrady.md) (Polish). Its markers mean: **[DECYZJA]** fixed requirement, **[PROPOZYCJA]** default that may change, **[PARAM]** value that must live in config, **[OTWARTE]** unresolved — implement the default and mark the code `# TODO(open):`.
 
+**Decisions take precedence:** the MVP spec [`.ai/specs/2026-10-11-highway-driving-simulator-mvp.md`](.ai/specs/2026-10-11-highway-driving-simulator-mvp.md) resolves the requirements doc's [OTWARTE] items in its *Decisions* table and defines the architecture and phasing. Where the two disagree, the spec wins; use `# TODO(open):` only for questions neither document settles.
+
 > Status: no Godot project exists yet. Paths below follow the planned layout (requirements §15.1); update this file when the skeleton lands.
 
 ## Task routing
