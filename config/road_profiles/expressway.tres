@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="RoadProfile" format=3]
+
+[ext_resource type="Script" path="res://config/road_profile.gd" id="1_road"]
+
+[resource]
+script = ExtResource("1_road")
+id = &"expressway"
+display_name_key = "ROAD_EXPRESSWAY"
+speed_limit_kmh = 120.0
+lane_count = 2
+lane_width_m = 3.75
+shoulder_width_m = 2.5
