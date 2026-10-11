@@ -6,6 +6,10 @@ extends RefCounted
 ## car itself is a `VehicleState` like the player's; `TrafficSim` asks its driver to
 ## decide before integrating. AI does not treat the player specially (§7.1).
 
+## Lane change candidates, right first so a tie keeps right; a constant so deciding
+## allocates nothing per step.
+const LANE_CHANGE_DIRS: Array[VehicleState.Dir] = [VehicleState.Dir.RIGHT, VehicleState.Dir.LEFT]
+
 ## Speed the driver cruises at on a free road.
 var desired_speed_mps: float
 ## 1 = model driver (legal gap, keep-right); lower values drive less by the book (Q13).
@@ -39,7 +43,8 @@ func decide(sim: TrafficSim, vehicle: VehicleState) -> void:
 ## pass on the right (Q5). The bias is `mobil_keep_right_bias_mps2` scaled by
 ## discipline. -INF when the change is unsafe: the target lane is off the road or not
 ## free within the clearance (`LaneQuery.is_lane_free`), or the new follower would
-## have to brake harder than `mobil_safe_decel_mps2`.
+## have to brake harder than `mobil_safe_decel_mps2`. The own gain is measured against
+## `accel_mps2`, so call this after `decide` has run for the current step.
 func lane_change_incentive(sim: TrafficSim, vehicle: VehicleState, dir: VehicleState.Dir) -> float:
 	var config: SimConfig = sim.config
 	var target: int = vehicle.lane + dir
@@ -106,7 +111,7 @@ func _following_acceleration(sim: TrafficSim, vehicle: VehicleState) -> float:
 func _consider_lane_change(sim: TrafficSim, vehicle: VehicleState) -> void:
 	var best_dir: VehicleState.Dir = VehicleState.Dir.NONE
 	var best_incentive: float = sim.config.mobil_threshold_mps2
-	for dir: VehicleState.Dir in [VehicleState.Dir.RIGHT, VehicleState.Dir.LEFT]:
+	for dir: VehicleState.Dir in LANE_CHANGE_DIRS:
 		var incentive: float = lane_change_incentive(sim, vehicle, dir)
 		if incentive > best_incentive:
 			best_dir = dir
