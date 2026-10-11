@@ -36,12 +36,14 @@ Give AI, scoring and hints one shared definition of free lanes, gaps and signal 
 
 ## Progress
 
+PR: #17
+
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: LaneQuery
 
-- [ ] 1.1 Vehicle dimensions, signal minimum and LaneQuery
+- [x] 1.1 Vehicle dimensions, signal minimum and LaneQuery — 253e49e
 
 ### Phase 2: Collisions, RNG and replay
 
-- [ ] 2.1 Collision detection, seeded RNG, InputLog and snapshot
+- [x] 2.1 Collision detection, seeded RNG, InputLog and snapshot — 688e5ee
