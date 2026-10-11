@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="DevLauncherConfig" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://config/dev_launcher_config.gd" id="1_launcher"]
+[ext_resource type="Script" path="res://config/road_profile.gd" id="2_road"]
+[ext_resource type="Resource" path="res://config/road_profiles/motorway.tres" id="3_motorway"]
+[ext_resource type="Resource" path="res://config/road_profiles/expressway.tres" id="4_expressway"]
+
+[resource]
+script = ExtResource("1_launcher")
+profiles = Array[ExtResource("2_road")]([ExtResource("3_motorway"), ExtResource("4_expressway")])
+default_profile = &"motorway"
+default_mode = &"learn"
+level_count = 4
+default_level = 1
