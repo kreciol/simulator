@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="DifficultyLevel" format=3]
+
+[ext_resource type="Script" path="res://config/difficulty_level.gd" id="1_level"]
+
+[resource]
+script = ExtResource("1_level")
+id = 4
+display_name_key = "LEVEL_RUSH_HOUR"
+density_per_km_per_lane = 12.0
+truck_share = 0.25
+ai_speed_spread_kmh = 25.0
+ai_discipline_min = 0.55
+ai_discipline_max = 0.9
+recommended = false
