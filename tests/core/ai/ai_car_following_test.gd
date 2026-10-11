@@ -62,10 +62,12 @@ func test_free_road_accelerates_to_desired_speed() -> void:
 	var sim: TrafficSim = _new_sim()
 	var car: VehicleState = sim.add_ai_vehicle(0.0, 0, 60.0 * KMH, 110.0 * KMH, 1.0)
 	var previous_speed: float = car.speed_mps
+	var slowed_down: bool = false
 	for i: int in roundi(90.0 / DT):
 		sim.step(DT)
-		assert_float(car.speed_mps).is_greater_equal(previous_speed)
+		slowed_down = slowed_down or car.speed_mps < previous_speed
 		previous_speed = car.speed_mps
+	assert_bool(slowed_down).is_false()
 	assert_float(car.speed_mps).is_equal_approx(110.0 * KMH, 1.0 * KMH)
 	assert_float(car.speed_mps).is_less_equal(110.0 * KMH)
 
@@ -80,10 +82,12 @@ func test_disciplined_driver_never_dips_below_the_legal_gap_once_following() -> 
 	sim.add_vehicle(150.0, 0, 80.0 * KMH)
 	var follower: VehicleState = sim.add_ai_vehicle(0.0, 0, 130.0 * KMH, 130.0 * KMH, 1.0)
 	_run(sim, 60.0)
+	var worst_ratio: float = INF
 	for i: int in roundi(60.0 / DT):
 		sim.step(DT)
 		var min_gap: float = LaneQuery.min_gap(follower.speed_mps * TrafficSim.KMH_PER_MPS)
-		assert_float(LaneQuery.gap_to_leader(follower, sim.vehicles)).is_greater_equal(min_gap)
+		worst_ratio = minf(worst_ratio, LaneQuery.gap_to_leader(follower, sim.vehicles) / min_gap)
+	assert_float(worst_ratio).is_greater_equal(1.0)
 
 
 func test_lower_discipline_follows_closer() -> void:
@@ -97,9 +101,11 @@ func test_stops_behind_a_stopped_leader_without_overlap() -> void:
 	var sim: TrafficSim = _new_sim()
 	var stopped: VehicleState = sim.add_vehicle(250.0, 0, 0.0)
 	var car: VehicleState = sim.add_ai_vehicle(0.0, 0, 110.0 * KMH, 110.0 * KMH, 1.0)
+	var min_gap: float = INF
 	for i: int in roundi(60.0 / DT):
 		sim.step(DT)
-		assert_bool(sim.vehicles_overlap(car, stopped)).is_false()
+		min_gap = minf(min_gap, LaneQuery.gap_to_leader(car, sim.vehicles))
+	assert_float(min_gap).is_greater(0.0)
 	assert_float(car.speed_mps).is_equal_approx(0.0, 0.1)
 	var gap: float = LaneQuery.gap_to_leader(car, sim.vehicles)
 	assert_float(gap).is_between(0.0, 2.0 * _config.idm_min_spacing_m)

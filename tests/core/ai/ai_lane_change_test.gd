@@ -45,6 +45,15 @@ func _run(seconds: float) -> void:
 		_sim.step(DT)
 
 
+## Steps for `seconds`; whether `vehicle` had a signal on after any step.
+func _signalled_within(vehicle: VehicleState, seconds: float) -> bool:
+	var signalled: bool = false
+	for i: int in roundi(seconds / DT):
+		_sim.step(DT)
+		signalled = signalled or vehicle.signal_dir != NO_DIR
+	return signalled
+
+
 func _changes_of(vehicle: VehicleState) -> Array[Dictionary]:
 	return _changes.filter(func(change: Dictionary) -> bool: return change["id"] == vehicle.id)
 
@@ -81,9 +90,7 @@ func test_no_lane_change_into_a_vehicle_alongside() -> void:
 	_sim.add_vehicle(40.0, 0, 80.0 * KMH)
 	var car: VehicleState = _sim.add_ai_vehicle(0.0, 0, 80.0 * KMH, 130.0 * KMH, 1.0)
 	_sim.add_vehicle(-3.0, 1, 80.0 * KMH)
-	for i: int in roundi(20.0 / DT):
-		_sim.step(DT)
-		assert_int(car.signal_dir).is_equal(NO_DIR)
+	assert_bool(_signalled_within(car, 20.0)).is_false()
 	assert_array(_changes).is_empty()
 	assert_int(car.lane).is_equal(0)
 	assert_array(_collisions).is_empty()
@@ -133,9 +140,7 @@ func test_model_driver_returns_right_on_a_free_road() -> void:
 
 func test_undisciplined_driver_has_no_keep_right_bias() -> void:
 	var car: VehicleState = _sim.add_ai_vehicle(0.0, 1, 110.0 * KMH, 110.0 * KMH, 0.0)
-	for i: int in roundi(20.0 / DT):
-		_sim.step(DT)
-		assert_int(car.signal_dir).is_equal(NO_DIR)
+	assert_bool(_signalled_within(car, 20.0)).is_false()
 	assert_int(car.lane).is_equal(1)
 
 
