@@ -138,8 +138,9 @@ func test_signal_valid_with_signal_timed_by_the_sim() -> void:
 		sim.step(1.0 / 60.0)
 	var on_s: float = sim.time_s - car.signal_on_since_s
 	assert_int(LaneQuery.signal_valid(LEFT, car.signal_dir, on_s, config.signal_min_on_s)).is_equal(LaneQuery.SignalResult.LATE)
-	for i: int in 31:
+	for i: int in 30:
 		sim.step(1.0 / 60.0)
+	# Exactly the minimum, reached by summing fixed steps.
 	on_s = sim.time_s - car.signal_on_since_s
 	assert_int(LaneQuery.signal_valid(LEFT, car.signal_dir, on_s, config.signal_min_on_s)).is_equal(LaneQuery.SignalResult.OK)
 

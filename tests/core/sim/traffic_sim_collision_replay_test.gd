@@ -136,6 +136,23 @@ func test_input_log_records_a_copy_per_step_including_empty_steps() -> void:
 	assert_bool(player.lane_change_active).is_true()
 
 
+func test_input_log_round_trips_every_command_combination() -> void:
+	var input_log: InputLog = InputLog.new()
+	var expected: Array[Array] = []
+	for longitudinal: int in [NO_INPUT, ACCELERATE, BRAKE]:
+		for lane_change: int in [VehicleState.Dir.RIGHT, VehicleState.Dir.NONE, VehicleState.Dir.LEFT]:
+			for signal_toggle: int in [VehicleState.Dir.RIGHT, VehicleState.Dir.NONE, VehicleState.Dir.LEFT]:
+				input_log.append(PlayerCommands.create(
+						longitudinal as VehicleState.Longitudinal,
+						lane_change as VehicleState.Dir,
+						signal_toggle as VehicleState.Dir))
+				expected.append([longitudinal, lane_change, signal_toggle])
+	assert_int(input_log.size()).is_equal(27)
+	for i: int in expected.size():
+		var commands: PlayerCommands = input_log.at(i)
+		assert_array([commands.longitudinal, commands.lane_change, commands.signal_toggle]).is_equal(expected[i])
+
+
 func test_without_a_player_nothing_is_logged() -> void:
 	_sim.add_vehicle(0.0, 0, 30.0)
 	_steps(10)

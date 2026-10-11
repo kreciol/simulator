@@ -9,6 +9,9 @@ enum SignalResult { OK, LATE, NONE, WRONG }
 ## Legal minimum following distance: metres per km/h of speed (art. 19 ust. 3 pkt 2
 ## Prawo o ruchu drogowym, requirements §8.2 K1).
 const MIN_GAP_M_PER_KMH: float = 0.5
+## Absorbs float drift in sim time summed over fixed steps, so a signal held for
+## exactly the minimum is not rated LATE.
+const TIME_EPSILON: float = 1e-6
 
 
 static func min_gap(speed_kmh: float) -> float:
@@ -79,6 +82,6 @@ static func signal_valid(
 		return SignalResult.NONE
 	if signal_dir != change_dir:
 		return SignalResult.WRONG
-	if signal_on_s < min_on_s:
+	if signal_on_s + TIME_EPSILON < min_on_s:
 		return SignalResult.LATE
 	return SignalResult.OK

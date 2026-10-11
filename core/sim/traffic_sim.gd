@@ -30,6 +30,8 @@ var input_log: InputLog = InputLog.new()
 var _next_id: int = 0
 ## Pairs currently in contact, keyed by Vector2i(lower id, higher id).
 var _contacts: Dictionary[Vector2i, bool] = {}
+## Scratch buffer swapped with `_contacts` each step, so detection does not allocate.
+var _next_contacts: Dictionary[Vector2i, bool] = {}
 
 
 func _init(road_profile: RoadProfile, sim_config: SimConfig, seed_value: int = 0) -> void:
@@ -187,7 +189,7 @@ func _advance_lane_change(vehicle: VehicleState, dt: float) -> void:
 
 
 func _detect_collisions() -> void:
-	var contacts: Dictionary[Vector2i, bool] = {}
+	_next_contacts.clear()
 	for i: int in vehicles.size():
 		for j: int in range(i + 1, vehicles.size()):
 			var a: VehicleState = vehicles[i]
@@ -195,7 +197,9 @@ func _detect_collisions() -> void:
 			if not vehicles_overlap(a, b):
 				continue
 			var key: Vector2i = Vector2i(mini(a.id, b.id), maxi(a.id, b.id))
-			contacts[key] = true
+			_next_contacts[key] = true
 			if not _contacts.has(key):
 				collision.emit(key.x, key.y)
-	_contacts = contacts
+	var previous: Dictionary[Vector2i, bool] = _contacts
+	_contacts = _next_contacts
+	_next_contacts = previous
