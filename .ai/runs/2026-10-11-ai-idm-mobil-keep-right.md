@@ -36,6 +36,7 @@ AI cars drive like disciplined motorway drivers: IDM car-following that keeps at
 
 - MOBIL tuning: the spec defaults may cause signal flicker or late returns; decisions use a hysteresis (start above threshold, keep while still beneficial) and the tests assert behaviour, not exact timings.
 - Sequential per-vehicle decisions within a step: deterministic (vehicle order), and a started change immediately occupies the target lane for later vehicles' checks.
+- No passing on the right is enforced only in the lane decision (moving right never gains speed over the left-lane leader); car-following on the right lane does not look left, so a car already on the right may still pass a slower left-lane car. Rare while AI keeps right; revisit with scoring (Q5) if it shows up.
 
 ## Progress
 
@@ -48,5 +49,5 @@ AI cars drive like disciplined motorway drivers: IDM car-following that keeps at
 
 ### Phase 2: MOBIL keep-right
 
-- [ ] 2.1 MOBIL keep-right lane decisions with signalling
-- [ ] 2.2 LaneQuery usage scan and seeded no-collision run
+- [x] 2.1 MOBIL keep-right lane decisions with signalling — 42445df
+- [x] 2.2 LaneQuery usage scan and seeded no-collision run — 19bfb20
