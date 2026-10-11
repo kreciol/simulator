@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="ViewConfig" format=3]
+
+[ext_resource type="Script" path="res://config/view_config.gd" id="1_view"]
+
+[resource]
+script = ExtResource("1_view")
+segment_length_m = 48.0
+segment_count = 14
+segments_behind = 2
+dash_length_m = 4.0
+dash_gap_m = 8.0
+lane_line_width_m = 0.15
+edge_line_width_m = 0.25
+inner_strip_width_m = 0.75
+median_width_m = 4.0
+barrier_offset_m = 0.5
+barrier_width_m = 0.3
+barrier_height_m = 0.75
+terrain_width_m = 400.0
+eye_height_m = 1.2
+eye_offset_left_m = 0.35
+camera_fov_deg = 70.0
+camera_pitch_down_deg = 4.0
+signal_blink_hz = 1.5
