@@ -34,12 +34,14 @@ Land the first headless piece of the simulation core: road/sim config resources,
 
 ## Progress
 
+PR: #16
+
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: Config and longitudinal motion
 
-- [ ] 1.1 Config resources, VehicleState and longitudinal TrafficSim
+- [x] 1.1 Config resources, VehicleState and longitudinal TrafficSim — a13bb78
 
 ### Phase 2: Lane changes and signals
 
-- [ ] 2.1 Animated lane changes, off-road and signals
+- [x] 2.1 Animated lane changes, off-road and signals — 650d604
