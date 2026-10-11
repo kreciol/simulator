@@ -43,8 +43,8 @@ AI cars drive like disciplined motorway drivers: IDM car-following that keeps at
 
 ### Phase 1: IDM car-following
 
-- [ ] 1.1 IDM/MOBIL params and LaneQuery neighbours
-- [ ] 1.2 Idm, AiDriver longitudinal control and sim integration
+- [x] 1.1 IDM/MOBIL params and LaneQuery neighbours — 654cc72
+- [x] 1.2 Idm, AiDriver longitudinal control and sim integration — 33bb15b
 
 ### Phase 2: MOBIL keep-right
 
