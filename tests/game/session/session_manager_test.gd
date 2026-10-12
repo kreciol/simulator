@@ -260,3 +260,52 @@ func test_exam_without_an_incident_completes_after_ninety_seconds() -> void:
 	assert_int(_session.state).is_equal(SessionManager.State.ENDED)
 	assert_str(_session.status()).is_equal(SessionRecord.STATUS_COMPLETED)
 	assert_int(ended[0]).is_equal(1)
+
+
+func _setup_scored(session_mode: StringName = LaunchOptions.MODE_LEARN) -> void:
+	_session.setup(load("res://config/road_profiles/motorway.tres") as RoadProfile, _config, 0,
+			session_mode, load("res://config/scoring.tres") as ScoringConfig)
+
+
+func test_without_a_scoring_config_nothing_is_scored() -> void:
+	assert_object(_session.scoring).is_null()
+	_start_driving()
+	_step(_steps_for(1.0))
+	assert_object(_session.scoring).is_null()
+
+
+func test_scoring_observes_the_drive_but_not_the_countdown() -> void:
+	_setup_scored()
+	assert_object(_session.scoring.sim).is_same(_session.sim)
+	_step(_steps_for(_config.countdown_s) - 1)
+	assert_float(_session.scoring.total_score()).is_equal(0.0)
+	_step(1)
+	# Keeping right on an empty road earns points steadily (N2, N3).
+	_step(_steps_for(5.0))
+	var after_five: float = _session.scoring.total_score()
+	assert_float(after_five).is_greater(0.0)
+	_step(_steps_for(5.0))
+	assert_float(_session.scoring.total_score()).is_greater(after_five)
+
+
+func test_scoring_closes_open_segments_when_the_session_ends() -> void:
+	_setup_scored()
+	var emitted: Array[ScoreEvent] = []
+	_session.scoring.score_event_emitted.connect(func(event: ScoreEvent) -> void: emitted.append(event))
+	var ended: Array[int] = _start_driving()
+	_step(_steps_for(_config.session_length_s) - 1)
+	# The right-lane reward is still an open segment while driving.
+	assert_array(emitted).is_empty()
+	_step(1)
+	assert_int(ended[0]).is_equal(1)
+	assert_array(emitted).is_not_empty()
+	var total: float = _session.scoring.total_score()
+	_step(_steps_for(1.0))
+	assert_float(_session.scoring.total_score()).is_equal(total)
+
+
+func test_exam_scores_too() -> void:
+	_setup_scored(LaunchOptions.MODE_EXAM)
+	_start_driving()
+	_step(_steps_for(5.0))
+	assert_float(_session.scoring.total_score()).is_greater(0.0)

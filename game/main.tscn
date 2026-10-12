@@ -1,4 +1,4 @@
-[gd_scene load_steps=14 format=3]
+[gd_scene load_steps=15 format=3]
 
 [ext_resource type="Script" path="res://game/main.gd" id="1_main"]
 [ext_resource type="Resource" path="res://config/dev_launcher.tres" id="2_launcher"]
@@ -10,6 +10,7 @@
 [ext_resource type="Script" path="res://ui/hud.gd" id="8_hud"]
 [ext_resource type="Script" path="res://game/traffic/traffic_view.gd" id="9_traffic_view"]
 [ext_resource type="Script" path="res://game/mirrors/mirrors_view.gd" id="10_mirrors_view"]
+[ext_resource type="Resource" path="res://config/scoring.tres" id="11_scoring"]
 
 [sub_resource type="ProceduralSkyMaterial" id="SkyMaterial_1"]
 sky_top_color = Color(0.32, 0.52, 0.82, 1)
@@ -40,6 +41,7 @@ script = ExtResource("1_main")
 launcher_config = ExtResource("2_launcher")
 sim_config = ExtResource("3_sim")
 view_config = ExtResource("4_view")
+scoring_config = ExtResource("11_scoring")
 
 [node name="SessionManager" type="Node" parent="."]
 script = ExtResource("7_session")
