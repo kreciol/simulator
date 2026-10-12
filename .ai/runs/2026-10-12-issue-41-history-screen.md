@@ -47,8 +47,8 @@ Saved results show the player their progress (requirements §11.3, §13; spec Ph
 
 ### Phase 1: Queries and comparison
 
-- [ ] 1.1 HistoryStore queries for recent, bests, previous and trend
-- [ ] 1.2 ResultComparison with its Polish strings
+- [x] 1.1 HistoryStore queries for recent, bests, previous and trend — 35f147b
+- [x] 1.2 ResultComparison with its Polish strings — 5fa5f85
 
 ### Phase 2: Screens
 
