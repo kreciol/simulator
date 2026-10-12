@@ -197,3 +197,66 @@ func test_ai_cars_touching_each_other_do_not_end_the_session() -> void:
 	_step(10)
 	assert_int(_session.state).is_equal(SessionManager.State.DRIVING)
 	assert_int(_session.end_reason).is_equal(SessionManager.EndReason.NONE)
+
+
+func test_the_mode_from_the_url_is_active(query: String, mode: StringName, exam: bool, test_parameters: Array = [
+		["?mode=learn", LaunchOptions.MODE_LEARN, false],
+		["?mode=exam", LaunchOptions.MODE_EXAM, true],
+		]) -> void:
+	var launcher: DevLauncherConfig = load("res://config/dev_launcher.tres") as DevLauncherConfig
+	var options: LaunchOptions = DevLauncher.resolve(DevLauncher.parse_query(query), launcher, 0)
+	var session: SessionManager = auto_free(SessionManager.new()) as SessionManager
+	session.start(options, _config)
+	assert_str(session.mode).is_equal(mode)
+	assert_bool(session.is_exam()).is_equal(exam)
+
+
+func test_setup_alone_is_a_learn_session() -> void:
+	assert_str(_session.mode).is_equal(LaunchOptions.MODE_LEARN)
+	assert_bool(_session.is_exam()).is_false()
+	assert_str(_session.status()).is_empty()
+
+
+func _start_exam() -> Array[int]:
+	_session.setup(load("res://config/road_profiles/motorway.tres") as RoadProfile, _config, 0,
+			LaunchOptions.MODE_EXAM)
+	return _start_driving()
+
+
+func test_exam_collision_ends_the_session_as_aborted_collision() -> void:
+	var ended: Array[int] = _start_exam()
+	_step(30)
+	var player: VehicleState = _session.player
+	_session.sim.add_vehicle(player.s + player.length_m + 1.0, 0, 0.0)
+	var steps: int = 0
+	while _session.state == SessionManager.State.DRIVING and steps < 120:
+		_step(1)
+		steps += 1
+	assert_int(_session.state).is_equal(SessionManager.State.ENDED)
+	assert_int(_session.end_reason).is_equal(SessionManager.EndReason.COLLISION)
+	assert_str(_session.status()).is_equal(SessionRecord.STATUS_ABORTED_COLLISION)
+	assert_float(_session.elapsed_s).is_less(_config.session_length_s)
+	assert_int(ended[0]).is_equal(1)
+
+
+func test_exam_leaving_the_road_ends_the_session_as_aborted_offroad() -> void:
+	var ended: Array[int] = _start_exam()
+	var right: PlayerCommands = PlayerCommands.new()
+	right.lane_change = VehicleState.Dir.RIGHT
+	_step(1, right)
+	_step(_steps_for(_config.lane_change_duration_s))
+	assert_bool(_session.player.off_road).is_true()
+	assert_int(_session.state).is_equal(SessionManager.State.ENDED)
+	assert_str(_session.status()).is_equal(SessionRecord.STATUS_ABORTED_OFFROAD)
+	assert_int(ended[0]).is_equal(1)
+
+
+func test_exam_without_an_incident_completes_after_ninety_seconds() -> void:
+	var ended: Array[int] = _start_exam()
+	_step(_steps_for(_config.session_length_s) - 1)
+	assert_int(_session.state).is_equal(SessionManager.State.DRIVING)
+	assert_str(_session.status()).is_empty()
+	_step(1)
+	assert_int(_session.state).is_equal(SessionManager.State.ENDED)
+	assert_str(_session.status()).is_equal(SessionRecord.STATUS_COMPLETED)
+	assert_int(ended[0]).is_equal(1)

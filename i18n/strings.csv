@@ -1,3 +1,6 @@
 keys,pl
 HUD_SPEED_UNIT,km/h
 SESSION_ENDED,Koniec sesji
+EXAM_FAILED,Egzamin niezaliczony
+END_CAUSE_COLLISION,Przyczyna: kolizja z innym pojazdem
+END_CAUSE_OFFROAD,Przyczyna: zjechanie z drogi
