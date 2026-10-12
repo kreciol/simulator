@@ -42,6 +42,8 @@ The player sees the AI traffic: cars, vans/SUVs and trucks in several colours, b
 
 ## Progress
 
+PR: #52
+
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: Traffic and the collision outcome in the session
@@ -51,9 +53,9 @@ The player sees the AI traffic: cars, vans/SUVs and trucks in several colours, b
 
 ### Phase 2: Vehicle views
 
-- [ ] 2.1 Vehicle view with looks, colours, brake lights and indicators
-- [ ] 2.2 Pooled traffic view in the main scene and end-screen backdrop
+- [x] 2.1 Vehicle view with looks, colours, brake lights and indicators — 1f886e4
+- [x] 2.2 Pooled traffic view in the main scene and end-screen backdrop — 862ca53
 
 ### Phase 3: Docs
 
-- [ ] 3.1 AGENTS.md status and routing
+- [x] 3.1 AGENTS.md status and routing — caa947f
