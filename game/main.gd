@@ -113,15 +113,22 @@ func _notification(what: int) -> void:
 		_input.reset()
 
 
-## Saves the finished session to the local history and tells the player how it went.
-## Play never depends on it: with saving disabled the session just is not kept.
+## Compares the finished session with the earlier results of its combination, saves it
+## to the local history and tells the player how both went. Play never depends on it:
+## with saving disabled the session just is not kept.
 func _on_session_ended() -> void:
 	# A session that ends before the probe's window fills still reports what it measured.
 	if _fps_probe != null and perf_report.is_empty():
 		_report_probe()
 	if session.record == null:
 		return
-	var saved: bool = SaveManager.save_record(session.record)
+	var record: SessionRecord = session.record
+	# Read before saving, so the comparison is with the results before this one.
+	var history: HistoryStore = SaveManager.store
+	_hud.show_comparison(ResultComparison.compare(record,
+			history.previous_for(record.mode, record.road_profile, record.difficulty),
+			history.best_for(record.mode, record.road_profile, record.difficulty)))
+	var saved: bool = SaveManager.save_record(record)
 	_hud.show_save_status(saved, SaveManager.store)
 
 
