@@ -2,12 +2,15 @@ class_name SessionManager
 extends Node
 ## Session flow (requirements §9.3, spec Architecture: Session): a 3-2-1 intro, then
 ## `SimConfig.session_length_s` of driving, then the end. Owns the sim and is the only
-## node that drives it; views and the HUD only read its state.
+## node that drives it; views and the HUD only read its state. Placeholder until the
+## Phase 7 modes: the player colliding or leaving the road ends the session early.
 
 signal session_started
 signal session_ended
 
 enum State { INTRO, DRIVING, ENDED }
+## Why the session ended; NONE until it has.
+enum EndReason { NONE, TIME_UP, COLLISION, OFF_ROAD }
 
 ## Absorbs float drift when fixed steps should sum to exactly a configured duration.
 const TIME_EPSILON: float = 1e-6
@@ -17,10 +20,15 @@ var player: VehicleState
 ## What the session was started with; null when set up directly through `setup`.
 var options: LaunchOptions
 var state: State = State.INTRO
+var end_reason: EndReason = EndReason.NONE
 ## Time spent in the intro countdown, seconds.
 var intro_elapsed_s: float = 0.0
 ## Session time driven so far; the timer starts when the intro ends.
 var elapsed_s: float = 0.0
+
+## The player's collision or off-road seen during the current sim step; the session
+## ends once the step is over.
+var _player_end_reason: EndReason = EndReason.NONE
 
 
 ## Sets the session up on the launch options' profile and seed with traffic at the
@@ -39,7 +47,11 @@ func setup(road_profile: RoadProfile, sim_config: SimConfig, seed_value: int = 0
 	# Right lane at the start speed (requirements §9.3).
 	player = sim.add_vehicle(0.0, 0, sim_config.start_speed_kmh / TrafficSim.KMH_PER_MPS)
 	sim.player = player
+	sim.collision.connect(_on_collision)
+	sim.offroad.connect(_on_offroad)
 	state = State.INTRO
+	end_reason = EndReason.NONE
+	_player_end_reason = EndReason.NONE
 	intro_elapsed_s = 0.0
 	elapsed_s = 0.0
 
@@ -56,9 +68,10 @@ func step(dt: float, commands: PlayerCommands = null) -> void:
 		State.DRIVING:
 			sim.step(dt, commands)
 			elapsed_s += dt
-			if elapsed_s >= sim.config.session_length_s - TIME_EPSILON:
-				state = State.ENDED
-				session_ended.emit()
+			if _player_end_reason != EndReason.NONE:
+				_end(_player_end_reason)
+			elif elapsed_s >= sim.config.session_length_s - TIME_EPSILON:
+				_end(EndReason.TIME_UP)
 
 
 func countdown_left_s() -> float:
@@ -71,3 +84,19 @@ func time_left_s() -> float:
 	if state == State.ENDED:
 		return 0.0
 	return maxf(0.0, sim.config.session_length_s - elapsed_s)
+
+
+func _end(reason: EndReason) -> void:
+	state = State.ENDED
+	end_reason = reason
+	session_ended.emit()
+
+
+func _on_collision(vehicle_id: int, other_id: int) -> void:
+	if vehicle_id == player.id or other_id == player.id:
+		_player_end_reason = EndReason.COLLISION
+
+
+func _on_offroad(vehicle_id: int) -> void:
+	if vehicle_id == player.id and _player_end_reason == EndReason.NONE:
+		_player_end_reason = EndReason.OFF_ROAD
