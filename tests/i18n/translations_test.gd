@@ -13,5 +13,7 @@ func test_hud_strings_are_translated_to_polish(key: StringName, polish: String, 
 		[&"EXAM_FAILED", "Egzamin niezaliczony"],
 		[&"END_CAUSE_COLLISION", "Przyczyna: kolizja z innym pojazdem"],
 		[&"END_CAUSE_OFFROAD", "Przyczyna: zjechanie z drogi"],
+		[&"HUD_SCORE", "Punkty"],
+		[&"HUD_BLIND_SPOT", "Martwe pole"],
 		]) -> void:
 	assert_str(TranslationServer.translate(key)).is_equal(polish)
