@@ -25,6 +25,7 @@ The source of truth for scope and behaviour is [`wymagania-symulator-autostrady.
 | Persistence and history | requirements §13; `persistence/` (planned) | `user://` (IndexedDB on web). Every saved record carries `schema_version`; changing the format needs a migration. |
 | Tunable numbers | requirements §0, §14 (Konfigurowalność); `config/` (`RoadProfile` + `road_profiles/*.tres`, `SimConfig` + `sim_config.tres`, `ViewConfig` + `view_config.tres`, `DifficultyLevel` + `difficulty_levels/level_1..4.tres`) | Every **[PARAM]** lives in a `.tres` resource or the single config file — never a literal in code. Road profiles and difficulty levels are `Resource`s. |
 | Tests | requirements §14 (Testowalność); `tests/`, `addons/gdUnit4/` (vendored, v6.2.2) | gdUnit4. Logic in `core/` is fully unit-tested; tests run headless. |
+| Product discovery, a product brief, or a backlog | `.ai/specs/product-brief.md`, `.ai/specs/research/`, `.ai/specs/backlog.md`; *Definition of Ready* and *Product decisions as a protected contract* in `SDLC.md` | Non-goals, business rules and decisions in the brief are a protected contract: contradicting one needs an explicit superseding entry approved by its owner. Synthetic personas (`[SYNTHETIC]`) are hypotheses, never evidence. <!-- discovery:routing-start --><!-- discovery:routing-end --> |
 
 ## Code conventions
 
