@@ -47,18 +47,20 @@ After every session, in both modes, the end screen shows how the drive went: the
 
 ## Progress
 
+PR: #61
+
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: Summary generator
 
-- [ ] 1.1 SummaryGenerator with status, categories, strength, improvements, sentences and tip
-- [ ] 1.2 Polish gender-neutral templates and the gendered-form lint test
+- [x] 1.1 SummaryGenerator with status, categories, strength, improvements, sentences and tip — 4ebb18a
+- [x] 1.2 Polish gender-neutral templates and the gendered-form lint test — c2ee029
 
 ### Phase 2: Session and screen
 
-- [ ] 2.1 SessionManager scores the drive and builds the record and summary
-- [ ] 2.2 Summary panel in the HUD end screen
+- [x] 2.1 SessionManager scores the drive and builds the record and summary — 47c426f
+- [x] 2.2 Summary panel in the HUD end screen — 7b094a0, 7def209
 
 ### Phase 3: Docs
 
-- [ ] 3.1 AGENTS.md status and routing
+- [x] 3.1 AGENTS.md status and routing — 6cc8d3e
