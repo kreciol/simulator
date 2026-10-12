@@ -44,6 +44,10 @@ func test_perf_prints_average_and_5th_percentile_after_60_s_of_driving() -> void
 	assert_str(main.perf_report).contains("avg=40.0").contains("p5=40.0").not_contains("incomplete")
 	# The line names what was measured, for the record in the PR.
 	assert_str(main.perf_report).contains("level=4").contains("profile=motorway").contains("seed=1").contains("quality=low")
+	# Reported once: the session ending later does not print again.
+	var report: String = main.perf_report
+	main.session._end(SessionManager.EndReason.TIME_UP)
+	assert_str(main.perf_report).is_equal(report)
 
 
 func test_a_session_ending_early_still_reports_marked_incomplete() -> void:
@@ -101,3 +105,12 @@ func test_a_session_already_on_the_low_preset_gets_no_suggestion() -> void:
 	_finish_countdown(main)
 	_frames(main, 5.0, 30.0)
 	assert_bool(_toast(main).visible).is_false()
+
+
+func test_a_stall_is_not_measured_and_does_not_suggest_anything() -> void:
+	var main: Node3D = _main("?perf=1&quality=high&seed=1")
+	_finish_countdown(main)
+	# A hidden tab: one long frame while the per-second FPS still reads low.
+	main.track_performance(1.0, main.perf_config.probe_duration_s + main.perf_config.low_fps_sustain_s)
+	assert_bool(_toast(main).visible).is_false()
+	assert_str(main.perf_report).is_empty()

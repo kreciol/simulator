@@ -11,6 +11,8 @@ func test_values_match_the_spec() -> void:
 	assert_float(perf.low_fps_threshold).is_equal(30.0)
 	assert_float(perf.low_fps_sustain_s).is_greater(0.0)
 	assert_float(perf.toast_duration_s).is_greater(0.0)
+	# A frame at the threshold is still measured.
+	assert_float(perf.max_frame_s).is_greater(1.0 / perf.low_fps_threshold)
 
 
 func test_the_suggested_preset_exists() -> void:

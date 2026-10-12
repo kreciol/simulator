@@ -8,5 +8,6 @@ probe_duration_s = 60.0
 probe_percentile = 5.0
 low_fps_threshold = 30.0
 low_fps_sustain_s = 5.0
+max_frame_s = 0.5
 suggested_quality = &"low"
 toast_duration_s = 6.0

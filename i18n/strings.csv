@@ -1,4 +1,4 @@
 keys,pl
 HUD_SPEED_UNIT,km/h
 SESSION_ENDED,Koniec sesji
-TOAST_LOW_FPS,"Gra działa wolno na tym komputerze. Spróbuj niskiej jakości grafiki (quality=low)."
+TOAST_LOW_FPS,"Gra działa wolno na tym komputerze. Spróbuj niskiej jakości grafiki."

@@ -14,5 +14,8 @@ extends Resource
 @export var low_fps_sustain_s: float
 ## Quality preset the low-FPS notice suggests; a session already on it gets no notice.
 @export var suggested_quality: StringName
+## Frames longer than this are not measured: a stall such as a hidden browser tab is
+## not the game running slowly.
+@export var max_frame_s: float
 ## How long the low-FPS notice stays on screen.
 @export var toast_duration_s: float

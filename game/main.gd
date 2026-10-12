@@ -80,9 +80,10 @@ func _process(delta: float) -> void:
 
 
 ## Feeds one rendered frame's FPS to the probe and the low-FPS watch; only driving is
-## measured, so the countdown's warm-up and the frozen end screen do not count.
+## measured, so the countdown's warm-up and the frozen end screen do not count, and
+## neither does a stall (a frame over `PerfConfig.max_frame_s`, e.g. a hidden tab).
 func track_performance(fps: float, delta: float) -> void:
-	if session.state != SessionManager.State.DRIVING:
+	if session.state != SessionManager.State.DRIVING or delta > perf_config.max_frame_s:
 		return
 	if _low_fps_watch.add_sample(fps, delta):
 		_hud.show_toast(tr(&"TOAST_LOW_FPS"), perf_config.toast_duration_s)

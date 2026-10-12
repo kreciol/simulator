@@ -1,10 +1,12 @@
 class_name FpsProbe
 extends RefCounted
-## In-game FPS probe (spec Phase 5 step 2): fed one FPS sample per rendered frame of
+## In-game FPS probe (spec Phase 5 step 2): fed the FPS once per rendered frame of
 ## driving, it fills a window of `PerfConfig.probe_duration_s` and reports the average
 ## and a low percentile (the 5th), the numbers the §16 exit criterion is checked
-## against. Fed by the main scene from `Performance.TIME_FPS`; pure, so tests feed it
-## synthetic samples.
+## against. Every sample counts for the time its frame took, not once per frame:
+## `Performance.TIME_FPS` holds one value per second, so counting frames would let
+## fast seconds outweigh slow ones and flatter the result. Fed by the main scene; pure,
+## so tests feed it synthetic samples.
 
 var duration_s: float
 ## Percentile reported beside the average, 0–100.
@@ -12,7 +14,9 @@ var percentile: float
 ## Driving time sampled so far.
 var elapsed_s: float = 0.0
 
-var _samples: PackedFloat32Array = PackedFloat32Array()
+var _fps: PackedFloat32Array = PackedFloat32Array()
+## How long each sample's frame took, in step with `_fps`.
+var _weights: PackedFloat32Array = PackedFloat32Array()
 
 
 func _init(config: PerfConfig) -> void:
@@ -25,7 +29,8 @@ func _init(config: PerfConfig) -> void:
 func add_sample(fps: float, delta_s: float) -> void:
 	if is_complete():
 		return
-	_samples.append(fps)
+	_fps.append(fps)
+	_weights.append(delta_s)
 	elapsed_s += delta_s
 
 
@@ -34,20 +39,22 @@ func is_complete() -> bool:
 
 
 func sample_count() -> int:
-	return _samples.size()
+	return _fps.size()
 
 
+## Time-weighted mean FPS.
 func average_fps() -> float:
-	if _samples.is_empty():
+	if elapsed_s <= 0.0:
 		return 0.0
 	var total: float = 0.0
-	for fps: float in _samples:
-		total += fps
-	return total / _samples.size()
+	for i: int in _fps.size():
+		total += _fps[i] * _weights[i]
+	return total / elapsed_s
 
 
+## The FPS the drive ran at or below for `percentile`% of its time.
 func percentile_fps() -> float:
-	return nearest_rank(_samples, percentile)
+	return nearest_rank(_fps, _weights, percentile)
 
 
 ## One line for the console; marks a window the session ended before filling.
@@ -57,12 +64,23 @@ func report() -> String:
 			"" if is_complete() else " — incomplete, the session ended first"]
 
 
-## The `p`-th percentile (0–100) of `values` by the nearest-rank method: the smallest
-## value with at least p% of the values at or below it. 0 for no values.
-static func nearest_rank(values: PackedFloat32Array, p: float) -> float:
-	if values.is_empty():
+## The weighted `p`-th percentile (0–100) of `values` by the nearest-rank method: the
+## smallest value with at least p% of the total weight at or below it. 0 for no
+## values or no weight.
+static func nearest_rank(values: PackedFloat32Array, weights: PackedFloat32Array, p: float) -> float:
+	var total: float = 0.0
+	for weight: float in weights:
+		total += weight
+	if values.is_empty() or total <= 0.0:
 		return 0.0
-	var sorted: PackedFloat32Array = values.duplicate()
-	sorted.sort()
-	var rank: int = clampi(ceili(p / 100.0 * sorted.size()), 1, sorted.size())
-	return sorted[rank - 1]
+	var order: Array[int] = []
+	for i: int in values.size():
+		order.append(i)
+	order.sort_custom(func(a: int, b: int) -> bool: return values[a] < values[b])
+	var target: float = p / 100.0 * total
+	var covered: float = 0.0
+	for i: int in order:
+		covered += weights[i]
+		if covered >= target - SessionManager.TIME_EPSILON and weights[i] > 0.0:
+			return values[i]
+	return values[order[order.size() - 1]]

@@ -122,6 +122,8 @@ func _process(delta: float) -> void:
 
 ## Shows `text` for `duration_s` over the drive; it never takes input or pauses play.
 func show_toast(text: String, duration_s: float) -> void:
+	if duration_s <= 0.0:
+		return
 	toast_label.text = text
 	toast.visible = true
 	_toast_left_s = duration_s

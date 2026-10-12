@@ -47,7 +47,22 @@ func test_nearest_rank_percentile(p: float, expected: float, test_parameters: Ar
 		[100.0, 100.0],
 		]) -> void:
 	var values: PackedFloat32Array = PackedFloat32Array([100.0, 90.0, 80.0, 70.0, 60.0, 50.0, 40.0, 30.0, 20.0, 10.0])
-	assert_float(FpsProbe.nearest_rank(values, p)).is_equal(expected)
+	var weights: PackedFloat32Array = PackedFloat32Array()
+	weights.resize(values.size())
+	weights.fill(1.0)
+	assert_float(FpsProbe.nearest_rank(values, weights, p)).is_equal(expected)
+
+
+func test_slow_seconds_count_for_their_time_not_their_frames() -> void:
+	# `TIME_FPS` holds one value per second: 30 s at 36 FPS and 30 s at 22 FPS is
+	# 1740 frames in 60 s, 29 FPS — below the criterion, however many frames were fast.
+	var probe: FpsProbe = FpsProbe.new(_config)
+	_feed(probe, 36.0, 30.0, 1.0 / 36.0)
+	_feed(probe, 22.0, 30.0, 1.0 / 22.0)
+	assert_bool(probe.is_complete()).is_true()
+	assert_float(probe.average_fps()).is_equal_approx(29.0, 0.1)
+	# 5% of the time is in the slow half.
+	assert_float(probe.percentile_fps()).is_equal(22.0)
 
 
 func test_no_samples_report_zero() -> void:
