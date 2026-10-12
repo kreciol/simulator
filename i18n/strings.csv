@@ -35,9 +35,9 @@ SUMMARY_ALL_GOOD,Pozostałe zasady też były przestrzegane — tak trzymać.
 SUMMARY_EXAM_BELOW_PASS,Do zaliczenia zabrakło {missing} pkt — próg na tym poziomie to {pass} pkt.
 SUMMARY_ABORTED_COLLISION,Jazda zakończyła się kolizją — większy odstęp i spojrzenie w lusterko przed zmianą pasa dają czas na reakcję.
 SUMMARY_ABORTED_OFFROAD,"Jazda zakończyła się zjechaniem z drogi — zmiana pasa jest możliwa tylko wtedy, gdy obok jest kolejny pas."
-SUMMARY_RESPAWN_COLLISION,"Liczba kolizji z innym pojazdem: {count} — w trybie nauki jazda trwała dalej, ale na prawdziwej drodze każda z nich kończy podróż i może kogoś zranić."
-SUMMARY_RESPAWN_OFFROAD,"Liczba zjechań z drogi: {count} — w trybie nauki jazda trwała dalej, ale na prawdziwej drodze każde z nich grozi wypadkiem, a pas można zmienić tylko wtedy, gdy obok jest kolejny."
-SUMMARY_RESPAWN_BOTH,"Kolizje z innym pojazdem: {collisions}, zjechania z drogi: {offroad} — w trybie nauki jazda trwała dalej, ale na prawdziwej drodze każde z tych zdarzeń kończy podróż i może kogoś zranić."
+SUMMARY_RESPAWN_COLLISION,"Liczba kolizji z innym pojazdem: {count} — w trybie nauki jazda trwała dalej, ale na prawdziwej drodze każda taka kolizja kończy podróż i może kogoś zranić."
+SUMMARY_RESPAWN_OFFROAD,"Liczba zjechań z drogi: {count} — w trybie nauki jazda trwała dalej, ale na prawdziwej drodze każde zjechanie z drogi grozi wypadkiem."
+SUMMARY_RESPAWN_BOTH,"Kolizje z innym pojazdem: {collisions}, zjechania z drogi: {offroad} — w trybie nauki jazda trwała dalej, ale na prawdziwej drodze każde takie zdarzenie kończy podróż i może kogoś zranić."
 TIP_GAP,Licz minimalny odstęp w metrach jako połowę prędkości w km/h — przy 120 km/h to 60 m.
 TIP_LANE,"Po wyprzedzeniu włącz prawy kierunkowskaz i wróć na prawy pas, gdy tylko będzie wolny."
 TIP_SIGNAL,"Najpierw kierunkowskaz i lusterko, a zmiana pasa dopiero po chwili."

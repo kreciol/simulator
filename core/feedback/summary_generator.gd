@@ -151,6 +151,7 @@ func generate(event_log: EventLog, record: SessionRecord, exam_pass_score: float
 		summary.sentences.append(FeedbackLine.create(abort_sentence))
 	var collisions: int = 0
 	var offroad: int = 0
+	# An aborted session's sentence already names its cause; learn mode never aborts since #60.
 	if record.mode == SessionRecord.MODE_LEARN and abort_sentence == &"":
 		collisions = event_log.events_of_type(CollisionRule.TYPE_COLLISION).size()
 		offroad = event_log.events_of_type(CollisionRule.TYPE_OFFROAD).size()
