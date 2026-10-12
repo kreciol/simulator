@@ -59,7 +59,7 @@ Scoring stays a pure observer of `TrafficSim`.
 
 ### Phase 1: Continuous rewards
 
-- [ ] 1.1 Reward config, N2 right-lane and N3 gap-kept rules
+- [x] 1.1 Reward config, N2 right-lane and N3 gap-kept rules — 1b2cb63
 
 ### Phase 2: Lane-change reward
 
