@@ -199,6 +199,119 @@ func test_ai_cars_touching_each_other_do_not_end_the_session() -> void:
 	assert_int(_session.end_reason).is_equal(SessionManager.EndReason.NONE)
 
 
+func _left_with_signal() -> PlayerCommands:
+	var commands: PlayerCommands = PlayerCommands.new()
+	commands.lane_change = VehicleState.Dir.LEFT
+	commands.signal_toggle = VehicleState.Dir.LEFT
+	return commands
+
+
+func test_pause_mid_lane_change_freezes_sim_timer_and_animation() -> void:
+	# Issue #34: the sim, session timer and lane-change animation all freeze.
+	_start_driving()
+	_step(1, _left_with_signal())
+	_step(10, _accelerate())
+	var player: VehicleState = _session.player
+	assert_bool(player.lane_change_active).is_true()
+	var progress: float = player.lane_change_progress
+	var s_before: float = player.s
+	var speed_before: float = player.speed_mps
+	var sim_time: float = _session.sim.time_s
+	var elapsed: float = _session.elapsed_s
+	var logged: int = _session.sim.input_log.size()
+
+	_session.pause()
+	_step(_steps_for(30.0), _left_with_signal())
+	assert_bool(_session.paused).is_true()
+	assert_int(_session.state).is_equal(SessionManager.State.DRIVING)
+	assert_float(player.lane_change_progress).is_equal(progress)
+	assert_float(player.s).is_equal(s_before)
+	assert_float(player.speed_mps).is_equal(speed_before)
+	assert_int(player.signal_dir).is_equal(VehicleState.Dir.LEFT)
+	assert_float(_session.sim.time_s).is_equal(sim_time)
+	assert_float(_session.elapsed_s).is_equal(elapsed)
+	assert_int(_session.sim.input_log.size()).is_equal(logged)
+
+	_session.resume()
+	_step(1)
+	assert_float(player.lane_change_progress).is_greater(progress)
+	assert_float(_session.sim.time_s).is_equal_approx(sim_time + DT, 1e-9)
+	assert_float(_session.elapsed_s).is_equal_approx(elapsed + DT, 1e-9)
+
+
+func test_pause_during_the_countdown_freezes_it() -> void:
+	_step(30)
+	var left: float = _session.countdown_left_s()
+	_session.pause()
+	_step(_steps_for(10.0))
+	assert_int(_session.state).is_equal(SessionManager.State.INTRO)
+	assert_float(_session.countdown_left_s()).is_equal(left)
+	assert_float(_session.time_left_s()).is_equal(_config.session_length_s)
+
+	_session.resume()
+	_step(_steps_for(_config.countdown_s) - 30)
+	assert_int(_session.state).is_equal(SessionManager.State.DRIVING)
+
+
+func test_toggle_pause_pauses_then_resumes_with_one_signal_each() -> void:
+	var paused: Array[int] = [0]
+	var resumed: Array[int] = [0]
+	_session.session_paused.connect(func() -> void: paused[0] += 1)
+	_session.session_resumed.connect(func() -> void: resumed[0] += 1)
+	_session.toggle_pause()
+	_session.pause()
+	assert_bool(_session.paused).is_true()
+	_session.toggle_pause()
+	_session.resume()
+	assert_bool(_session.paused).is_false()
+	assert_int(paused[0]).is_equal(1)
+	assert_int(resumed[0]).is_equal(1)
+
+
+func test_window_focus_out_notification_pauses_the_session() -> void:
+	_start_driving()
+	_session.notification(Node.NOTIFICATION_WM_WINDOW_FOCUS_OUT)
+	assert_bool(_session.paused).is_true()
+
+
+func test_focus_out_notification_pauses_the_session() -> void:
+	_start_driving()
+	_session.notification(Node.NOTIFICATION_APPLICATION_FOCUS_OUT)
+	assert_bool(_session.paused).is_true()
+	# Focus coming back does not resume on its own: the player resumes on purpose.
+	_session.notification(Node.NOTIFICATION_APPLICATION_FOCUS_IN)
+	assert_bool(_session.paused).is_true()
+
+
+func test_resuming_after_a_long_absence_does_not_fast_forward() -> void:
+	# Negative case of issue #34: however long the tab was away, resuming continues
+	# from where the session stopped rather than catching up the lost time.
+	_start_driving()
+	var elapsed: float = _session.elapsed_s
+	var sim_time: float = _session.sim.time_s
+	_session.notification(Node.NOTIFICATION_APPLICATION_FOCUS_OUT)
+	_step(_steps_for(600.0))
+	_session.resume()
+	_step(1)
+	assert_float(_session.elapsed_s).is_equal_approx(elapsed + DT, 1e-9)
+	assert_float(_session.sim.time_s).is_equal_approx(sim_time + DT, 1e-9)
+	assert_int(_session.state).is_equal(SessionManager.State.DRIVING)
+
+
+func test_pause_after_the_end_is_ignored() -> void:
+	_step(_steps_for(_config.countdown_s + _config.session_length_s))
+	assert_int(_session.state).is_equal(SessionManager.State.ENDED)
+	_session.pause()
+	_session.notification(Node.NOTIFICATION_APPLICATION_FOCUS_OUT)
+	assert_bool(_session.paused).is_false()
+
+
+func test_setup_clears_a_previous_pause() -> void:
+	_session.pause()
+	_session.setup(load("res://config/road_profiles/motorway.tres") as RoadProfile, _config)
+	assert_bool(_session.paused).is_false()
+
+
 func test_the_mode_from_the_url_is_active(query: String, mode: StringName, exam: bool, test_parameters: Array = [
 		["?mode=learn", LaunchOptions.MODE_LEARN, false],
 		["?mode=exam", LaunchOptions.MODE_EXAM, true],

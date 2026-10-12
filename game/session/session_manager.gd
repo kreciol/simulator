@@ -4,10 +4,13 @@ extends Node
 ## `SimConfig.session_length_s` of driving, then the end. Owns the sim and is the only
 ## node that drives it; views and the HUD only read its state. In the exam the player
 ## colliding or leaving the road ends the session at once as aborted, with the cause
-## (requirements §9.2).
+## (requirements §9.2). The countdown and the drive can be paused (spec Edge Cases):
+## everything stands still until resumed, and losing window focus pauses on its own.
 
 signal session_started
 signal session_ended
+signal session_paused
+signal session_resumed
 
 enum State { INTRO, DRIVING, ENDED }
 ## Why the session ended; NONE until it has.
@@ -28,6 +31,11 @@ var end_reason: EndReason = EndReason.NONE
 var intro_elapsed_s: float = 0.0
 ## Session time driven so far; the timer starts when the intro ends.
 var elapsed_s: float = 0.0
+## While set, `step` does nothing: the sim, its lane-change animation and signals, the
+## countdown and the session timer stand still and commands are dropped. A flag rather
+## than a state because both the intro and the drive can be paused; `state` says
+## which one resumes.
+var paused: bool = false
 
 ## The player's collision or off-road seen during the current sim step; the session
 ## ends once the step is over.
@@ -57,13 +65,16 @@ func setup(road_profile: RoadProfile, sim_config: SimConfig, seed_value: int = 0
 	state = State.INTRO
 	end_reason = EndReason.NONE
 	_player_end_reason = EndReason.NONE
+	paused = false
 	intro_elapsed_s = 0.0
 	elapsed_s = 0.0
 
 
 ## Advances the session by one fixed step. The sim only runs while driving: during
-## the intro and after the end it is frozen and `commands` are dropped.
+## the intro, while paused and after the end it is frozen and `commands` are dropped.
 func step(dt: float, commands: PlayerCommands = null) -> void:
+	if paused:
+		return
 	match state:
 		State.INTRO:
 			intro_elapsed_s += dt
@@ -80,6 +91,28 @@ func step(dt: float, commands: PlayerCommands = null) -> void:
 				_end(EndReason.TIME_UP)
 
 
+## Pauses the countdown or the drive; does nothing once the session has ended.
+func pause() -> void:
+	if paused or state == State.ENDED:
+		return
+	paused = true
+	session_paused.emit()
+
+
+func resume() -> void:
+	if not paused:
+		return
+	paused = false
+	session_resumed.emit()
+
+
+func toggle_pause() -> void:
+	if paused:
+		resume()
+	else:
+		pause()
+
+
 func countdown_left_s() -> float:
 	if state != State.INTRO:
 		return 0.0
@@ -92,6 +125,12 @@ func time_left_s() -> float:
 	return maxf(0.0, sim.config.session_length_s - elapsed_s)
 
 
+func _notification(what: int) -> void:
+	# A hidden tab or a window in the background must not run the clock (§9.3). The
+	# player resumes on purpose rather than on focus returning. Platforms report focus
+	# loss as either notification (the web build through the window), so both pause.
+	if what == NOTIFICATION_APPLICATION_FOCUS_OUT or what == NOTIFICATION_WM_WINDOW_FOCUS_OUT:
+		pause()
 func is_exam() -> bool:
 	return mode == LaunchOptions.MODE_EXAM
 
