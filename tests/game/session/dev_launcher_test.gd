@@ -1,7 +1,7 @@
 extends GdUnitTestSuite
 ## Dev launcher: mode, profile, level and seed from URL params or user args, with
 ## defaults for missing or invalid values (issue #9 acceptance criteria, spec Phase 3
-## step 4); quality and mirrors the same way (issue #25).
+## step 4); quality and mirrors the same way (issue #25), and the FPS probe (issue #26).
 
 const RANDOM_SEED: int = 777
 
@@ -25,6 +25,7 @@ func _assert_defaults(options: LaunchOptions) -> void:
 	assert_bool(options.seed_given).is_false()
 	assert_str(options.quality.id).is_equal(_config.default_quality)
 	assert_bool(options.mirrors).is_equal(_config.default_mirrors)
+	assert_bool(options.perf).is_equal(_config.default_perf)
 
 
 func test_config_offers_both_profiles_and_four_levels() -> void:
@@ -45,6 +46,14 @@ func test_documented_defaults_are_high_quality_with_mirrors() -> void:
 	var options: LaunchOptions = _from_query("")
 	assert_str(options.quality.id).is_equal(&"high")
 	assert_bool(options.mirrors).is_true()
+
+
+func test_the_fps_probe_is_off_unless_asked_for() -> void:
+	# README "Dev launcher": no perf param → no probe.
+	assert_bool(_from_query("").perf).is_false()
+	assert_bool(_from_query("?perf=1").perf).is_true()
+	assert_bool(_from_query("?perf=0").perf).is_false()
+	assert_str(_from_query("?perf=1&level=4&seed=1").describe()).contains("perf=1")
 
 
 func test_all_params_are_used() -> void:
@@ -85,6 +94,9 @@ func test_invalid_values_fall_back_to_defaults(query: String, test_parameters: A
 		["?mirrors=2"],
 		["?mirrors=yes"],
 		["?mirrors="],
+		["?perf=2"],
+		["?perf=yes"],
+		["?perf="],
 		["?mode=race&profile=autobahn&level=9&seed=x"],
 		["?level&seed&=3&&=&profile"],
 		]) -> void:
@@ -116,7 +128,7 @@ func test_keys_and_values_are_case_insensitive_and_url_decoded() -> void:
 
 
 func test_unknown_keys_are_ignored_and_a_repeated_key_keeps_its_last_value() -> void:
-	var options: LaunchOptions = _from_query("?perf=1&level=2&level=4")
+	var options: LaunchOptions = _from_query("?turbo=1&level=2&level=4")
 	assert_int(options.level).is_equal(4)
 
 

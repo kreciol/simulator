@@ -9,6 +9,7 @@ extends Node3D
 @export var launcher_config: DevLauncherConfig
 @export var sim_config: SimConfig
 @export var view_config: ViewConfig
+@export var perf_config: PerfConfig
 
 ## Set before the scene enters the tree to skip the dev launcher (tests).
 var launch_options: LaunchOptions
