@@ -48,9 +48,11 @@ func test_observe_and_finish_emit_each_completed_event_once() -> void:
 	world.drive(1.0)
 	world.drive(3.0, commands)
 	world.scoring.finish()
-	# The K3 event for the unsignalled return and the K2 segment closed by it.
-	assert_int(emitted.size()).is_equal(2)
+	# Every logged event, each exactly once: instant events and every closed segment.
+	assert_int(emitted.size()).is_equal(world.scoring.event_log.events.size())
 	assert_array(emitted).contains_exactly_in_any_order(world.scoring.event_log.events)
+	assert_array(world.scoring.event_log.events_of_type(SignalRule.TYPE_NONE)).has_size(1)
+	assert_array(world.scoring.event_log.events_of_type(KeepRightRule.TYPE)).has_size(1)
 
 
 func test_finish_closes_open_segments() -> void:
@@ -58,8 +60,9 @@ func test_finish_closes_open_segments() -> void:
 	world.drive(1.0)
 	assert_bool(world.scoring.event_log.is_open(KeepRightRule.KEY)).is_true()
 	var completed: Array[ScoreEvent] = world.scoring.finish()
-	assert_int(completed.size()).is_equal(1)
+	assert_array(completed).contains(world.scoring.event_log.events_of_type(KeepRightRule.TYPE))
 	assert_bool(world.scoring.event_log.is_open(KeepRightRule.KEY)).is_false()
+	assert_array(world.scoring.event_log.close_all()).is_empty()
 
 
 func test_nothing_is_scored_off_the_road() -> void:

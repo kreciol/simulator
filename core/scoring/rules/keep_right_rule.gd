@@ -59,11 +59,17 @@ func applies(player: VehicleState) -> bool:
 ## nothing within the distance the player would close on the right-lane leader in
 ## `k2_return_horizon_s` (at least `k2_min_look_ahead_m`).
 func is_right_lane_free(player: VehicleState) -> bool:
-	var lanes: LaneIndex = _sim.lanes
+	return right_lane_free(player, _sim, _config)
+
+
+## `is_right_lane_free` for any sim and config; N1 uses the same definition to tell a
+## justified return right.
+static func right_lane_free(player: VehicleState, sim: TrafficSim, config: ScoringConfig) -> bool:
+	var lanes: LaneIndex = sim.lanes
 	var right_lane: int = player.lane - 1
 	var leader: VehicleState = LaneQuery.leader_in_lane(lanes, right_lane, player.s, player)
 	var closing_mps: float = 0.0 if leader == null else player.speed_mps - leader.speed_mps
 	var half_length_m: float = player.length_m / 2.0
-	var look_ahead_m: float = half_length_m + maxf(_config.k2_min_look_ahead_m, closing_mps * _config.k2_return_horizon_s)
-	var look_behind_m: float = half_length_m + _config.k2_look_behind_m
+	var look_ahead_m: float = half_length_m + maxf(config.k2_min_look_ahead_m, closing_mps * config.k2_return_horizon_s)
+	var look_behind_m: float = half_length_m + config.k2_look_behind_m
 	return LaneQuery.is_lane_free(lanes, right_lane, player.s, look_ahead_m, look_behind_m, player)

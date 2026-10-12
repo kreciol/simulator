@@ -10,13 +10,16 @@ var scoring: ScoringSystem
 var player: VehicleState
 
 
-func _init(player_lane: int, player_speed_kmh: float) -> void:
+## `scoring_config` overrides `scoring.tres` (e.g. a duplicate with one value changed).
+func _init(player_lane: int, player_speed_kmh: float, scoring_config: ScoringConfig = null) -> void:
 	sim = TrafficSim.new(
 			load("res://config/road_profiles/motorway.tres") as RoadProfile,
 			load("res://config/sim_config.tres") as SimConfig)
 	player = sim.add_vehicle(0.0, player_lane, kmh(player_speed_kmh))
 	sim.player = player
-	scoring = ScoringSystem.new(sim, load("res://config/scoring.tres") as ScoringConfig)
+	if scoring_config == null:
+		scoring_config = load("res://config/scoring.tres") as ScoringConfig
+	scoring = ScoringSystem.new(sim, scoring_config)
 
 
 static func kmh(speed_kmh: float) -> float:
@@ -40,3 +43,15 @@ func drive(seconds: float, commands: PlayerCommands = null) -> Array[ScoreEvent]
 
 func total_for(category: StringName) -> float:
 	return scoring.event_log.total_for(category)
+
+
+func total_of_type(type: StringName) -> float:
+	var sum: float = 0.0
+	for event: ScoreEvent in scoring.event_log.events_of_type(type):
+		sum += event.points
+	return sum
+
+
+## A copy of `scoring.tres` to change values in, without touching the cached resource.
+static func scoring_config_copy() -> ScoringConfig:
+	return (load("res://config/scoring.tres") as ScoringConfig).duplicate() as ScoringConfig
