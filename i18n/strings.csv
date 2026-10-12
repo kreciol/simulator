@@ -54,3 +54,10 @@ HISTORY_CORRUPT_RECOVERED,"Zapisana historia była uszkodzona. Zachowaliśmy jej
 TOAST_LOW_FPS,"Gra działa wolno na tym komputerze. Spróbuj niskiej jakości grafiki."
 HUD_SCORE,Punkty
 HUD_BLIND_SPOT,Martwe pole
+COMPARE_FIRST,"To pierwszy zapisany przejazd w tym trybie, na tej drodze i tym poziomie ruchu."
+COMPARE_PREVIOUS_UP,Poprzednio: {points} pkt — tym razem o {change} pkt więcej.
+COMPARE_PREVIOUS_DOWN,Poprzednio: {points} pkt — tym razem o {change} pkt mniej.
+COMPARE_PREVIOUS_SAME,Poprzednio: {points} pkt — tym razem tyle samo.
+COMPARE_NEW_BEST,Nowy rekord w tej kombinacji — dotychczasowy wynosił {points} pkt.
+COMPARE_FIRST_BEST,To pierwszy ukończony przejazd w tej kombinacji i od razu rekord.
+COMPARE_BEST,Rekord w tej kombinacji: {points} pkt.
