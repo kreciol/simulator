@@ -52,9 +52,9 @@ Saved results show the player their progress (requirements §11.3, §13; spec Ph
 
 ### Phase 2: Screens
 
-- [ ] 2.1 Comparison on the end-of-session summary
-- [ ] 2.2 History screen with list, bests, trend and its states
-- [ ] 2.3 Dev launcher screen=history opens the history screen
+- [x] 2.1 Comparison on the end-of-session summary — 445d85a
+- [x] 2.2 History screen with list, bests, trend and its states — 5b42911
+- [x] 2.3 Dev launcher screen=history opens the history screen — 2b9137f
 
 ### Phase 3: Docs
 
