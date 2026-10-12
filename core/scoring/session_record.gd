@@ -75,3 +75,34 @@ func to_dict() -> Dictionary:
 		},
 		"exam_passed": exam_passed,
 	}
+
+
+## Reads back a `to_dict` shape, e.g. parsed from JSON, where every number is a float.
+## Missing fields keep their defaults.
+static func from_dict(data: Dictionary) -> SessionRecord:
+	var record: SessionRecord = SessionRecord.new()
+	record.id = str(data.get("id", ""))
+	record.started_at = str(data.get("started_at", ""))
+	record.app_version = str(data.get("app_version", ""))
+	record.mode = StringName(str(data.get("mode", "")))
+	record.road_profile = StringName(str(data.get("road_profile", "")))
+	record.difficulty = int(data.get("difficulty", 0))
+	record.seed_value = int(data.get("seed", 0))
+	record.duration_s = float(data.get("duration_s", 0.0))
+	record.status = StringName(str(data.get("status", STATUS_COMPLETED)))
+	record.score_total = float(data.get("score_total", 0.0))
+	var categories: Variant = data.get("score_by_category", {})
+	if categories is Dictionary:
+		for category: StringName in SCORED_CATEGORIES:
+			record.score_by_category[category] = float((categories as Dictionary).get(String(category), 0.0))
+	var stats: Variant = data.get("stats", {})
+	if stats is Dictionary:
+		var values: Dictionary = stats as Dictionary
+		record.lane_changes = int(values.get("lane_changes", 0))
+		record.lane_changes_signaled = int(values.get("lane_changes_signaled", 0))
+		record.time_left_lane_unjustified_s = float(values.get("time_left_lane_unjustified_s", 0.0))
+		record.time_gap_below_min_s = float(values.get("time_gap_below_min_s", 0.0))
+		record.min_gap_ratio = float(values.get("min_gap_ratio", 1.0))
+	var passed: Variant = data.get("exam_passed")
+	record.exam_passed = bool(passed) if passed is bool else null
+	return record
