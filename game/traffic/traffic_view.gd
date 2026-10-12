@@ -30,7 +30,9 @@ func setup(traffic_sim: TrafficSim, view_config: ViewConfig) -> void:
 
 func update() -> void:
 	var player_s: float = sim.player.s
-	for vehicle_view: VehicleView in _views.values():
+	# Iterates the keys in place: `values()` would allocate an array every frame.
+	for vehicle_id: int in _views:
+		var vehicle_view: VehicleView = _views[vehicle_id]
 		vehicle_view.update(player_s, sim.lateral_position(vehicle_view.vehicle), sim.time_s)
 
 
