@@ -57,6 +57,6 @@ Every finished session is saved to `user://history.json` (IndexedDB on web) and 
 
 ### Phase 2: Saving finished sessions
 
-- [ ] 2.1 SessionManager scoring and record at session end
-- [ ] 2.2 Save on session end and end-screen save status
-- [ ] 2.3 AGENTS.md status and routing
+- [x] 2.1 SessionManager scoring and record at session end — 1b4db2b
+- [x] 2.2 Save on session end and end-screen save status — 4b22f39
+- [x] 2.3 AGENTS.md status and routing — 8ad341c
