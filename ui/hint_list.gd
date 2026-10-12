@@ -9,8 +9,8 @@ extends VBoxContainer
 const SEPARATION: int = 8
 const OUTLINE_SIZE: int = 6
 const FONT_SIZE: int = 24
-## Wrap width of a hint's text; the longest hint takes two lines.
-const TEXT_WIDTH: float = 620.0
+## Wrap width of a hint's text: every gap hint fits one line, the longest hint takes two.
+const TEXT_WIDTH: float = 720.0
 const BACKDROP: Color = Color(0.0, 0.0, 0.0, 0.6)
 const PADDING: int = 10
 
@@ -83,4 +83,4 @@ func show_hints(hints: Array[Hint]) -> void:
 		# As wide as the text, wrapping only beyond `TEXT_WIDTH`.
 		var font: Font = label.get_theme_font(&"font")
 		var text_width: float = font.get_string_size(label.text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, FONT_SIZE).x
-		label.custom_minimum_size = Vector2(minf(ceilf(text_width) + OUTLINE_SIZE, TEXT_WIDTH), 0.0)
+		label.custom_minimum_size = Vector2(minf(ceilf(text_width) + 2.0 * OUTLINE_SIZE, TEXT_WIDTH), 0.0)
