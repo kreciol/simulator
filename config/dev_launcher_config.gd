@@ -13,6 +13,12 @@ extends Resource
 @export var levels: Array[DifficultyLevel]
 ## Level used when the `level` param is missing or out of range.
 @export var default_level: int
+## Graphics quality presets selectable by their `id` (`low`, `high`).
+@export var quality_presets: Array[QualityPreset]
+## Preset used when the `quality` param is missing or unknown.
+@export var default_quality: StringName
+## Whether the mirrors are shown when the `mirrors` param is missing or invalid.
+@export var default_mirrors: bool
 
 
 ## The profile with this id, or null when there is none.
@@ -20,6 +26,14 @@ func find_profile(id: StringName) -> RoadProfile:
 	for profile: RoadProfile in profiles:
 		if profile.id == id:
 			return profile
+	return null
+
+
+## The quality preset with this id, or null when there is none.
+func find_quality(id: StringName) -> QualityPreset:
+	for quality: QualityPreset in quality_presets:
+		if quality.id == id:
+			return quality
 	return null
 
 
