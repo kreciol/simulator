@@ -8,8 +8,10 @@ extends CanvasLayer
 ## suggestion). In learn mode only (Q10, Q11) it also shows the live score and, under
 ## each side mirror, a blind-spot warning (icon and text, never colour alone) while
 ## driving with a vehicle in that side's blind spot (`LaneQuery.blind_spot_occupied`) —
-## shown under where the mirror sits even with mirrors off. The score stays up through
-## the countdown, a respawn and under the end screen. Only reads session state.
+## shown under where the mirror sits even with mirrors off — and, under the rear-view
+## mirror, the hints of the session's `HintEngine` (requirements §11.2) while driving.
+## The score stays up through the countdown, a respawn and under the end screen. Only
+## reads session state.
 ## Placeholder styling until the UI theme lands (Phase 10).
 
 const MARGIN: float = 24.0
@@ -38,6 +40,8 @@ const BLIND_SPOT_ICON_COLOR: Color = Color(1.0, 0.75, 0.1)
 const BLIND_SPOT_MARK_FONT_SIZE: int = 26
 ## Space between a side mirror's lower edge and its blind-spot warning.
 const BLIND_SPOT_GAP: float = 8.0
+## Space between the rear-view mirror's lower edge and the hints.
+const HINTS_GAP: float = 12.0
 ## Translation key of the cause shown for each aborted session status.
 const END_CAUSES: Dictionary[StringName, StringName] = {
 	SessionRecord.STATUS_ABORTED_COLLISION: &"END_CAUSE_COLLISION",
@@ -97,6 +101,8 @@ var score_panel: VBoxContainer
 var score_label: Label
 var blind_spot_left: VBoxContainer
 var blind_spot_right: VBoxContainer
+## Learn mode only: the hints on screen, under the rear-view mirror.
+var hint_list: HintList
 ## Whether the finished session was saved, or why not; hidden until it is known.
 var save_status_label: Label
 var toast: PanelContainer
@@ -173,6 +179,16 @@ func setup(view_config: ViewConfig) -> void:
 	root.add_child(blind_spot_left)
 	blind_spot_right = _blind_spot("BlindSpotRight", view.right_mirror_rect())
 	root.add_child(blind_spot_right)
+	hint_list = HintList.new()
+	hint_list.visible = false
+	root.add_child(hint_list)
+	hint_list.anchor_left = 0.5
+	hint_list.anchor_right = 0.5
+	hint_list.anchor_top = view.rear_mirror_rect.end.y
+	hint_list.anchor_bottom = view.rear_mirror_rect.end.y
+	hint_list.offset_top = HINTS_GAP
+	hint_list.offset_bottom = HINTS_GAP
+	hint_list.grow_horizontal = Control.GROW_DIRECTION_BOTH
 
 	countdown_label = _centered_label("Countdown", COUNTDOWN_FONT_SIZE)
 	root.add_child(countdown_label)
@@ -274,6 +290,12 @@ func update(session: SessionManager) -> void:
 			sim.lanes, player, VehicleState.Dir.LEFT, view.blind_spot_ahead_m, view.blind_spot_behind_m)
 	blind_spot_right.visible = driving and LaneQuery.blind_spot_occupied(
 			sim.lanes, player, VehicleState.Dir.RIGHT, view.blind_spot_ahead_m, view.blind_spot_behind_m)
+	# The exam has no hint engine; hints wait out the countdown, a respawn and a pause.
+	hint_list.visible = driving and session.hints != null
+	if hint_list.visible:
+		if hint_list.rows.is_empty():
+			hint_list.setup(session.hints.config.hint_max_on_screen)
+		hint_list.show_hints(session.hints.hints)
 
 	paused_screen.visible = session.paused
 	countdown_label.visible = session.state == SessionManager.State.INTRO and not session.paused
