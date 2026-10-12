@@ -40,16 +40,18 @@ In learn mode the player sees the live score and, by each side mirror, an icon w
 
 ## Progress
 
+PR: #59
+
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: Blind-spot query
 
-- [ ] 1.1 Blind-spot query and zone params
+- [x] 1.1 Blind-spot query and zone params — ceb28e3
 
 ### Phase 2: Live score in the session
 
-- [ ] 2.1 Session owns the scoring system
+- [x] 2.1 Session owns the scoring system — 87e1908
 
 ### Phase 3: Learn-only HUD
 
-- [ ] 3.1 Score box and blind-spot icons in learn mode only
+- [x] 3.1 Score box and blind-spot icons in learn mode only — b1b1e64
