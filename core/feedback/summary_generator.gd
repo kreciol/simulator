@@ -20,6 +20,11 @@ extends RefCounted
 ## when there is nothing of that, a sentence saying the rest went well: always
 ## `MIN_SENTENCES`–`MAX_SENTENCES`. The tip is the habit for the top area, else for
 ## the abort cause, else a next step that fits the mode.
+##
+## A learn session that went on after K4 respawns (issue #63) is still `completed`, and
+## K4's category is not a rated one, so the respawns get their own sentence with the
+## counts in place of an abort cause, and the tip is the habit for the more frequent
+## cause (a tie goes to the collision), ahead of the top area's.
 
 ## Requirements §11.3: one strength and one or two areas, in 2–4 sentences.
 const MAX_IMPROVEMENTS: int = 2
@@ -35,6 +40,11 @@ const EXAM_BELOW_PASS: StringName = &"SUMMARY_EXAM_BELOW_PASS"
 const TIP_GENERAL: StringName = &"TIP_GENERAL"
 const TIP_GENERAL_EXAM: StringName = &"TIP_GENERAL_EXAM"
 const TIP_EXAM_POINTS: StringName = &"TIP_EXAM_POINTS"
+const RESPAWN_COLLISION: StringName = &"SUMMARY_RESPAWN_COLLISION"
+const RESPAWN_OFFROAD: StringName = &"SUMMARY_RESPAWN_OFFROAD"
+const RESPAWN_BOTH: StringName = &"SUMMARY_RESPAWN_BOTH"
+const TIP_COLLISION: StringName = &"TIP_COLLISION"
+const TIP_OFFROAD: StringName = &"TIP_OFFROAD"
 ## S1 is the only rule that can be switched off (Q4).
 const SPEED: StringName = &"speed"
 
@@ -139,10 +149,24 @@ func generate(event_log: EventLog, record: SessionRecord, exam_pass_score: float
 	var abort_sentence: StringName = ABORT_SENTENCES.get(record.status, &"")
 	if abort_sentence != &"":
 		summary.sentences.append(FeedbackLine.create(abort_sentence))
+	var collisions: int = 0
+	var offroad: int = 0
+	if record.mode == SessionRecord.MODE_LEARN and abort_sentence == &"":
+		collisions = event_log.events_of_type(CollisionRule.TYPE_COLLISION).size()
+		offroad = event_log.events_of_type(CollisionRule.TYPE_OFFROAD).size()
+	if collisions > 0 and offroad > 0:
+		summary.sentences.append(FeedbackLine.create(RESPAWN_BOTH,
+				{"collisions": collisions, "offroad": offroad}))
+	elif collisions > 0:
+		summary.sentences.append(FeedbackLine.create(RESPAWN_COLLISION, {"count": collisions}))
+	elif offroad > 0:
+		summary.sentences.append(FeedbackLine.create(RESPAWN_OFFROAD, {"count": offroad}))
 	if summary.sentences.size() < MIN_SENTENCES:
 		summary.sentences.append(FeedbackLine.create(ALL_GOOD))
 
-	if not summary.improvements.is_empty():
+	if collisions > 0 or offroad > 0:
+		summary.tip = FeedbackLine.create(TIP_COLLISION if collisions >= offroad else TIP_OFFROAD)
+	elif not summary.improvements.is_empty():
 		summary.tip = FeedbackLine.create(TIPS[summary.improvements[0]])
 	elif abort_sentence != &"":
 		summary.tip = FeedbackLine.create(ABORT_TIPS[record.status])

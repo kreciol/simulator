@@ -278,6 +278,63 @@ func test_tip_targets_the_top_area_then_the_cause_then_a_next_step(gap_s: float,
 	assert_str(summary.tip.key).is_equal(tip)
 
 
+# Learn-mode respawns (issue #63)
+
+## Adds K4 events to a finished log, as a learn session that respawned the player
+## logs them: the session still ends `completed`.
+func _with_k4(event_log: EventLog, collisions: int, offroad: int) -> EventLog:
+	for i: int in collisions:
+		event_log.add_instant(55.0 + i, CollisionRule.TYPE_COLLISION, CollisionRule.CATEGORY, -50.0)
+	for i: int in offroad:
+		event_log.add_instant(57.0 + i, CollisionRule.TYPE_OFFROAD, CollisionRule.CATEGORY, -50.0)
+	return event_log
+
+
+func test_respawns_are_named_with_their_count_and_tip(collisions: int, offroad: int,
+		key: StringName, args: Dictionary, tip: StringName, test_parameters: Array = [
+		[2, 0, &"SUMMARY_RESPAWN_COLLISION", {"count": 2}, &"TIP_COLLISION"],
+		[0, 1, &"SUMMARY_RESPAWN_OFFROAD", {"count": 1}, &"TIP_OFFROAD"],
+		[1, 2, &"SUMMARY_RESPAWN_BOTH", {"collisions": 1, "offroad": 2}, &"TIP_OFFROAD"],
+		[2, 1, &"SUMMARY_RESPAWN_BOTH", {"collisions": 2, "offroad": 1}, &"TIP_COLLISION"],
+		[1, 1, &"SUMMARY_RESPAWN_BOTH", {"collisions": 1, "offroad": 1}, &"TIP_COLLISION"],
+		]) -> void:
+	var summary: Summary = _generate(_with_k4(_log(), collisions, offroad))
+	assert_str(summary.status_key).is_equal(&"SUMMARY_STATUS_COMPLETED")
+	# The respawn sentence takes the place of "the rest went well".
+	assert_array(_keys(summary.sentences)).is_equal([&"SUMMARY_STRENGTH_GAP", key])
+	assert_dict(summary.sentences[1].args).is_equal(args)
+	assert_str(summary.tip.key).is_equal(tip)
+
+
+func test_respawn_follows_the_areas_and_its_tip_comes_first() -> void:
+	# Penalties: gap 12, lane 6, signal 10, speed 0 — and one crash.
+	var summary: Summary = _generate(_with_k4(_log(6.0, 3.0, 0, 1), 1, 0))
+	assert_array(_keys(summary.sentences)).is_equal([&"SUMMARY_STRENGTH_SPEED",
+			&"SUMMARY_IMPROVE_GAP", &"SUMMARY_IMPROVE_SIGNAL", &"SUMMARY_RESPAWN_COLLISION"])
+	assert_int(summary.sentences.size()).is_less_equal(SummaryGenerator.MAX_SENTENCES)
+	assert_str(summary.tip.key).is_equal(&"TIP_COLLISION")
+
+
+func test_all_good_is_never_said_after_a_k4(mode: StringName, status: StringName,
+		test_parameters: Array = [
+		[SessionRecord.MODE_LEARN, SessionRecord.STATUS_COMPLETED],
+		[SessionRecord.MODE_LEARN, SessionRecord.STATUS_ABORTED_COLLISION],
+		[SessionRecord.MODE_EXAM, SessionRecord.STATUS_ABORTED_COLLISION],
+		]) -> void:
+	var summary: Summary = _generate(_with_k4(_log(), 1, 0), mode, status)
+	assert_array(_keys(summary.sentences)).not_contains([&"SUMMARY_ALL_GOOD"])
+
+
+func test_an_aborted_session_names_its_cause_once(mode: StringName, test_parameters: Array = [
+		[SessionRecord.MODE_LEARN],
+		[SessionRecord.MODE_EXAM],
+		]) -> void:
+	# The abort sentence already explains the crash; no respawn line on top of it.
+	var summary: Summary = _generate(_with_k4(_log(), 1, 0), mode, SessionRecord.STATUS_ABORTED_COLLISION)
+	assert_array(_keys(summary.sentences)).is_equal([&"SUMMARY_STRENGTH_GAP", &"SUMMARY_ABORTED_COLLISION"])
+	assert_str(summary.tip.key).is_equal(&"TIP_COLLISION")
+
+
 # Purity
 
 func test_generating_leaves_the_log_and_record_unchanged() -> void:
