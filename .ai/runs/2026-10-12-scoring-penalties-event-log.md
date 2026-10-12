@@ -50,5 +50,5 @@ The three core motorway habits are judged: following too closely (K1), staying i
 ### Phase 2: Penalty rules
 
 - [x] 2.1 ScoringSystem and K1 gap rule — 3a6e742
-- [ ] 2.2 K2 keep-right rule with grace period
+- [x] 2.2 K2 keep-right rule with grace period — cbf3474
 - [ ] 2.3 K3 signal rule, observer-only check, docs
