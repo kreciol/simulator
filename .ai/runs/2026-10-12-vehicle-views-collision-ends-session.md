@@ -46,8 +46,8 @@ The player sees the AI traffic: cars, vans/SUVs and trucks in several colours, b
 
 ### Phase 1: Traffic and the collision outcome in the session
 
-- [ ] 1.1 Difficulty levels reach the session and the spawner runs in it
-- [ ] 1.2 Player collision or off-road ends the session
+- [x] 1.1 Difficulty levels reach the session and the spawner runs in it — 4a0af5f
+- [x] 1.2 Player collision or off-road ends the session — c0b2650
 
 ### Phase 2: Vehicle views
 
