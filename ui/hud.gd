@@ -3,8 +3,8 @@ extends CanvasLayer
 ## Driving HUD (requirements §5.3): speed, the road's limit, blinking signal arrows and
 ## the session time left, plus the 3-2-1 countdown, the pause screen and the plain
 ## end-of-session screen with the cause of an aborted session (placeholder until the
-## Phase 8 summary). Only reads session state. Placeholder styling until the UI theme
-## lands (Phase 10).
+## Phase 8 summary), and a timed, non-blocking notice (the low-FPS suggestion). Only
+## reads session state. Placeholder styling until the UI theme lands (Phase 10).
 
 const MARGIN: float = 24.0
 const OUTLINE_SIZE: int = 8
@@ -24,6 +24,11 @@ const END_CAUSES: Dictionary[StringName, StringName] = {
 	SessionRecord.STATUS_ABORTED_COLLISION: &"END_CAUSE_COLLISION",
 	SessionRecord.STATUS_ABORTED_OFFROAD: &"END_CAUSE_OFFROAD",
 }
+const TOAST_FONT_SIZE: int = 26
+## The notice sits under the time left.
+const TOAST_TOP: float = 2.0 * MARGIN + 1.5 * TIME_FONT_SIZE
+const TOAST_BACKDROP: Color = Color(0.0, 0.0, 0.0, 0.6)
+const TOAST_PADDING: int = 12
 ## Round limit sign: white disc with a red ring, as on Polish B-33 signs.
 const LIMIT_SIGN_SIZE: float = 76.0
 const LIMIT_RING_WIDTH: int = 9
@@ -54,6 +59,11 @@ var ended_label: Label
 var ended_cause_label: Label
 ## Whether the finished session was saved, or why not; hidden until it is known.
 var save_status_label: Label
+var toast: PanelContainer
+var toast_label: Label
+
+## Time the notice stays on screen; it hides at 0.
+var _toast_left_s: float = 0.0
 
 
 func setup(view_config: ViewConfig) -> void:
@@ -137,6 +147,28 @@ func setup(view_config: ViewConfig) -> void:
 	save_status_label.visible = false
 	ended_notice.add_child(save_status_label)
 
+	toast = _toast()
+	root.add_child(toast)
+	toast.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP, Control.PRESET_MODE_MINSIZE, int(TOAST_TOP))
+	toast.grow_horizontal = Control.GROW_DIRECTION_BOTH
+
+
+func _process(delta: float) -> void:
+	if _toast_left_s <= 0.0:
+		return
+	_toast_left_s -= delta
+	if _toast_left_s <= 0.0:
+		toast.visible = false
+
+
+## Shows `text` for `duration_s` over the drive; it never takes input or pauses play.
+func show_toast(text: String, duration_s: float) -> void:
+	if duration_s <= 0.0:
+		return
+	toast_label.text = text
+	toast.visible = true
+	_toast_left_s = duration_s
+
 
 func update(session: SessionManager) -> void:
 	var sim: TrafficSim = session.sim
@@ -210,6 +242,22 @@ func _centered_label(node_name: String, font_size: int) -> Label:
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	label.visible = false
 	return label
+
+
+func _toast() -> PanelContainer:
+	var panel: PanelContainer = PanelContainer.new()
+	panel.name = "Toast"
+	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var style: StyleBoxFlat = StyleBoxFlat.new()
+	style.bg_color = TOAST_BACKDROP
+	style.set_content_margin_all(TOAST_PADDING)
+	style.set_corner_radius_all(TOAST_PADDING)
+	panel.add_theme_stylebox_override("panel", style)
+	toast_label = _label("ToastText", TOAST_FONT_SIZE)
+	toast_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	panel.add_child(toast_label)
+	panel.visible = false
+	return panel
 
 
 ## Full-screen dimmed backdrop, hidden until its notice is due.

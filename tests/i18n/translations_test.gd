@@ -19,5 +19,6 @@ func test_hud_strings_are_translated_to_polish(key: StringName, polish: String, 
 		[&"SAVE_UNAVAILABLE", "Tym razem wyniku nie zapisaliśmy: pamięć przeglądarki jest niedostępna (np. w trybie prywatnym). Możesz dalej ćwiczyć, tylko historia się nie zapisze."],
 		[&"SAVE_READ_ONLY", "Twoja historia pochodzi z nowszej wersji gry, więc nie dopisujemy do niej wyników, żeby jej nie uszkodzić."],
 		[&"HISTORY_CORRUPT_RECOVERED", "Zapisana historia była uszkodzona. Zachowaliśmy jej kopię i zaczęliśmy nową."],
+		[&"TOAST_LOW_FPS", "Gra działa wolno na tym komputerze. Spróbuj niskiej jakości grafiki."],
 		]) -> void:
 	assert_str(TranslationServer.translate(key)).is_equal(polish)
