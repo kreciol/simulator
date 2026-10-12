@@ -63,7 +63,7 @@ Scoring stays a pure observer of `TrafficSim`.
 
 ### Phase 2: Lane-change reward
 
-- [ ] 2.1 N1 lane-change rule with anti-farming
+- [x] 2.1 N1 lane-change rule with anti-farming — ab9a7ee
 
 ### Phase 3: Speeding, collisions, total
 
