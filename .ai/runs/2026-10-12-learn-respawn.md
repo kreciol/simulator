@@ -44,18 +44,20 @@ In learn mode a mistake teaches instead of ending the session: a player collisio
 
 ## Progress
 
+PR: #60
+
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: Respawn in the simulation core
 
-- [ ] 1.1 TrafficSim.place_vehicle, Respawn and SimConfig params
-- [ ] 1.2 ScoringSystem.restart_after_respawn
+- [x] 1.1 TrafficSim.place_vehicle, Respawn and SimConfig params — fd69785
+- [x] 1.2 ScoringSystem.restart_after_respawn — 34c6b24
 
 ### Phase 2: Session and HUD
 
-- [ ] 2.1 SessionManager scoring wiring and RESPAWNING state
-- [ ] 2.2 HUD fade and message, strings, main scene scoring config
+- [x] 2.1 SessionManager scoring wiring and RESPAWNING state — f005470
+- [x] 2.2 HUD fade and message, strings, main scene scoring config — 22e7358
 
 ### Phase 3: Docs
 
-- [ ] 3.1 AGENTS.md status and routing rows
+- [x] 3.1 AGENTS.md status and routing rows — efdae08
