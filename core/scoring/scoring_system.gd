@@ -3,7 +3,7 @@ extends RefCounted
 ## Scores the player's driving (requirements §8, spec Architecture: Scoring). Observes a
 ## `TrafficSim` and never mutates it: call `observe(dt)` after every `sim.step(dt)`.
 ## Each rule is a small object writing to one shared `EventLog`; categories are &"gap"
-## (K1, N3), &"lane" (K2, N1, N2) and &"signal" (K3).
+## (K1, N3), &"lane" (K2, N1, N2), &"signal" (K3), &"speed" (S1) and &"collision" (K4).
 
 ## Emitted for every event completed during `observe` or `finish`: instant events and
 ## closed segments, in completion order.
@@ -19,6 +19,8 @@ var signal_rule: SignalRule
 var right_lane_rule: RightLaneRule
 var gap_kept_rule: GapKeptRule
 var lane_change_rule: LaneChangeRule
+var speed_rule: SpeedRule
+var collision_rule: CollisionRule
 
 
 func _init(observed_sim: TrafficSim, scoring_config: ScoringConfig) -> void:
@@ -30,6 +32,8 @@ func _init(observed_sim: TrafficSim, scoring_config: ScoringConfig) -> void:
 	right_lane_rule = RightLaneRule.new(sim, config, event_log)
 	gap_kept_rule = GapKeptRule.new(sim, config, event_log)
 	lane_change_rule = LaneChangeRule.new(sim, config, event_log)
+	speed_rule = SpeedRule.new(sim, config, event_log)
+	collision_rule = CollisionRule.new(sim, config, event_log)
 
 
 ## Scores the step of length `dt` that `sim` just finished and returns the events it
@@ -42,6 +46,7 @@ func observe(dt: float) -> Array[ScoreEvent]:
 	keep_right_rule.observe(player if active else null, dt, completed)
 	right_lane_rule.observe(player if active else null, dt, completed)
 	gap_kept_rule.observe(player if active else null, dt, completed)
+	speed_rule.observe(player if active else null, dt, completed)
 	for event: ScoreEvent in completed:
 		score_event_emitted.emit(event)
 	return completed
@@ -56,10 +61,21 @@ func finish() -> Array[ScoreEvent]:
 	return completed
 
 
+## The session total: every point so far, never below `score_floor` (Q6).
+func total_score() -> float:
+	return maxf(config.score_floor, event_log.total())
+
+
+## One category's sub-score, unclamped: it may be negative (Q6; feedback uses it).
+func category_score(category: StringName) -> float:
+	return event_log.total_for(category)
+
+
 ## Instant events the signal-driven rules logged since the last call.
 func _take_instant_events() -> Array[ScoreEvent]:
 	var events: Array[ScoreEvent] = signal_rule.take_events()
 	events.append_array(lane_change_rule.take_events())
+	events.append_array(collision_rule.take_events())
 	return events
 
 
