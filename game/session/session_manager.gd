@@ -2,10 +2,10 @@ class_name SessionManager
 extends Node
 ## Session flow (requirements §9.3, spec Architecture: Session): a 3-2-1 intro, then
 ## `SimConfig.session_length_s` of driving, then the end. Owns the sim and is the only
-## node that drives it; views and the HUD only read its state. Placeholder until the
-## Phase 7 modes: the player colliding or leaving the road ends the session early.
-## The countdown and the drive can be paused (spec Edge Cases): everything stands
-## still until resumed, and losing window focus pauses on its own.
+## node that drives it; views and the HUD only read its state. In the exam the player
+## colliding or leaving the road ends the session at once as aborted, with the cause
+## (requirements §9.2). The countdown and the drive can be paused (spec Edge Cases):
+## everything stands still until resumed, and losing window focus pauses on its own.
 
 signal session_started
 signal session_ended
@@ -23,6 +23,8 @@ var sim: TrafficSim
 var player: VehicleState
 ## What the session was started with; null when set up directly through `setup`.
 var options: LaunchOptions
+## `LaunchOptions.MODE_LEARN` or `MODE_EXAM`.
+var mode: StringName = LaunchOptions.MODE_LEARN
 var state: State = State.INTRO
 var end_reason: EndReason = EndReason.NONE
 ## Time spent in the intro countdown, seconds.
@@ -44,14 +46,16 @@ var _player_end_reason: EndReason = EndReason.NONE
 ## options' difficulty level, keeping the options (mode, level) for the rules that
 ## depend on them.
 func start(launch_options: LaunchOptions, sim_config: SimConfig) -> void:
-	setup(launch_options.profile, sim_config, launch_options.seed_value)
+	setup(launch_options.profile, sim_config, launch_options.seed_value, launch_options.mode)
 	options = launch_options
 	if launch_options.difficulty != null:
 		Spawner.new(launch_options.difficulty).attach(sim)
 
 
-func setup(road_profile: RoadProfile, sim_config: SimConfig, seed_value: int = 0) -> void:
+func setup(road_profile: RoadProfile, sim_config: SimConfig, seed_value: int = 0,
+		session_mode: StringName = LaunchOptions.MODE_LEARN) -> void:
 	options = null
+	mode = session_mode
 	sim = TrafficSim.new(road_profile, sim_config, seed_value)
 	# Right lane at the start speed (requirements §9.3).
 	player = sim.add_vehicle(0.0, 0, sim_config.start_speed_kmh / TrafficSim.KMH_PER_MPS)
@@ -80,6 +84,7 @@ func step(dt: float, commands: PlayerCommands = null) -> void:
 		State.DRIVING:
 			sim.step(dt, commands)
 			elapsed_s += dt
+			# TODO(E08-S02): in learn mode, K4 and a respawn instead of ending the session.
 			if _player_end_reason != EndReason.NONE:
 				_end(_player_end_reason)
 			elif elapsed_s >= sim.config.session_length_s - TIME_EPSILON:
@@ -126,6 +131,20 @@ func _notification(what: int) -> void:
 	# loss as either notification (the web build through the window), so both pause.
 	if what == NOTIFICATION_APPLICATION_FOCUS_OUT or what == NOTIFICATION_WM_WINDOW_FOCUS_OUT:
 		pause()
+func is_exam() -> bool:
+	return mode == LaunchOptions.MODE_EXAM
+
+
+## The §13 record status of an ended session; empty until it has ended.
+func status() -> StringName:
+	match end_reason:
+		EndReason.TIME_UP:
+			return SessionRecord.STATUS_COMPLETED
+		EndReason.COLLISION:
+			return SessionRecord.STATUS_ABORTED_COLLISION
+		EndReason.OFF_ROAD:
+			return SessionRecord.STATUS_ABORTED_OFFROAD
+	return &""
 
 
 func _end(reason: EndReason) -> void:

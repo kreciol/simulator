@@ -2,8 +2,9 @@ class_name Hud
 extends CanvasLayer
 ## Driving HUD (requirements §5.3): speed, the road's limit, blinking signal arrows and
 ## the session time left, plus the 3-2-1 countdown, the pause screen and the plain
-## end-of-session screen (placeholder until the Phase 7/8 summary). Only reads session
-## state. Placeholder styling until the UI theme lands (Phase 10).
+## end-of-session screen with the cause of an aborted session (placeholder until the
+## Phase 8 summary). Only reads session state. Placeholder styling until the UI theme
+## lands (Phase 10).
 
 const MARGIN: float = 24.0
 const OUTLINE_SIZE: int = 8
@@ -14,6 +15,12 @@ const TIME_FONT_SIZE: int = 40
 const COUNTDOWN_FONT_SIZE: int = 160
 const NOTICE_FONT_SIZE: int = 64
 const HINT_FONT_SIZE: int = 28
+const CAUSE_FONT_SIZE: int = 36
+## Translation key of the cause shown for each aborted session status.
+const END_CAUSES: Dictionary[StringName, StringName] = {
+	SessionRecord.STATUS_ABORTED_COLLISION: &"END_CAUSE_COLLISION",
+	SessionRecord.STATUS_ABORTED_OFFROAD: &"END_CAUSE_OFFROAD",
+}
 ## Round limit sign: white disc with a red ring, as on Polish B-33 signs.
 const LIMIT_SIGN_SIZE: float = 76.0
 const LIMIT_RING_WIDTH: int = 9
@@ -40,6 +47,8 @@ var paused_label: Label
 var paused_hint_label: Label
 var ended_screen: ColorRect
 var ended_label: Label
+## Why an aborted session ended; hidden after a completed one.
+var ended_cause_label: Label
 
 
 func setup(view_config: ViewConfig) -> void:
@@ -103,9 +112,19 @@ func setup(view_config: ViewConfig) -> void:
 	paused_box.add_child(paused_hint_label)
 	ended_screen = _backdrop("EndedScreen")
 	root.add_child(ended_screen)
-	ended_label = _centered_label("Ended", NOTICE_FONT_SIZE)
-	ended_label.text = tr(&"SESSION_ENDED")
-	ended_screen.add_child(ended_label)
+	var ended_notice: VBoxContainer = VBoxContainer.new()
+	ended_notice.name = "EndedNotice"
+	ended_notice.add_theme_constant_override("separation", int(MARGIN))
+	ended_screen.add_child(ended_notice)
+	ended_notice.set_anchors_and_offsets_preset(Control.PRESET_CENTER, Control.PRESET_MODE_MINSIZE)
+	ended_notice.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	ended_notice.grow_vertical = Control.GROW_DIRECTION_BOTH
+	ended_label = _label("Ended", NOTICE_FONT_SIZE)
+	ended_label.visible = false
+	ended_notice.add_child(ended_label)
+	ended_cause_label = _label("EndedCause", CAUSE_FONT_SIZE)
+	ended_cause_label.visible = false
+	ended_notice.add_child(ended_cause_label)
 
 
 func update(session: SessionManager) -> void:
@@ -125,6 +144,13 @@ func update(session: SessionManager) -> void:
 		countdown_label.text = str(maxi(1, ceili(session.countdown_left_s() - TIME_EPSILON)))
 	ended_screen.visible = session.state == SessionManager.State.ENDED
 	ended_label.visible = ended_screen.visible
+	var cause: StringName = END_CAUSES.get(session.status(), &"")
+	ended_cause_label.visible = ended_screen.visible and cause != &""
+	if ended_screen.visible:
+		# The exam ends as failed on a collision or leaving the road (requirements §9.2).
+		var failed: bool = session.is_exam() and cause != &""
+		ended_label.text = tr(&"EXAM_FAILED" if failed else &"SESSION_ENDED")
+		ended_cause_label.text = tr(cause) if cause != &"" else ""
 
 
 ## `m:ss`, rounding up so the display reads 0:00 only once the time is up.
