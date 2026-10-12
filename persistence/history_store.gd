@@ -119,6 +119,43 @@ func last_session() -> Dictionary:
 	return sessions.back() if not sessions.is_empty() else {}
 
 
+## The last `count` sessions, newest first.
+func recent(count: int) -> Array[Dictionary]:
+	var entries: Array[Dictionary] = sessions.slice(maxi(0, sessions.size() - count))
+	entries.reverse()
+	return entries
+
+
+## The best session of every combination that has one, ordered by mode, road profile
+## and level.
+func bests() -> Array[Dictionary]:
+	var entries: Array[Dictionary] = []
+	for id: String in best.values():
+		var entry: Dictionary = _find(id)
+		if not entry.is_empty():
+			entries.append(entry)
+	entries.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		return _sort_key(a) < _sort_key(b))
+	return entries
+
+
+## The latest session of a combination, or an empty dictionary when it has none.
+func previous_for(mode: StringName, road_profile: StringName, level: int) -> Dictionary:
+	var key: String = combination_key(mode, road_profile, level)
+	for i: int in range(sessions.size() - 1, -1, -1):
+		if _key_of(sessions[i]) == key:
+			return sessions[i]
+	return {}
+
+
+## Total scores of the last `count` sessions, oldest first, for the trend chart.
+func trend_scores(count: int) -> Array[float]:
+	var scores: Array[float] = []
+	for entry: Dictionary in sessions.slice(maxi(0, sessions.size() - count)):
+		scores.append(float(entry.get("score_total", 0.0)))
+	return scores
+
+
 ## Brings an older file up to `SCHEMA_VERSION`. Version 1 is the first format, so there
 ## is nothing to migrate yet; a format change bumps the version and adds a step here.
 func _migrate(data: Dictionary, _from_version: int) -> Dictionary:
@@ -185,6 +222,12 @@ func _counts_for_best(entry: Dictionary) -> bool:
 func _key_of(entry: Dictionary) -> String:
 	return combination_key(StringName(str(entry.get("mode", ""))),
 			StringName(str(entry.get("road_profile", ""))), int(entry.get("difficulty", 0)))
+
+
+## Orders bests: mode, then road profile, then level (zero-padded so 10 follows 9).
+func _sort_key(entry: Dictionary) -> String:
+	return "%s|%s|%04d" % [str(entry.get("mode", "")), str(entry.get("road_profile", "")),
+			int(entry.get("difficulty", 0))]
 
 
 func _find(id: String) -> Dictionary:
