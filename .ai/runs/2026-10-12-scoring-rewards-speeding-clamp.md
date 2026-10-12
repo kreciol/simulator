@@ -55,6 +55,8 @@ Scoring stays a pure observer of `TrafficSim`.
 
 ## Progress
 
+PR: #50
+
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: Continuous rewards
@@ -67,4 +69,4 @@ Scoring stays a pure observer of `TrafficSim`.
 
 ### Phase 3: Speeding, collisions, total
 
-- [ ] 3.1 S1 speeding, K4 collision hook, clamped total, docs
+- [x] 3.1 S1 speeding, K4 collision hook, clamped total, docs — f47f13f
