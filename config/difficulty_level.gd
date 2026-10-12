@@ -3,8 +3,7 @@ extends Resource
 ## One difficulty level (requirements §10, spec Data Model). Difficulty is traffic
 ## density; higher levels also widen the AI speed spread and lower AI discipline,
 ## moderately (Q13). All levels are available from the start (Q14). Instances live in
-## res://config/difficulty_levels/; nothing is defaulted here. `exam_pass_score`
-## joins with scoring (Phase 6, Q9).
+## res://config/difficulty_levels/; nothing is defaulted here.
 
 ## 1–4, from calm to rush hour.
 @export var id: int
@@ -22,3 +21,7 @@ extends Resource
 @export_range(0.0, 1.0) var ai_discipline_max: float
 ## Highlighted as the suggested level in level selection (Q14).
 @export var recommended: bool
+## Exam pass mark (Q9): an exam is passed with no collision or off-road and at least
+## this `score_total`. Initially 60% of the ideal-driver bot's score on the level
+## (`ExamCalibration`); retuned with playtests.
+@export var exam_pass_score: float
