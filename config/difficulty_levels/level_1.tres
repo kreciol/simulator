@@ -12,3 +12,4 @@ ai_speed_spread_kmh = 10.0
 ai_discipline_min = 0.9
 ai_discipline_max = 1.0
 recommended = true
+exam_pass_score = 71.0
