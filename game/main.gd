@@ -5,6 +5,7 @@ extends Node3D
 ## and the HUD, and shows the mirrors (Phase 5). What the session starts with —
 ## including graphics quality and whether mirrors are shown — comes from the dev
 ## launcher (URL params on web, user args on desktop) until the Phase 10 menus exist.
+## With `perf=1` an FPS probe samples the drive and prints its result (Phase 5 step 2).
 
 @export var launcher_config: DevLauncherConfig
 @export var sim_config: SimConfig
@@ -17,8 +18,12 @@ var quality: QualityPreset
 var road_profile: RoadProfile
 var sim: TrafficSim
 var player: VehicleState
+## The FPS probe's printed line, empty until it has reported (or without `perf=1`).
+var perf_report: String = ""
 
 var _input: PlayerInput = PlayerInput.new()
+## Null unless the launch asked for the probe.
+var _fps_probe: FpsProbe
 
 @onready var session: SessionManager = $SessionManager
 @onready var _road_view: RoadView = $RoadView
@@ -41,6 +46,9 @@ func _ready() -> void:
 	view_config = view_config.for_quality(quality)
 	_sun.shadow_enabled = quality.shadows_enabled
 	session.start(launch_options, sim_config)
+	session.session_ended.connect(_on_session_ended)
+	if launch_options.perf:
+		_fps_probe = FpsProbe.new(perf_config)
 	sim = session.sim
 	player = session.player
 	_road_view.setup(road_profile, view_config)
@@ -63,8 +71,33 @@ func _physics_process(delta: float) -> void:
 	session.step(delta, _input.consume())
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
+	track_performance(Performance.get_monitor(Performance.TIME_FPS), delta)
 	_update_views()
+
+
+## Feeds one rendered frame's FPS to the probe; only driving is measured, so the
+## countdown's warm-up and the frozen end screen do not count.
+func track_performance(fps: float, delta: float) -> void:
+	if session.state != SessionManager.State.DRIVING:
+		return
+	if _fps_probe != null and perf_report.is_empty():
+		_fps_probe.add_sample(fps, delta)
+		if _fps_probe.is_complete():
+			_report_probe()
+
+
+## Printed with the launch options, so a result names the level, seed and preset it
+## was measured on.
+func _report_probe() -> void:
+	perf_report = "%s | %s" % [_fps_probe.report(), launch_options.describe()]
+	print(perf_report)
+
+
+func _on_session_ended() -> void:
+	# A session that ends before the window fills still reports what it measured.
+	if _fps_probe != null and perf_report.is_empty():
+		_report_probe()
 
 
 func _notification(what: int) -> void:
