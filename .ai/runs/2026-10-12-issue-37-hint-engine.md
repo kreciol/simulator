@@ -53,6 +53,6 @@ In learn mode, short Polish hints warn before a penalty and explain events with 
 
 ### Phase 2: Session and HUD
 
-- [ ] 2.1 `SessionManager` runs the engine in learn mode only
-- [ ] 2.2 HUD hint list with icon + text
-- [ ] 2.3 Session, HUD and docs updates with tests
+- [x] 2.1 `SessionManager` runs the engine in learn mode only — be99924
+- [x] 2.2 HUD hint list with icon + text — 57968f4
+- [x] 2.3 Session, HUD and docs updates with tests — 0e5154c
