@@ -57,7 +57,8 @@ func _init() -> void:
 
 
 func show_summary(summary: Summary) -> void:
-	total_label.text = tr(&"SUMMARY_TOTAL").format({"points": roundi(summary.score_total)})
+	# Rounded down: an exam short of its pass mark by a fraction never reads as reaching it.
+	total_label.text = tr(&"SUMMARY_TOTAL").format({"points": floori(summary.score_total)})
 	for i: int in summary.categories.size():
 		var result: Summary.CategoryResult = summary.categories[i]
 		category_icons[i].rating = result.rating

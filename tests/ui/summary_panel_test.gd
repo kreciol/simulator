@@ -30,6 +30,13 @@ func test_shows_the_total() -> void:
 	assert_str(_panel.total_label.text).is_equal("Wynik: 44 pkt")
 
 
+func test_total_is_rounded_down_so_a_near_miss_never_reads_as_the_pass_mark() -> void:
+	var summary: Summary = _summary()
+	summary.score_total = 49.6
+	_panel.show_summary(summary)
+	assert_str(_panel.total_label.text).is_equal("Wynik: 49 pkt")
+
+
 func test_shows_four_categories_each_with_an_icon_and_text() -> void:
 	_panel.show_summary(_summary())
 	assert_int(_panel.category_icons.size()).is_equal(4)

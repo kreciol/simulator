@@ -231,7 +231,7 @@ func test_scored_session_ends_with_the_summary() -> void:
 	assert_bool(_hud.summary_panel.is_visible_in_tree()).is_true()
 	assert_str(_hud.ended_label.text).is_equal("Sesja ukończona")
 	assert_bool(_hud.ended_cause_label.visible).is_false()
-	var points: int = roundi(_session.summary.score_total)
+	var points: int = floori(_session.summary.score_total)
 	assert_str(_hud.summary_panel.total_label.text).is_equal("Wynik: %d pkt" % points)
 	assert_str(_hud.summary_panel.description_label.text).is_not_empty()
 

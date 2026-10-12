@@ -183,7 +183,8 @@ func test_the_top_loss_is_named_even_below_the_threshold() -> void:
 	# gap loses 2, under the 4-point threshold: still one area (§11.3: one or two).
 	var summary: Summary = _generate(_log(1.0))
 	assert_array(summary.improvements).is_equal([&"gap"])
-	assert_int(summary.categories[0].rating).is_equal(Summary.Rating.GOOD)
+	# Named as an area, so its row says "to improve" too.
+	assert_int(summary.categories[0].rating).is_equal(Summary.Rating.IMPROVE)
 
 
 func test_a_second_area_needs_the_threshold() -> void:

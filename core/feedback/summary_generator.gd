@@ -13,7 +13,8 @@ extends RefCounted
 ##   "to improve", it is worded as the relatively best one;
 ## - the first area to improve is the other category that lost most, whenever any
 ##   lost points; a second one joins when it lost at least
-##   `FeedbackConfig.improve_penalty_threshold` (§11.3: one or two areas).
+##   `FeedbackConfig.improve_penalty_threshold` (§11.3: one or two areas). A named area
+##   is always rated "to improve", so its row agrees with the description.
 ## The description is the strength, then each area with its numbers, then why the
 ## session fell short — an abort cause or the points missing for an exam pass — or,
 ## when there is nothing of that, a sentence saying the rest went well: always
@@ -118,6 +119,9 @@ func generate(event_log: EventLog, record: SessionRecord, exam_pass_score: float
 	var strength: Summary.CategoryResult = _strength(summary.categories)
 	summary.strength = strength.category
 	summary.improvements = _improvements(summary.categories, strength)
+	for result: Summary.CategoryResult in summary.categories:
+		if summary.improvements.has(result.category):
+			result.rating = Summary.Rating.IMPROVE
 
 	var strengths: Dictionary[StringName, StringName] = \
 			RELATIVE_STRENGTHS if strength.rating == Summary.Rating.IMPROVE else STRENGTHS
