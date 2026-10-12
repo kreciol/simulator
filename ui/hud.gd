@@ -1,8 +1,9 @@
 class_name Hud
 extends CanvasLayer
 ## Driving HUD (requirements §5.3): speed, the road's limit, blinking signal arrows and
-## the session time left, plus the 3-2-1 countdown and the plain end-of-session screen
-## with the cause of an aborted session (placeholder until the Phase 8 summary). Only
+## the session time left, plus the 3-2-1 countdown, the learn-mode respawn fade with
+## what happened, and the plain end-of-session screen with the cause of an aborted
+## session (placeholder until the Phase 8 summary). Only
 ## reads session state. Placeholder styling until the UI theme lands (Phase 10).
 
 const MARGIN: float = 24.0
@@ -19,6 +20,13 @@ const END_CAUSES: Dictionary[StringName, StringName] = {
 	SessionRecord.STATUS_ABORTED_COLLISION: &"END_CAUSE_COLLISION",
 	SessionRecord.STATUS_ABORTED_OFFROAD: &"END_CAUSE_OFFROAD",
 }
+## Translation key of what happened, shown while the player is put back (learn mode).
+const RESPAWN_CAUSES: Dictionary[SessionManager.EndReason, StringName] = {
+	SessionManager.EndReason.COLLISION: &"RESPAWN_COLLISION",
+	SessionManager.EndReason.OFF_ROAD: &"RESPAWN_OFFROAD",
+}
+## Colour of the respawn fade at its darkest; its alpha follows `fade_amount`.
+const FADE_COLOR: Color = Color.BLACK
 ## Round limit sign: white disc with a red ring, as on Polish B-33 signs.
 const LIMIT_SIGN_SIZE: float = 76.0
 const LIMIT_RING_WIDTH: int = 9
@@ -44,6 +52,11 @@ var ended_screen: ColorRect
 var ended_label: Label
 ## Why an aborted session ended; hidden after a completed one.
 var ended_cause_label: Label
+## Learn-mode respawn: the fade over the scene and the message on top of it.
+var fade_screen: ColorRect
+var respawn_notice: VBoxContainer
+var respawn_label: Label
+var respawn_hint_label: Label
 
 
 func setup(view_config: ViewConfig) -> void:
@@ -92,6 +105,22 @@ func setup(view_config: ViewConfig) -> void:
 
 	countdown_label = _centered_label("Countdown", COUNTDOWN_FONT_SIZE)
 	root.add_child(countdown_label)
+	fade_screen = ColorRect.new()
+	fade_screen.name = "FadeScreen"
+	fade_screen.color = Color(FADE_COLOR, 0.0)
+	fade_screen.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	fade_screen.set_anchors_preset(Control.PRESET_FULL_RECT)
+	fade_screen.visible = false
+	root.add_child(fade_screen)
+	respawn_notice = _notice("RespawnNotice")
+	respawn_notice.visible = false
+	root.add_child(respawn_notice)
+	respawn_label = _label("Respawn", NOTICE_FONT_SIZE)
+	respawn_notice.add_child(respawn_label)
+	respawn_hint_label = _label("RespawnHint", CAUSE_FONT_SIZE)
+	respawn_hint_label.text = tr(&"RESPAWN_BACK_ON_ROAD")
+	respawn_notice.add_child(respawn_hint_label)
+	_center(respawn_notice)
 	ended_screen = ColorRect.new()
 	ended_screen.name = "EndedScreen"
 	ended_screen.color = ENDED_BACKDROP
@@ -99,13 +128,9 @@ func setup(view_config: ViewConfig) -> void:
 	ended_screen.set_anchors_preset(Control.PRESET_FULL_RECT)
 	ended_screen.visible = false
 	root.add_child(ended_screen)
-	var ended_notice: VBoxContainer = VBoxContainer.new()
-	ended_notice.name = "EndedNotice"
-	ended_notice.add_theme_constant_override("separation", int(MARGIN))
+	var ended_notice: VBoxContainer = _notice("EndedNotice")
 	ended_screen.add_child(ended_notice)
-	ended_notice.set_anchors_and_offsets_preset(Control.PRESET_CENTER, Control.PRESET_MODE_MINSIZE)
-	ended_notice.grow_horizontal = Control.GROW_DIRECTION_BOTH
-	ended_notice.grow_vertical = Control.GROW_DIRECTION_BOTH
+	_center(ended_notice)
 	ended_label = _label("Ended", NOTICE_FONT_SIZE)
 	ended_label.visible = false
 	ended_notice.add_child(ended_label)
@@ -128,6 +153,13 @@ func update(session: SessionManager) -> void:
 	countdown_label.visible = session.state == SessionManager.State.INTRO
 	if countdown_label.visible:
 		countdown_label.text = str(maxi(1, ceili(session.countdown_left_s() - TIME_EPSILON)))
+	var respawning: bool = session.state == SessionManager.State.RESPAWNING
+	fade_screen.visible = respawning
+	fade_screen.color = Color(FADE_COLOR, session.fade_amount())
+	respawn_notice.visible = respawning
+	if respawning:
+		var respawn_cause: StringName = RESPAWN_CAUSES.get(session.respawn_cause, &"RESPAWN_COLLISION")
+		respawn_label.text = tr(respawn_cause)
 	ended_screen.visible = session.state == SessionManager.State.ENDED
 	ended_label.visible = ended_screen.visible
 	var cause: StringName = END_CAUSES.get(session.status(), &"")
@@ -153,6 +185,21 @@ func _label(node_name: String, font_size: int) -> Label:
 	label.add_theme_constant_override("outline_size", OUTLINE_SIZE)
 	label.add_theme_color_override("font_outline_color", Color.BLACK)
 	return label
+
+
+## A column of lines for a notice in the middle of the screen.
+func _notice(node_name: String) -> VBoxContainer:
+	var notice: VBoxContainer = VBoxContainer.new()
+	notice.name = node_name
+	notice.add_theme_constant_override("separation", int(MARGIN))
+	return notice
+
+
+## Centres `notice` in its parent once added; it grows both ways with its text.
+func _center(notice: Control) -> void:
+	notice.set_anchors_and_offsets_preset(Control.PRESET_CENTER, Control.PRESET_MODE_MINSIZE)
+	notice.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	notice.grow_vertical = Control.GROW_DIRECTION_BOTH
 
 
 func _centered_label(node_name: String, font_size: int) -> Label:

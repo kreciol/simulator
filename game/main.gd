@@ -9,6 +9,7 @@ extends Node3D
 @export var launcher_config: DevLauncherConfig
 @export var sim_config: SimConfig
 @export var view_config: ViewConfig
+@export var scoring_config: ScoringConfig
 
 ## Set before the scene enters the tree to skip the dev launcher (tests).
 var launch_options: LaunchOptions
@@ -39,7 +40,7 @@ func _ready() -> void:
 	# The preset sets the draw distance; the shared config resource stays untouched.
 	view_config = view_config.for_quality(quality)
 	_sun.shadow_enabled = quality.shadows_enabled
-	session.start(launch_options, sim_config)
+	session.start(launch_options, sim_config, scoring_config)
 	sim = session.sim
 	player = session.player
 	_road_view.setup(road_profile, view_config)

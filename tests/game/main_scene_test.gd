@@ -179,17 +179,26 @@ func test_scene_shows_traffic_at_the_launch_level() -> void:
 	assert_int(_traffic_view().live_count()).is_equal(sim.vehicles.size() - 1)
 
 
-func test_hitting_a_car_ends_the_session_with_the_end_screen() -> void:
+func test_hitting_a_car_in_learn_mode_charges_k4_fades_and_drives_on() -> void:
 	var hud: Hud = _main.get_node("Hud") as Hud
-	assert_bool(hud.ended_screen.visible).is_false()
+	var session: SessionManager = _main.session
+	assert_bool(session.is_exam()).is_false()
+	assert_object(session.scoring).is_not_null()
 	# A stopped car right ahead of the player.
 	var wreck: VehicleState = _main.sim.add_vehicle(_player().s + _player().length_m + 1.0, 0, 0.0)
 	assert_object(_traffic_view().view_of(wreck.id)).is_not_null()
 	var steps: int = 0
-	while _main.session.state == SessionManager.State.DRIVING and steps < 120:
+	while session.state == SessionManager.State.DRIVING and steps < 120:
 		_drive(1)
 		steps += 1
-	assert_int(_main.session.state).is_equal(SessionManager.State.ENDED)
-	assert_int(_main.session.end_reason).is_equal(SessionManager.EndReason.COLLISION)
-	assert_bool(hud.ended_screen.visible).is_true()
-	assert_str(hud.ended_label.text).is_equal("Koniec sesji")
+	assert_int(session.state).is_equal(SessionManager.State.RESPAWNING)
+	assert_float(session.scoring.category_score(CollisionRule.CATEGORY)).is_equal(-session.scoring.config.k4_penalty)
+	assert_bool(hud.respawn_notice.visible).is_true()
+	assert_bool(hud.ended_screen.visible).is_false()
+	_drive(roundi(_main.sim_config.respawn_fade_s / DT))
+	assert_int(session.state).is_equal(SessionManager.State.DRIVING)
+	assert_int(_player().lane).is_equal(0)
+	assert_bool(hud.respawn_notice.visible).is_false()
+	assert_bool(hud.fade_screen.visible).is_false()
+	assert_bool(_main.sim.vehicles_overlap(_player(), wreck)).is_false()
+

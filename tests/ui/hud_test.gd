@@ -177,9 +177,41 @@ func test_exam_completed_without_an_incident_shows_no_cause() -> void:
 	assert_bool(_hud.ended_cause_label.visible).is_false()
 
 
-func test_learn_session_ended_off_road_is_not_an_exam_failure() -> void:
+func test_learn_leaving_the_road_shows_the_respawn_message_and_fade() -> void:
 	_finish_countdown()
 	_leave_the_road()
-	assert_int(_session.state).is_equal(SessionManager.State.ENDED)
-	assert_str(_hud.ended_label.text).is_equal("Koniec sesji")
-	assert_str(_hud.ended_cause_label.text).is_equal("Przyczyna: zjechanie z drogi")
+	assert_int(_session.state).is_equal(SessionManager.State.RESPAWNING)
+	assert_bool(_hud.ended_screen.visible).is_false()
+	assert_bool(_hud.respawn_notice.is_visible_in_tree()).is_true()
+	assert_str(_hud.respawn_label.text).is_equal("Zjazd z drogi")
+	assert_str(_hud.respawn_hint_label.text).is_equal("Wracasz na prawy pas. Czas sesji biegnie dalej.")
+	assert_bool(_hud.fade_screen.visible).is_true()
+	# Darkest at the midpoint, where the player is put back.
+	_step(_session.sim.config.respawn_fade_s / 2.0)
+	assert_float(_hud.fade_screen.color.a).is_equal_approx(1.0, 0.05)
+	_step(_session.sim.config.respawn_fade_s / 2.0)
+	assert_int(_session.state).is_equal(SessionManager.State.DRIVING)
+	assert_bool(_hud.respawn_notice.visible).is_false()
+	assert_bool(_hud.fade_screen.visible).is_false()
+	assert_bool(_hud.ended_screen.visible).is_false()
+
+
+func test_learn_collision_names_it_while_respawning() -> void:
+	_finish_countdown()
+	var player: VehicleState = _session.player
+	_session.sim.add_vehicle(player.s + player.length_m + 1.0, 0, 0.0)
+	for i: int in 120:
+		if _session.state != SessionManager.State.DRIVING:
+			break
+		_session.step(DT)
+	_hud.update(_session)
+	assert_int(_session.state).is_equal(SessionManager.State.RESPAWNING)
+	assert_str(_hud.respawn_label.text).is_equal("Kolizja z innym pojazdem")
+	assert_bool(_hud.respawn_notice.visible).is_true()
+
+
+func test_no_respawn_notice_while_driving() -> void:
+	_finish_countdown()
+	_step(1.0)
+	assert_bool(_hud.respawn_notice.visible).is_false()
+	assert_bool(_hud.fade_screen.visible).is_false()
