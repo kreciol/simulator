@@ -58,9 +58,9 @@ COMPARE_FIRST,"To pierwszy zapisany przejazd w tym trybie, na tej drodze i tym p
 COMPARE_PREVIOUS_UP,Poprzednio: {points} pkt — tym razem o {change} pkt więcej.
 COMPARE_PREVIOUS_DOWN,Poprzednio: {points} pkt — tym razem o {change} pkt mniej.
 COMPARE_PREVIOUS_SAME,Poprzednio: {points} pkt — tym razem tyle samo.
-COMPARE_NEW_BEST,Nowy rekord w tej kombinacji — dotychczasowy wynosił {points} pkt.
-COMPARE_FIRST_BEST,To pierwszy ukończony przejazd w tej kombinacji i od razu rekord.
-COMPARE_BEST,Rekord w tej kombinacji: {points} pkt.
+COMPARE_NEW_BEST,"Nowy rekord dla tego trybu, drogi i poziomu ruchu — dotychczasowy wynosił {points} pkt."
+COMPARE_FIRST_BEST,"To pierwszy ukończony przejazd w tym trybie, na tej drodze i tym poziomie ruchu — od razu rekord."
+COMPARE_BEST,"Rekord dla tego trybu, drogi i poziomu ruchu: {points} pkt."
 HISTORY_TITLE,Historia wyników
 HISTORY_LOCAL_NOTICE,Wyniki są zapisane tylko w tej przeglądarce na tym urządzeniu. Wyczyszczenie danych przeglądarki je usunie.
 HISTORY_EMPTY,Brak zapisanych przejazdów. Po ukończeniu pierwszej sesji wynik pojawi się tutaj.

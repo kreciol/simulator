@@ -156,6 +156,15 @@ func test_the_trend_plots_the_latest_scores_and_says_them_in_text() -> void:
 			"Ostatnie wyniki (4): najniższy 12 pkt, najwyższy 33 pkt, ostatni 28 pkt.")
 
 
+func test_a_trend_count_of_zero_hides_the_trend() -> void:
+	_save("a", 10.0)
+	_screen.trend_count = 0
+	_screen.show_history(_store)
+	assert_bool(_screen.trend_chart.visible).is_false()
+	assert_bool(_screen.trend_caption_label.visible).is_false()
+	assert_int(_screen.recent_rows.get_child_count()).is_equal(1)
+
+
 func test_showing_again_replaces_the_rows() -> void:
 	_save("a", 10.0)
 	_screen.show_history(_store)
@@ -177,6 +186,8 @@ func test_format_date_is_local_day_month_year_and_time(started_at: String, bias_
 			["2026-10-12T10:05:00Z", 0, "12.10.2026 10:05"],
 			["2026-10-12T23:30:00Z", 120, "13.10.2026 01:30"],
 			["", 60, "—"],
+			["not a date", 0, "—"],
+			["2026-10-12", 0, "—"],
 		]) -> void:
 	assert_str(HistoryScreen.format_date(started_at, bias_min)).is_equal(shown)
 

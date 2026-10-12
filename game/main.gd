@@ -135,11 +135,16 @@ func _on_session_ended() -> void:
 	if session.record == null:
 		return
 	var record: SessionRecord = session.record
-	# Read before saving, so the comparison is with the results before this one.
 	var history: HistoryStore = SaveManager.store
-	_hud.show_comparison(ResultComparison.compare(record,
-			history.previous_for(record.mode, record.road_profile, record.difficulty),
-			history.best_for(record.mode, record.road_profile, record.difficulty)))
+	# Read before saving, so the comparison is with the results before this one. With
+	# saving disabled there is no history to compare with, and this result will not
+	# join it either: the save status explains why instead.
+	var comparison: Array[FeedbackLine] = []
+	if history.can_save():
+		comparison = ResultComparison.compare(record,
+				history.previous_for(record.mode, record.road_profile, record.difficulty),
+				history.best_for(record.mode, record.road_profile, record.difficulty))
+	_hud.show_comparison(comparison)
 	var saved: bool = SaveManager.save_record(record)
 	_hud.show_save_status(saved, SaveManager.store)
 

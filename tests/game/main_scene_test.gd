@@ -317,6 +317,8 @@ func test_with_storage_unavailable_the_session_still_ends_and_explains_why() -> 
 	assert_bool(hud.ended_screen.visible).is_true()
 	assert_str(hud.save_status_label.text).starts_with("Tym razem wyniku nie zapisaliśmy")
 	assert_bool(FileAccess.file_exists(TEST_HISTORY)).is_false()
+	# No "first saved drive" or "new best" for a result that is not kept.
+	assert_bool(hud.comparison_label.visible).is_false()
 
 
 ## A saved session of this scene's combination, as an earlier drive would have left it.
@@ -338,6 +340,15 @@ func test_the_summary_compares_with_the_results_before_this_one() -> void:
 	var hud: Hud = _main.get_node("Hud") as Hud
 	_drive_to_the_end()
 	assert_str(hud.comparison_label.text).starts_with("Poprzednio: 3 pkt — tym razem")
-	assert_str(hud.comparison_label.text).ends_with("Rekord w tej kombinacji: 100000 pkt.")
+	assert_str(hud.comparison_label.text).ends_with("Rekord dla tego trybu, drogi i poziomu ruchu: 100000 pkt.")
 	# The finished session is saved after the comparison, not compared with itself.
 	assert_str(str(SaveManager.store.last_session()["id"])).is_equal(_main.session.record.id)
+
+
+func test_a_read_only_history_shows_no_comparison() -> void:
+	_save_earlier("previous", 3.0)
+	SaveManager.store.read_only = true
+	var hud: Hud = _main.get_node("Hud") as Hud
+	_drive_to_the_end()
+	assert_bool(hud.comparison_label.visible).is_false()
+	assert_str(hud.save_status_label.text).starts_with("Twoja historia pochodzi z nowszej wersji gry")

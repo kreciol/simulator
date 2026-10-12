@@ -432,7 +432,7 @@ func test_comparison_is_shown_in_polish_right_under_the_summary() -> void:
 		FeedbackLine.create(ResultComparison.BEST, {"points": 70}),
 	])
 	assert_str(_hud.comparison_label.text).is_equal(
-			"Poprzednio: 40 pkt — tym razem o 12 pkt więcej. Rekord w tej kombinacji: 70 pkt.")
+			"Poprzednio: 40 pkt — tym razem o 12 pkt więcej. Rekord dla tego trybu, drogi i poziomu ruchu: 70 pkt.")
 	assert_bool(_hud.comparison_label.visible).is_true()
 	assert_bool(_hud.ended_screen.is_ancestor_of(_hud.comparison_label)).is_true()
 	assert_int(_hud.comparison_label.get_index()).is_equal(_hud.summary_panel.get_index() + 1)

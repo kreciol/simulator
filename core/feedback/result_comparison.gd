@@ -6,8 +6,9 @@ extends RefCounted
 ## sessions as their §13 dictionaries and picks translation keys, never text.
 ##
 ## Points are rounded down, as the summary's total is, so the numbers agree with it.
-## A new best follows the history's rule: only a completed session that beats the best
-## so far (a tie keeps the earlier one).
+## A new best follows the history's rule — only a completed session that beats the best
+## so far — and is only announced when it beats it in the points shown, so the line
+## never calls 80 pkt a new best over 80 pkt.
 
 const FIRST: StringName = &"COMPARE_FIRST"
 const PREVIOUS_UP: StringName = &"COMPARE_PREVIOUS_UP"
@@ -40,7 +41,7 @@ static func compare(record: SessionRecord, previous: Dictionary, best: Dictionar
 	if best.is_empty():
 		if completed:
 			lines.append(FeedbackLine.create(FIRST_BEST))
-	elif completed and record.score_total > float(best.get("score_total", 0.0)):
+	elif completed and points > _points(best):
 		lines.append(FeedbackLine.create(NEW_BEST, {"points": _points(best)}))
 	else:
 		lines.append(FeedbackLine.create(BEST, {"points": _points(best)}))

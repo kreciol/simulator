@@ -144,12 +144,22 @@ func show_history(history: HistoryStore) -> void:
 	if not has_sessions:
 		return
 
-	_fill(recent_rows, history.recent(recent_count).map(row_text), RECENT_WIDTH)
-	var bests: Array[Dictionary] = history.bests()
-	_fill(best_rows, bests.map(best_text), SIDE_WIDTH)
-	no_bests_label.visible = bests.is_empty()
+	var recent_texts: Array[String] = []
+	for entry: Dictionary in history.recent(recent_count):
+		recent_texts.append(row_text(entry))
+	_fill(recent_rows, recent_texts, RECENT_WIDTH)
+	var best_texts: Array[String] = []
+	for entry: Dictionary in history.bests():
+		best_texts.append(best_text(entry))
+	_fill(best_rows, best_texts, SIDE_WIDTH)
+	no_bests_label.visible = best_texts.is_empty()
 	var scores: Array[float] = history.trend_scores(trend_count)
 	trend_chart.scores = scores
+	# Nothing to plot when the trend count is configured to 0.
+	trend_chart.visible = not scores.is_empty()
+	trend_caption_label.visible = not scores.is_empty()
+	if scores.is_empty():
+		return
 	trend_caption_label.text = tr(&"HISTORY_TREND_CAPTION").format({
 		"count": scores.size(),
 		"min": floori(scores.min()),
@@ -215,12 +225,16 @@ static func status_of(entry: Dictionary) -> StringName:
 
 
 ## `started_at` (ISO-8601, UTC) as local "dd.mm.yyyy hh:mm", `bias_min` minutes ahead
-## of UTC; a dash when it is missing.
+## of UTC; a dash when it is missing or unreadable. The bias is today's, so a session
+## from the other side of a daylight-saving change shows an hour off: the record keeps
+## no offset of its own.
 static func format_date(started_at: String, bias_min: int) -> String:
-	if started_at.is_empty():
+	if not started_at.contains("T"):
 		return "—"
-	var unix: int = Time.get_unix_time_from_datetime_string(started_at.trim_suffix("Z")) + bias_min * 60
-	var local: Dictionary = Time.get_datetime_dict_from_unix_time(unix)
+	var utc: int = Time.get_unix_time_from_datetime_string(started_at.trim_suffix("Z"))
+	if utc <= 0:
+		return "—"
+	var local: Dictionary = Time.get_datetime_dict_from_unix_time(utc + bias_min * 60)
 	return "%02d.%02d.%04d %02d:%02d" % [local.day, local.month, local.year, local.hour, local.minute]
 
 
@@ -228,13 +242,13 @@ func _time_zone_bias_min() -> int:
 	return int(Time.get_time_zone_from_system().get("bias", 0))
 
 
-func _fill(rows: VBoxContainer, texts: Array, width: float) -> void:
+func _fill(rows: VBoxContainer, texts: Array[String], width: float) -> void:
 	for child: Node in rows.get_children():
 		rows.remove_child(child)
 		child.queue_free()
-	for text: Variant in texts:
+	for text: String in texts:
 		var row: Label = _row_label("Row", width)
-		row.text = str(text)
+		row.text = text
 		rows.add_child(row)
 
 

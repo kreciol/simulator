@@ -34,7 +34,7 @@ func test_a_better_result_than_the_previous_shows_the_gain_and_a_new_best() -> v
 	var lines: Array[FeedbackLine] = ResultComparison.compare(_record(72.8), _saved(55.0), _saved(60.0))
 	assert_array(_shown(lines)).contains_exactly([
 		"Poprzednio: 55 pkt — tym razem o 17 pkt więcej.",
-		"Nowy rekord w tej kombinacji — dotychczasowy wynosił 60 pkt.",
+		"Nowy rekord dla tego trybu, drogi i poziomu ruchu — dotychczasowy wynosił 60 pkt.",
 	])
 
 
@@ -42,7 +42,7 @@ func test_a_worse_result_shows_the_drop_and_the_best_to_beat() -> void:
 	var lines: Array[FeedbackLine] = ResultComparison.compare(_record(30.0), _saved(55.0), _saved(80.0))
 	assert_array(_shown(lines)).contains_exactly([
 		"Poprzednio: 55 pkt — tym razem o 25 pkt mniej.",
-		"Rekord w tej kombinacji: 80 pkt.",
+		"Rekord dla tego trybu, drogi i poziomu ruchu: 80 pkt.",
 	])
 
 
@@ -53,13 +53,21 @@ func test_the_same_points_as_before_reads_as_the_same() -> void:
 
 func test_equalling_the_best_is_not_a_new_best() -> void:
 	var lines: Array[FeedbackLine] = ResultComparison.compare(_record(60.0), _saved(40.0), _saved(60.0))
-	assert_str(_shown(lines)[1]).is_equal("Rekord w tej kombinacji: 60 pkt.")
+	assert_str(_shown(lines)[1]).is_equal("Rekord dla tego trybu, drogi i poziomu ruchu: 60 pkt.")
+
+
+func test_a_best_beaten_only_by_a_fraction_is_not_announced_over_the_same_points() -> void:
+	var lines: Array[FeedbackLine] = ResultComparison.compare(_record(80.6), _saved(80.2), _saved(80.2))
+	assert_array(_shown(lines)).contains_exactly([
+		"Poprzednio: 80 pkt — tym razem tyle samo.",
+		"Rekord dla tego trybu, drogi i poziomu ruchu: 80 pkt.",
+	])
 
 
 func test_an_aborted_session_never_claims_a_best() -> void:
 	var crash: StringName = SessionRecord.STATUS_ABORTED_COLLISION
 	var above_best: Array[FeedbackLine] = ResultComparison.compare(_record(90.0, crash), _saved(55.0), _saved(60.0))
-	assert_str(_shown(above_best)[1]).is_equal("Rekord w tej kombinacji: 60 pkt.")
+	assert_str(_shown(above_best)[1]).is_equal("Rekord dla tego trybu, drogi i poziomu ruchu: 60 pkt.")
 	var no_best_yet: Array[FeedbackLine] = ResultComparison.compare(_record(90.0, crash), _saved(10.0, crash), {})
 	assert_array(_shown(no_best_yet)).contains_exactly(["Poprzednio: 10 pkt — tym razem o 80 pkt więcej."])
 
@@ -69,7 +77,7 @@ func test_the_first_completed_session_after_aborted_ones_is_the_first_best() -> 
 			_record(20.0), _saved(35.0, SessionRecord.STATUS_ABORTED_OFFROAD), {})
 	assert_array(_shown(lines)).contains_exactly([
 		"Poprzednio: 35 pkt — tym razem o 15 pkt mniej.",
-		"To pierwszy ukończony przejazd w tej kombinacji i od razu rekord.",
+		"To pierwszy ukończony przejazd w tym trybie, na tej drodze i tym poziomie ruchu — od razu rekord.",
 	])
 
 
