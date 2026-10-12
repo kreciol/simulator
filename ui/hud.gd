@@ -14,6 +14,9 @@ const LIMIT_FONT_SIZE: int = 30
 const TIME_FONT_SIZE: int = 40
 const COUNTDOWN_FONT_SIZE: int = 160
 const NOTICE_FONT_SIZE: int = 64
+const SAVE_STATUS_FONT_SIZE: int = 24
+## Width of the save status under the end notice; longer messages wrap.
+const SAVE_STATUS_WIDTH: float = 760.0
 const HINT_FONT_SIZE: int = 28
 const CAUSE_FONT_SIZE: int = 36
 ## Translation key of the cause shown for each aborted session status.
@@ -49,6 +52,8 @@ var ended_screen: ColorRect
 var ended_label: Label
 ## Why an aborted session ended; hidden after a completed one.
 var ended_cause_label: Label
+## Whether the finished session was saved, or why not; hidden until it is known.
+var save_status_label: Label
 
 
 func setup(view_config: ViewConfig) -> void:
@@ -125,6 +130,12 @@ func setup(view_config: ViewConfig) -> void:
 	ended_cause_label = _label("EndedCause", CAUSE_FONT_SIZE)
 	ended_cause_label.visible = false
 	ended_notice.add_child(ended_cause_label)
+	save_status_label = _label("SaveStatus", SAVE_STATUS_FONT_SIZE)
+	save_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	# A wrapping label needs a width; the notice centres it under the cause.
+	save_status_label.custom_minimum_size = Vector2(SAVE_STATUS_WIDTH, 0.0)
+	save_status_label.visible = false
+	ended_notice.add_child(save_status_label)
 
 
 func update(session: SessionManager) -> void:
@@ -151,6 +162,30 @@ func update(session: SessionManager) -> void:
 		var failed: bool = session.is_exam() and cause != &""
 		ended_label.text = tr(&"EXAM_FAILED" if failed else &"SESSION_ENDED")
 		ended_cause_label.text = tr(cause) if cause != &"" else ""
+
+
+## Shows the outcome of saving the finished session under the end notice.
+func show_save_status(saved: bool, history: HistoryStore) -> void:
+	var lines: PackedStringArray = []
+	for key: StringName in save_status_keys(saved, history):
+		lines.append(tr(key))
+	save_status_label.text = "\n".join(lines)
+	save_status_label.visible = not lines.is_empty()
+
+
+## Translation keys explaining the save outcome (spec Edge Cases): a recovered corrupt
+## history first, then whether this session was saved and, when not, why.
+static func save_status_keys(saved: bool, history: HistoryStore) -> Array[StringName]:
+	var keys: Array[StringName] = []
+	if history.notice == HistoryStore.Notice.CORRUPT_RECOVERED:
+		keys.append(&"HISTORY_CORRUPT_RECOVERED")
+	if saved:
+		keys.append(&"SAVE_DONE")
+	elif history.read_only:
+		keys.append(&"SAVE_READ_ONLY")
+	else:
+		keys.append(&"SAVE_UNAVAILABLE")
+	return keys
 
 
 ## `m:ss`, rounding up so the display reads 0:00 only once the time is up.

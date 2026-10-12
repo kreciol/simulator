@@ -6,6 +6,8 @@ extends Node
 ## colliding or leaving the road ends the session at once as aborted, with the cause
 ## (requirements §9.2). The countdown and the drive can be paused (spec Edge Cases):
 ## everything stands still until resumed, and losing window focus pauses on its own.
+## With a `scoring_config` it also scores the drive and, at the end, builds the
+## session's `SessionRecord` for `SaveManager`.
 
 signal session_started
 signal session_ended
@@ -19,6 +21,9 @@ enum EndReason { NONE, TIME_UP, COLLISION, OFF_ROAD }
 ## Absorbs float drift when fixed steps should sum to exactly a configured duration.
 const TIME_EPSILON: float = 1e-6
 
+## Scores the session when set; without it there is no scoring and no record.
+@export var scoring_config: ScoringConfig
+
 var sim: TrafficSim
 var player: VehicleState
 ## What the session was started with; null when set up directly through `setup`.
@@ -31,6 +36,12 @@ var end_reason: EndReason = EndReason.NONE
 var intro_elapsed_s: float = 0.0
 ## Session time driven so far; the timer starts when the intro ends.
 var elapsed_s: float = 0.0
+## Observes the sim after every step; null without a `scoring_config`.
+var scoring: ScoringSystem
+## When driving started, ISO-8601 UTC.
+var started_at: String = ""
+## The finished session's record; null until the end, or without scoring.
+var record: SessionRecord
 ## While set, `step` does nothing: the sim, its lane-change animation and signals, the
 ## countdown and the session timer stand still and commands are dropped. A flag rather
 ## than a state because both the intro and the drive can be paused; `state` says
@@ -62,6 +73,9 @@ func setup(road_profile: RoadProfile, sim_config: SimConfig, seed_value: int = 0
 	sim.player = player
 	sim.collision.connect(_on_collision)
 	sim.offroad.connect(_on_offroad)
+	scoring = ScoringSystem.new(sim, scoring_config) if scoring_config != null else null
+	started_at = ""
+	record = null
 	state = State.INTRO
 	end_reason = EndReason.NONE
 	_player_end_reason = EndReason.NONE
@@ -80,9 +94,12 @@ func step(dt: float, commands: PlayerCommands = null) -> void:
 			intro_elapsed_s += dt
 			if intro_elapsed_s >= sim.config.countdown_s - TIME_EPSILON:
 				state = State.DRIVING
+				started_at = Time.get_datetime_string_from_system(true) + "Z"
 				session_started.emit()
 		State.DRIVING:
 			sim.step(dt, commands)
+			if scoring != null:
+				scoring.observe(dt)
 			elapsed_s += dt
 			# TODO(E08-S02): in learn mode, K4 and a respawn instead of ending the session.
 			if _player_end_reason != EndReason.NONE:
@@ -131,6 +148,8 @@ func _notification(what: int) -> void:
 	# loss as either notification (the web build through the window), so both pause.
 	if what == NOTIFICATION_APPLICATION_FOCUS_OUT or what == NOTIFICATION_WM_WINDOW_FOCUS_OUT:
 		pause()
+
+
 func is_exam() -> bool:
 	return mode == LaunchOptions.MODE_EXAM
 
@@ -150,7 +169,38 @@ func status() -> StringName:
 func _end(reason: EndReason) -> void:
 	state = State.ENDED
 	end_reason = reason
+	if scoring != null:
+		scoring.finish()
+		record = _build_record()
 	session_ended.emit()
+
+
+func _build_record() -> SessionRecord:
+	var builder: SessionRecordBuilder = SessionRecordBuilder.new(scoring_config)
+	builder.id = _new_id()
+	builder.started_at = started_at
+	builder.app_version = str(ProjectSettings.get_setting("application/config/version", ""))
+	builder.road_profile = sim.road.id
+	builder.seed_value = sim.rng_seed
+	builder.duration_s = elapsed_s
+	builder.status = status()
+	builder.mode = mode
+	if options != null:
+		builder.difficulty = options.level
+		if options.difficulty != null:
+			builder.exam_pass_score = options.difficulty.exam_pass_score
+	return builder.build(scoring.event_log)
+
+
+## A random UUID (version 4), as §13 asks for the record's `id`. Not drawn from the
+## sim's RNG, so it never disturbs a seeded replay.
+static func _new_id() -> String:
+	var bytes: PackedByteArray = Crypto.new().generate_random_bytes(16)
+	bytes[6] = (bytes[6] & 0x0f) | 0x40
+	bytes[8] = (bytes[8] & 0x3f) | 0x80
+	var hex: String = bytes.hex_encode()
+	return "%s-%s-%s-%s-%s" % [hex.substr(0, 8), hex.substr(8, 4), hex.substr(12, 4),
+			hex.substr(16, 4), hex.substr(20, 12)]
 
 
 func _on_collision(vehicle_id: int, other_id: int) -> void:

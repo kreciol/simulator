@@ -373,3 +373,94 @@ func test_exam_without_an_incident_completes_after_ninety_seconds() -> void:
 	assert_int(_session.state).is_equal(SessionManager.State.ENDED)
 	assert_str(_session.status()).is_equal(SessionRecord.STATUS_COMPLETED)
 	assert_int(ended[0]).is_equal(1)
+
+
+func _scored_session(query: String) -> SessionManager:
+	var launcher: DevLauncherConfig = load("res://config/dev_launcher.tres") as DevLauncherConfig
+	var session: SessionManager = auto_free(SessionManager.new()) as SessionManager
+	session.scoring_config = load("res://config/scoring.tres") as ScoringConfig
+	var options: LaunchOptions = DevLauncher.resolve(DevLauncher.parse_query(query), launcher, 0)
+	# Started on an empty road (no level, no spawner) so the hands-off player drives the
+	# whole session clean; the level and its pass mark are only read at the end.
+	var level: DifficultyLevel = options.difficulty
+	options.difficulty = null
+	session.start(options, _config)
+	options.difficulty = level
+	return session
+
+
+func test_without_a_scoring_config_there_is_no_record() -> void:
+	_step(_steps_for(_config.countdown_s + _config.session_length_s))
+	assert_int(_session.state).is_equal(SessionManager.State.ENDED)
+	assert_object(_session.scoring).is_null()
+	assert_object(_session.record).is_null()
+
+
+func test_a_session_that_runs_out_of_time_ends_with_a_completed_record() -> void:
+	var session: SessionManager = _scored_session("?mode=learn&profile=expressway&level=2&seed=42")
+	for i: int in _steps_for(_config.countdown_s + _config.session_length_s):
+		session.step(DT)
+	assert_int(session.end_reason).is_equal(SessionManager.EndReason.TIME_UP)
+	var record: SessionRecord = session.record
+	assert_object(record).is_not_null()
+	assert_str(record.status).is_equal(SessionRecord.STATUS_COMPLETED)
+	assert_str(record.mode).is_equal(SessionRecord.MODE_LEARN)
+	assert_str(record.road_profile).is_equal(&"expressway")
+	assert_int(record.difficulty).is_equal(2)
+	assert_int(record.seed_value).is_equal(42)
+	assert_float(record.duration_s).is_equal_approx(_config.session_length_s, 1e-6)
+	assert_float(record.score_total).is_equal(session.scoring.total_score())
+	assert_that(record.exam_passed).is_null()
+	assert_str(record.app_version).is_equal(str(ProjectSettings.get_setting("application/config/version")))
+	assert_str(record.started_at).ends_with("Z")
+	assert_bool(Time.get_unix_time_from_datetime_string(record.started_at.trim_suffix("Z")) > 0).is_true()
+	# A version-4 UUID.
+	assert_int(record.id.length()).is_equal(36)
+	assert_str(record.id.substr(14, 1)).is_equal("4")
+
+
+func test_every_session_gets_its_own_id() -> void:
+	var first: SessionManager = _scored_session("?seed=1")
+	var second: SessionManager = _scored_session("?seed=1")
+	for session: SessionManager in [first, second]:
+		for i: int in _steps_for(_config.countdown_s + _config.session_length_s):
+			session.step(DT)
+	assert_str(first.record.id).is_not_equal(second.record.id)
+
+
+func test_an_exam_record_carries_the_verdict_against_the_level_pass_mark() -> void:
+	var session: SessionManager = _scored_session("?mode=exam&level=1&seed=7")
+	for i: int in _steps_for(_config.countdown_s + _config.session_length_s):
+		session.step(DT)
+	var record: SessionRecord = session.record
+	assert_str(record.mode).is_equal(SessionRecord.MODE_EXAM)
+	assert_that(record.exam_passed).is_equal(record.score_total >= session.options.difficulty.exam_pass_score)
+
+
+func test_a_crash_gives_an_aborted_record() -> void:
+	var session: SessionManager = _scored_session("?mode=exam&level=1&seed=7")
+	for i: int in _steps_for(_config.countdown_s) + 30:
+		session.step(DT)
+	var player: VehicleState = session.player
+	session.sim.add_vehicle(player.s + player.length_m + 1.0, 0, 0.0)
+	var steps: int = 0
+	while session.state == SessionManager.State.DRIVING and steps < 120:
+		session.step(DT)
+		steps += 1
+	assert_int(session.end_reason).is_equal(SessionManager.EndReason.COLLISION)
+	assert_str(session.record.status).is_equal(SessionRecord.STATUS_ABORTED_COLLISION)
+	assert_float(session.record.duration_s).is_less(_config.session_length_s)
+	assert_that(session.record.exam_passed).is_equal(false)
+
+
+func test_leaving_the_road_gives_an_aborted_offroad_record() -> void:
+	var session: SessionManager = _scored_session("?seed=3")
+	for i: int in _steps_for(_config.countdown_s):
+		session.step(DT)
+	var right: PlayerCommands = PlayerCommands.new()
+	right.lane_change = VehicleState.Dir.RIGHT
+	session.step(DT, right)
+	for i: int in _steps_for(_config.lane_change_duration_s):
+		session.step(DT)
+	assert_int(session.end_reason).is_equal(SessionManager.EndReason.OFF_ROAD)
+	assert_str(session.record.status).is_equal(SessionRecord.STATUS_ABORTED_OFFROAD)
