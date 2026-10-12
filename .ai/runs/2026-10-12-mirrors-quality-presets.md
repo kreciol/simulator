@@ -40,18 +40,20 @@ The player sees traffic behind in a rear-view and two side mirrors, and quality 
 
 ## Progress
 
+PR: #53
+
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: Quality presets and launch params
 
-- [ ] 1.1 QualityPreset low/high and ViewConfig.for_quality
-- [ ] 1.2 Dev launcher quality and mirrors params
+- [x] 1.1 QualityPreset low/high and ViewConfig.for_quality — eaefe4a
+- [x] 1.2 Dev launcher quality and mirrors params — 0c393bf
 
 ### Phase 2: Mirrors
 
-- [ ] 2.1 MirrorsView with three SubViewport mirrors
-- [ ] 2.2 Main scene applies quality and mirrors
+- [x] 2.1 MirrorsView with three SubViewport mirrors — 97f514b
+- [x] 2.2 Main scene applies quality and mirrors — 318048e
 
 ### Phase 3: Docs
 
-- [ ] 3.1 README and AGENTS.md
+- [x] 3.1 README and AGENTS.md — 49564ed
