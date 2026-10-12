@@ -6,6 +6,8 @@ extends Node
 ## colliding or leaving the road ends the session at once as aborted, with the cause
 ## (requirements §9.2). The countdown and the drive can be paused (spec Edge Cases):
 ## everything stands still until resumed, and losing window focus pauses on its own.
+## With a `scoring_config` it also scores the drive and, at the end, builds the
+## session's `SessionRecord` and — with a `feedback_config` — its `Summary`.
 
 signal session_started
 signal session_ended
@@ -18,6 +20,11 @@ enum EndReason { NONE, TIME_UP, COLLISION, OFF_ROAD }
 
 ## Absorbs float drift when fixed steps should sum to exactly a configured duration.
 const TIME_EPSILON: float = 1e-6
+
+## Scores the session when set; without it there is no scoring, record or summary.
+@export var scoring_config: ScoringConfig
+## Writes the end-of-session summary when set along with `scoring_config`.
+@export var feedback_config: FeedbackConfig
 
 var sim: TrafficSim
 var player: VehicleState
@@ -36,6 +43,12 @@ var elapsed_s: float = 0.0
 ## than a state because both the intro and the drive can be paused; `state` says
 ## which one resumes.
 var paused: bool = false
+## Observes the sim after every driving step; null without a `scoring_config`.
+var scoring: ScoringSystem
+## The ended session's record; null until the end, or without scoring.
+var record: SessionRecord
+## The ended session's summary; null until the end, or without both configs.
+var summary: Summary
 
 ## The player's collision or off-road seen during the current sim step; the session
 ## ends once the step is over.
@@ -62,6 +75,9 @@ func setup(road_profile: RoadProfile, sim_config: SimConfig, seed_value: int = 0
 	sim.player = player
 	sim.collision.connect(_on_collision)
 	sim.offroad.connect(_on_offroad)
+	scoring = ScoringSystem.new(sim, scoring_config) if scoring_config != null else null
+	record = null
+	summary = null
 	state = State.INTRO
 	end_reason = EndReason.NONE
 	_player_end_reason = EndReason.NONE
@@ -83,6 +99,8 @@ func step(dt: float, commands: PlayerCommands = null) -> void:
 				session_started.emit()
 		State.DRIVING:
 			sim.step(dt, commands)
+			if scoring != null:
+				scoring.observe(dt)
 			elapsed_s += dt
 			# TODO(E08-S02): in learn mode, K4 and a respawn instead of ending the session.
 			if _player_end_reason != EndReason.NONE:
@@ -150,7 +168,26 @@ func status() -> StringName:
 func _end(reason: EndReason) -> void:
 	state = State.ENDED
 	end_reason = reason
+	if scoring != null:
+		scoring.finish()
+		record = _build_record()
+		if feedback_config != null:
+			summary = SummaryGenerator.new(feedback_config).generate(scoring.event_log, record)
 	session_ended.emit()
+
+
+func _build_record() -> SessionRecord:
+	var builder: SessionRecordBuilder = SessionRecordBuilder.new(scoring_config)
+	builder.mode = mode
+	builder.road_profile = sim.road.id
+	builder.seed_value = sim.rng_seed
+	builder.duration_s = elapsed_s
+	builder.status = status()
+	if options != null:
+		builder.difficulty = options.level
+		if options.difficulty != null:
+			builder.exam_pass_score = options.difficulty.exam_pass_score
+	return builder.build(scoring.event_log)
 
 
 func _on_collision(vehicle_id: int, other_id: int) -> void:
