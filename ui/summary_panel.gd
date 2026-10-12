@@ -5,16 +5,18 @@ extends VBoxContainer
 ## description and one tip. The status and the cause above it stay in the HUD's end
 ## notice. Only reads the `Summary`; translates its lines (Polish first).
 
-const SEPARATION: int = 14
+const SEPARATION: int = 8
 const OUTLINE_SIZE: int = 8
-const TOTAL_FONT_SIZE: int = 44
-const CATEGORY_FONT_SIZE: int = 26
-const TEXT_FONT_SIZE: int = 24
-## Wrap width of the description and the tip; fits the 1280 px minimum window.
-const TEXT_WIDTH: float = 900.0
+const TOTAL_FONT_SIZE: int = 36
+const CATEGORY_FONT_SIZE: int = 22
+const TEXT_FONT_SIZE: int = 20
+## Wrap width of the description and the tip; with the sizes above the longest
+## summary (4 sentences, aborted) fits the 1280×720 minimum window.
+const TEXT_WIDTH: float = 1040.0
 const RATING_KEYS: Dictionary[Summary.Rating, StringName] = {
 	Summary.Rating.GOOD: &"SUMMARY_RATING_GOOD",
 	Summary.Rating.IMPROVE: &"SUMMARY_RATING_IMPROVE",
+	Summary.Rating.NOT_JUDGED: &"SUMMARY_RATING_OFF",
 }
 
 var total_label: Label
@@ -68,7 +70,8 @@ func show_summary(summary: Summary) -> void:
 	for line: FeedbackLine in summary.sentences:
 		sentences.append(text_of(line))
 	description_label.text = " ".join(sentences)
-	tip_label.text = tr(&"SUMMARY_TIP").format({"tip": text_of(summary.tip)})
+	# Title on its own line: a tip is a whole sentence, which reads oddly after a colon.
+	tip_label.text = "%s\n%s" % [tr(&"SUMMARY_TIP_TITLE"), text_of(summary.tip)]
 
 
 func text_of(line: FeedbackLine) -> String:

@@ -15,7 +15,11 @@ const TIME_FONT_SIZE: int = 40
 const COUNTDOWN_FONT_SIZE: int = 160
 const NOTICE_FONT_SIZE: int = 64
 const HINT_FONT_SIZE: int = 28
-const CAUSE_FONT_SIZE: int = 36
+const CAUSE_FONT_SIZE: int = 30
+## The end screen is tighter than the other notices so the longest summary fits in
+## the 1280×720 minimum window.
+const ENDED_FONT_SIZE: int = 52
+const ENDED_SEPARATION: int = 10
 ## Translation key of the cause shown for each aborted session status.
 const END_CAUSES: Dictionary[StringName, StringName] = {
 	SessionRecord.STATUS_ABORTED_COLLISION: &"END_CAUSE_COLLISION",
@@ -126,12 +130,12 @@ func setup(view_config: ViewConfig) -> void:
 	root.add_child(ended_screen)
 	var ended_notice: VBoxContainer = VBoxContainer.new()
 	ended_notice.name = "EndedNotice"
-	ended_notice.add_theme_constant_override("separation", int(MARGIN))
+	ended_notice.add_theme_constant_override("separation", ENDED_SEPARATION)
 	ended_screen.add_child(ended_notice)
 	ended_notice.set_anchors_and_offsets_preset(Control.PRESET_CENTER, Control.PRESET_MODE_MINSIZE)
 	ended_notice.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	ended_notice.grow_vertical = Control.GROW_DIRECTION_BOTH
-	ended_label = _label("Ended", NOTICE_FONT_SIZE)
+	ended_label = _label("Ended", ENDED_FONT_SIZE)
 	ended_label.visible = false
 	ended_notice.add_child(ended_label)
 	ended_cause_label = _label("EndedCause", CAUSE_FONT_SIZE)

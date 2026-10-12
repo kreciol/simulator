@@ -3,7 +3,8 @@ extends RefCounted
 ## What the end-of-session screen shows (requirements §11.3, spec UI/UX: Summary).
 ## Built by `SummaryGenerator`; every text is a `FeedbackLine` for the UI to translate.
 
-enum Rating { GOOD, IMPROVE }
+## NOT_JUDGED: the category's rule was off this session (speed with S1 disabled, Q4).
+enum Rating { GOOD, IMPROVE, NOT_JUDGED }
 
 
 ## One category row: its sub-score and whether it went well.

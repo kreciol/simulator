@@ -6,16 +6,19 @@ extends RefCounted
 ## translation keys rather than text, so every sentence is gender-neutral Polish from
 ## i18n/strings.csv (Q3).
 ##
-## Selection by category penalty (the points a category lost):
+## Selection by category penalty (the points a category lost), among the judged
+## categories (speed only while S1 is on):
 ## - the strength is the category that lost least (ties: the higher sub-score, then
-##   `SessionRecord.SCORED_CATEGORIES` order);
-## - areas to improve are the other categories that lost at least
-##   `FeedbackConfig.improve_penalty_threshold`, largest loss first, at most
-##   `MAX_IMPROVEMENTS`.
-## The description is the strength, then each area with its numbers, then why an
-## aborted session ended — or, when nothing needs work and nothing went wrong, a
-## sentence saying so: always `MIN_SENTENCES`–`MAX_SENTENCES`. The tip is the habit
-## for the top area, else for the abort cause, else a general next step.
+##   `SessionRecord.SCORED_CATEGORIES` order); when even it lost enough to be rated
+##   "to improve", it is worded as the relatively best one;
+## - the first area to improve is the other category that lost most, whenever any
+##   lost points; a second one joins when it lost at least
+##   `FeedbackConfig.improve_penalty_threshold` (§11.3: one or two areas).
+## The description is the strength, then each area with its numbers, then why the
+## session fell short — an abort cause or the points missing for an exam pass — or,
+## when there is nothing of that, a sentence saying the rest went well: always
+## `MIN_SENTENCES`–`MAX_SENTENCES`. The tip is the habit for the top area, else for
+## the abort cause, else a next step that fits the mode.
 
 ## Requirements §11.3: one strength and one or two areas, in 2–4 sentences.
 const MAX_IMPROVEMENTS: int = 2
@@ -27,7 +30,12 @@ const STATUS_ABORTED: StringName = &"SUMMARY_STATUS_ABORTED"
 const STATUS_EXAM_PASSED: StringName = &"SUMMARY_STATUS_EXAM_PASSED"
 const STATUS_EXAM_FAILED: StringName = &"EXAM_FAILED"
 const ALL_GOOD: StringName = &"SUMMARY_ALL_GOOD"
+const EXAM_BELOW_PASS: StringName = &"SUMMARY_EXAM_BELOW_PASS"
 const TIP_GENERAL: StringName = &"TIP_GENERAL"
+const TIP_GENERAL_EXAM: StringName = &"TIP_GENERAL_EXAM"
+const TIP_EXAM_POINTS: StringName = &"TIP_EXAM_POINTS"
+## S1 is the only rule that can be switched off (Q4).
+const SPEED: StringName = &"speed"
 
 const CAUSES: Dictionary[StringName, StringName] = {
 	SessionRecord.STATUS_ABORTED_COLLISION: &"END_CAUSE_COLLISION",
@@ -53,6 +61,13 @@ const STRENGTHS: Dictionary[StringName, StringName] = {
 	&"signal": &"SUMMARY_STRENGTH_SIGNAL",
 	&"speed": &"SUMMARY_STRENGTH_SPEED",
 }
+## The strength when it, too, needs work.
+const RELATIVE_STRENGTHS: Dictionary[StringName, StringName] = {
+	&"gap": &"SUMMARY_STRENGTH_RELATIVE_GAP",
+	&"lane": &"SUMMARY_STRENGTH_RELATIVE_LANE",
+	&"signal": &"SUMMARY_STRENGTH_RELATIVE_SIGNAL",
+	&"speed": &"SUMMARY_STRENGTH_RELATIVE_SPEED",
+}
 const IMPROVEMENTS: Dictionary[StringName, StringName] = {
 	&"gap": &"SUMMARY_IMPROVE_GAP",
 	&"lane": &"SUMMARY_IMPROVE_LANE",
@@ -67,13 +82,20 @@ const TIPS: Dictionary[StringName, StringName] = {
 }
 
 var config: FeedbackConfig
+## Whether speeding was judged this session (`ScoringConfig.speed_rule_enabled`).
+var speed_judged: bool = true
 
 
-func _init(feedback_config: FeedbackConfig) -> void:
+## `scoring_config` tells whether S1 was on; without it speed counts as judged.
+func _init(feedback_config: FeedbackConfig, scoring_config: ScoringConfig = null) -> void:
 	config = feedback_config
+	if scoring_config != null:
+		speed_judged = scoring_config.speed_rule_enabled
 
 
-func generate(event_log: EventLog, record: SessionRecord) -> Summary:
+## `exam_pass_score` is the level's `DifficultyLevel.exam_pass_score`; it is only read
+## to say how many points an exam that completed but failed was short of.
+func generate(event_log: EventLog, record: SessionRecord, exam_pass_score: float = 0.0) -> Summary:
 	var summary: Summary = Summary.new()
 	summary.score_total = record.score_total
 	summary.exam_passed = record.exam_passed
@@ -85,17 +107,31 @@ func generate(event_log: EventLog, record: SessionRecord) -> Summary:
 		result.category = category
 		result.points = record.score_by_category.get(category, 0.0)
 		result.penalty = penalty(event_log, category)
-		result.rating = Summary.Rating.IMPROVE \
-				if result.penalty >= config.improve_penalty_threshold else Summary.Rating.GOOD
+		if category == SPEED and not speed_judged:
+			result.rating = Summary.Rating.NOT_JUDGED
+		elif result.penalty >= config.improve_penalty_threshold:
+			result.rating = Summary.Rating.IMPROVE
+		else:
+			result.rating = Summary.Rating.GOOD
 		summary.categories.append(result)
 
-	summary.strength = _strength(summary.categories)
-	summary.improvements = _improvements(summary.categories, summary.strength)
+	var strength: Summary.CategoryResult = _strength(summary.categories)
+	summary.strength = strength.category
+	summary.improvements = _improvements(summary.categories, strength)
 
-	summary.sentences.append(FeedbackLine.create(STRENGTHS[summary.strength]))
+	var strengths: Dictionary[StringName, StringName] = \
+			RELATIVE_STRENGTHS if strength.rating == Summary.Rating.IMPROVE else STRENGTHS
+	summary.sentences.append(FeedbackLine.create(strengths[strength.category]))
 	for category: StringName in summary.improvements:
 		summary.sentences.append(FeedbackLine.create(IMPROVEMENTS[category],
 				_improvement_args(category, event_log, record)))
+	var failed_on_points: bool = record.mode == SessionRecord.MODE_EXAM \
+			and record.status == SessionRecord.STATUS_COMPLETED and record.exam_passed != true
+	if failed_on_points:
+		summary.sentences.append(FeedbackLine.create(EXAM_BELOW_PASS, {
+			"missing": maxi(1, ceili(exam_pass_score - record.score_total)),
+			"pass": roundi(exam_pass_score),
+		}))
 	var abort_sentence: StringName = ABORT_SENTENCES.get(record.status, &"")
 	if abort_sentence != &"":
 		summary.sentences.append(FeedbackLine.create(abort_sentence))
@@ -104,8 +140,13 @@ func generate(event_log: EventLog, record: SessionRecord) -> Summary:
 
 	if not summary.improvements.is_empty():
 		summary.tip = FeedbackLine.create(TIPS[summary.improvements[0]])
+	elif abort_sentence != &"":
+		summary.tip = FeedbackLine.create(ABORT_TIPS[record.status])
+	elif failed_on_points:
+		summary.tip = FeedbackLine.create(TIP_EXAM_POINTS)
 	else:
-		summary.tip = FeedbackLine.create(ABORT_TIPS.get(record.status, TIP_GENERAL))
+		summary.tip = FeedbackLine.create(
+				TIP_GENERAL_EXAM if record.mode == SessionRecord.MODE_EXAM else TIP_GENERAL)
 	return summary
 
 
@@ -130,19 +171,22 @@ func _status_key(record: SessionRecord) -> StringName:
 	return STATUS_COMPLETED if record.status == SessionRecord.STATUS_COMPLETED else STATUS_ABORTED
 
 
-func _strength(categories: Array[Summary.CategoryResult]) -> StringName:
-	var best: Summary.CategoryResult = categories[0]
+func _strength(categories: Array[Summary.CategoryResult]) -> Summary.CategoryResult:
+	var best: Summary.CategoryResult = null
 	for result: Summary.CategoryResult in categories:
-		if result.penalty < best.penalty \
+		if result.rating == Summary.Rating.NOT_JUDGED:
+			continue
+		if best == null or result.penalty < best.penalty \
 				or (is_equal_approx(result.penalty, best.penalty) and result.points > best.points):
 			best = result
-	return best.category
+	return best
 
 
-func _improvements(categories: Array[Summary.CategoryResult], strength: StringName) -> Array[StringName]:
+func _improvements(categories: Array[Summary.CategoryResult],
+		strength: Summary.CategoryResult) -> Array[StringName]:
 	var candidates: Array[Summary.CategoryResult] = []
 	for result: Summary.CategoryResult in categories:
-		if result.category != strength and result.rating == Summary.Rating.IMPROVE:
+		if result != strength and result.rating != Summary.Rating.NOT_JUDGED and result.penalty > 0.0:
 			candidates.append(result)
 	# Stable for equal losses: `sort_custom` is not, so order by index on ties.
 	candidates.sort_custom(func(a: Summary.CategoryResult, b: Summary.CategoryResult) -> bool:
@@ -150,7 +194,11 @@ func _improvements(categories: Array[Summary.CategoryResult], strength: StringNa
 			return a.penalty > b.penalty
 		return categories.find(a) < categories.find(b))
 	var picked: Array[StringName] = []
-	for result: Summary.CategoryResult in candidates.slice(0, MAX_IMPROVEMENTS):
+	for result: Summary.CategoryResult in candidates:
+		# The top loss is always worth a sentence; a second only when it is a real one.
+		if picked.size() == MAX_IMPROVEMENTS \
+				or (not picked.is_empty() and result.rating != Summary.Rating.IMPROVE):
+			break
 		picked.append(result.category)
 	return picked
 

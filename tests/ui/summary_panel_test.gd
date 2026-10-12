@@ -52,8 +52,16 @@ func test_shows_four_categories_each_with_an_icon_and_text() -> void:
 func test_shows_the_description_and_the_tip_in_polish() -> void:
 	_panel.show_summary(_summary())
 	assert_str(_panel.description_label.text).is_equal(
-			"Najlepiej wyszło trzymanie się prawego pasa i powroty na prawo po wyprzedzaniu. "
-			+ "Zmiany pasa bez kierunkowskazu włączonego na czas: 1 z 2 — inni kierowcy powinni znać zamiar z wyprzedzeniem. "
+			"Najlepiej wyszło trzymanie się prawego pasa. "
+			+ "Zmiany pasa bez właściwego kierunkowskazu włączonego zawczasu: 1 z 2 — inni kierowcy powinni znać zamiar przed manewrem. "
 			+ "Przez 3 s odstęp był mniejszy niż wymagane minimum, czyli połowa prędkości w km/h wyrażona w metrach.")
 	assert_str(_panel.tip_label.text).is_equal(
-			"Na następny raz: Najpierw kierunkowskaz i lusterko, a zmiana pasa dopiero po chwili.")
+			"Wskazówka na następny raz\nNajpierw kierunkowskaz i lusterko, a zmiana pasa dopiero po chwili.")
+
+
+func test_a_category_not_judged_says_so() -> void:
+	var summary: Summary = _summary()
+	summary.categories[3].rating = Summary.Rating.NOT_JUDGED
+	_panel.show_summary(summary)
+	assert_str(_panel.category_labels[3].text).is_equal("Prędkość: 0 pkt — bez oceny")
+	assert_int(_panel.category_icons[3].rating).is_equal(Summary.Rating.NOT_JUDGED)

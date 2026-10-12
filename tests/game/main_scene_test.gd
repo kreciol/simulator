@@ -197,7 +197,7 @@ func test_hitting_a_car_ends_the_session_with_the_end_screen() -> void:
 	assert_str(hud.ended_cause_label.text).is_equal("Przyczyna: kolizja z innym pojazdem")
 	assert_bool(hud.summary_panel.is_visible_in_tree()).is_true()
 	assert_str(hud.summary_panel.total_label.text).starts_with("Wynik: ")
-	assert_str(hud.summary_panel.tip_label.text).starts_with("Na następny raz: ")
+	assert_str(hud.summary_panel.tip_label.text).starts_with("Wskazówka na następny raz\n")
 
 
 

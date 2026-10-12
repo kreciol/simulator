@@ -172,7 +172,8 @@ func _end(reason: EndReason) -> void:
 		scoring.finish()
 		record = _build_record()
 		if feedback_config != null:
-			summary = SummaryGenerator.new(feedback_config).generate(scoring.event_log, record)
+			summary = SummaryGenerator.new(feedback_config, scoring_config).generate(
+					scoring.event_log, record, _exam_pass_score())
 	session_ended.emit()
 
 
@@ -183,11 +184,17 @@ func _build_record() -> SessionRecord:
 	builder.seed_value = sim.rng_seed
 	builder.duration_s = elapsed_s
 	builder.status = status()
+	builder.exam_pass_score = _exam_pass_score()
 	if options != null:
 		builder.difficulty = options.level
-		if options.difficulty != null:
-			builder.exam_pass_score = options.difficulty.exam_pass_score
 	return builder.build(scoring.event_log)
+
+
+## The launch level's exam pass mark; 0 when set up without a level.
+func _exam_pass_score() -> float:
+	if options == null or options.difficulty == null:
+		return 0.0
+	return options.difficulty.exam_pass_score
 
 
 func _on_collision(vehicle_id: int, other_id: int) -> void:

@@ -29,13 +29,14 @@ func _summary_keys() -> Array[StringName]:
 	var keys: Array[StringName] = [
 		SummaryGenerator.STATUS_COMPLETED, SummaryGenerator.STATUS_ABORTED,
 		SummaryGenerator.STATUS_EXAM_PASSED, SummaryGenerator.STATUS_EXAM_FAILED,
-		SummaryGenerator.ALL_GOOD, SummaryGenerator.TIP_GENERAL,
-		&"SUMMARY_TOTAL", &"SUMMARY_CATEGORY_ROW", &"SUMMARY_RATING_GOOD",
-		&"SUMMARY_RATING_IMPROVE", &"SUMMARY_TIP",
+		SummaryGenerator.ALL_GOOD, SummaryGenerator.EXAM_BELOW_PASS, SummaryGenerator.TIP_GENERAL,
+		SummaryGenerator.TIP_GENERAL_EXAM, SummaryGenerator.TIP_EXAM_POINTS,
+		&"SUMMARY_TOTAL", &"SUMMARY_CATEGORY_ROW", &"SUMMARY_TIP_TITLE",
 	]
 	for table: Dictionary in [SummaryGenerator.CAUSES, SummaryGenerator.ABORT_SENTENCES,
 			SummaryGenerator.ABORT_TIPS, SummaryGenerator.CATEGORY_NAMES, SummaryGenerator.STRENGTHS,
-			SummaryGenerator.IMPROVEMENTS, SummaryGenerator.TIPS]:
+			SummaryGenerator.RELATIVE_STRENGTHS, SummaryGenerator.IMPROVEMENTS, SummaryGenerator.TIPS,
+			SummaryPanel.RATING_KEYS]:
 		for key: StringName in table.values():
 			keys.append(key)
 	return keys
@@ -51,12 +52,15 @@ func test_every_summary_text_is_translated_to_polish() -> void:
 
 func test_summary_sentences_are_one_sentence_each() -> void:
 	# The description counts sentences by line (2–4, requirements §11.3).
+	var keys: Array[StringName] = [SummaryGenerator.ALL_GOOD, SummaryGenerator.EXAM_BELOW_PASS]
 	for table: Dictionary in [SummaryGenerator.ABORT_SENTENCES, SummaryGenerator.STRENGTHS,
-			SummaryGenerator.IMPROVEMENTS]:
+			SummaryGenerator.RELATIVE_STRENGTHS, SummaryGenerator.IMPROVEMENTS]:
 		for key: StringName in table.values():
-			var text: String = TranslationServer.translate(key)
-			assert_str(text).override_failure_message("%s: %s" % [key, text]).ends_with(".")
-			assert_int(text.count(". ")).override_failure_message("%s: %s" % [key, text]).is_zero()
+			keys.append(key)
+	for key: StringName in keys:
+		var text: String = TranslationServer.translate(key)
+		assert_str(text).override_failure_message("%s: %s" % [key, text]).ends_with(".")
+		assert_int(text.count(". ")).override_failure_message("%s: %s" % [key, text]).is_zero()
 
 
 func test_the_gendered_form_lint_catches_the_superseded_example() -> void:

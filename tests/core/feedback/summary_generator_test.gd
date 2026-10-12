@@ -86,10 +86,38 @@ func test_status_of_each_ending(mode: StringName, status: StringName, collision:
 
 
 func test_exam_below_the_pass_score_fails_without_a_cause() -> void:
-	var summary: Summary = _generate(_log(), SessionRecord.MODE_EXAM, SessionRecord.STATUS_COMPLETED, 1000.0)
+	var event_log: EventLog = _log()
+	var summary: Summary = _generator.generate(event_log,
+			_record(event_log, SessionRecord.MODE_EXAM, SessionRecord.STATUS_COMPLETED, 1000.0), 1000.0)
 	assert_str(summary.status_key).is_equal(&"EXAM_FAILED")
 	assert_str(summary.cause_key).is_empty()
 	assert_bool(summary.exam_passed).is_false()
+
+
+func test_exam_failed_on_points_says_how_many_were_missing_not_that_all_went_well() -> void:
+	# 60 points against a 100.4 pass mark, nothing lost anywhere.
+	var event_log: EventLog = _log()
+	var summary: Summary = _generator.generate(event_log,
+			_record(event_log, SessionRecord.MODE_EXAM, SessionRecord.STATUS_COMPLETED, 100.4), 100.4)
+	assert_array(_keys(summary.sentences)).is_equal([&"SUMMARY_STRENGTH_GAP", &"SUMMARY_EXAM_BELOW_PASS"])
+	assert_dict(summary.sentences[1].args).is_equal({"missing": 41, "pass": 100})
+	assert_str(summary.tip.key).is_equal(&"TIP_EXAM_POINTS")
+
+
+func test_exam_failed_on_points_still_names_the_top_loss() -> void:
+	var event_log: EventLog = _log(6.0)
+	var summary: Summary = _generator.generate(event_log,
+			_record(event_log, SessionRecord.MODE_EXAM, SessionRecord.STATUS_COMPLETED, 1000.0), 1000.0)
+	assert_array(_keys(summary.sentences)).is_equal(
+			[&"SUMMARY_STRENGTH_LANE", &"SUMMARY_IMPROVE_GAP", &"SUMMARY_EXAM_BELOW_PASS"])
+	assert_str(summary.tip.key).is_equal(&"TIP_GAP")
+
+
+func test_a_clean_exam_pass_suggests_no_exam_mode() -> void:
+	var summary: Summary = _generate(_log(), SessionRecord.MODE_EXAM)
+	assert_str(summary.status_key).is_equal(&"SUMMARY_STATUS_EXAM_PASSED")
+	assert_array(_keys(summary.sentences)).is_equal([&"SUMMARY_STRENGTH_GAP", &"SUMMARY_ALL_GOOD"])
+	assert_str(summary.tip.key).is_equal(&"TIP_GENERAL_EXAM")
 
 
 func test_exam_above_the_pass_score_with_a_collision_fails() -> void:
@@ -151,10 +179,38 @@ func test_strength_tie_goes_to_the_higher_score() -> void:
 	assert_array(summary.improvements).is_empty()
 
 
-func test_small_slips_are_not_areas_to_improve() -> void:
-	# gap loses 2, under the 4-point threshold.
+func test_the_top_loss_is_named_even_below_the_threshold() -> void:
+	# gap loses 2, under the 4-point threshold: still one area (§11.3: one or two).
 	var summary: Summary = _generate(_log(1.0))
-	assert_array(summary.improvements).is_empty()
+	assert_array(summary.improvements).is_equal([&"gap"])
+	assert_int(summary.categories[0].rating).is_equal(Summary.Rating.GOOD)
+
+
+func test_a_second_area_needs_the_threshold() -> void:
+	# gap loses 2 and speed 2, both small: only the first is named.
+	assert_array(_generate(_log(1.0, 0.0, 0, 0, 1.0)).improvements).is_equal([&"gap"])
+	# gap 2, signal 5: the larger one first; the small one stays out.
+	assert_array(_generate(_log(1.0, 0.0, 1)).improvements).is_equal([&"signal"])
+
+
+func test_strength_needing_work_is_worded_as_the_relatively_best() -> void:
+	# Every category loses at least 4: gap 6, lane 6, signal 5, speed 6.
+	var summary: Summary = _generate(_log(3.0, 3.0, 1, 0, 3.0))
+	assert_str(summary.strength).is_equal(&"signal")
+	assert_str(summary.sentences[0].key).is_equal(&"SUMMARY_STRENGTH_RELATIVE_SIGNAL")
+
+
+func test_speed_is_not_judged_when_the_speed_rule_is_off() -> void:
+	var scoring: ScoringConfig = (load("res://config/scoring.tres") as ScoringConfig).duplicate() as ScoringConfig
+	scoring.speed_rule_enabled = false
+	var generator: SummaryGenerator = SummaryGenerator.new(_feedback, scoring)
+	# gap 2, lane 2, signal 5; speed lost nothing because nothing checked it.
+	var event_log: EventLog = _log(1.0, 1.0, 1)
+	var summary: Summary = generator.generate(event_log, _record(event_log))
+	assert_int(summary.categories[3].rating).is_equal(Summary.Rating.NOT_JUDGED)
+	assert_str(summary.strength).is_equal(&"gap")
+	assert_array(summary.improvements).is_equal([&"signal"])
+	assert_array(_keys(summary.sentences)).not_contains([&"SUMMARY_STRENGTH_SPEED"])
 
 
 # Description
@@ -164,6 +220,7 @@ func test_description_has_two_to_four_sentences(gap_s: float, lane_s: float, lat
 		[0.0, 0.0, 0, 0, 0.0, SessionRecord.STATUS_COMPLETED, 2],
 		[0.0, 0.0, 0, 0, 0.0, SessionRecord.STATUS_ABORTED_COLLISION, 2],
 		[6.0, 0.0, 0, 0, 0.0, SessionRecord.STATUS_COMPLETED, 2],
+		[1.0, 0.0, 0, 0, 0.0, SessionRecord.STATUS_ABORTED_COLLISION, 3],
 		[6.0, 3.0, 0, 1, 0.0, SessionRecord.STATUS_COMPLETED, 3],
 		[10.0, 4.0, 1, 1, 3.0, SessionRecord.STATUS_COMPLETED, 3],
 		[10.0, 4.0, 1, 1, 3.0, SessionRecord.STATUS_ABORTED_OFFROAD, 4],
