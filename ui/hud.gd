@@ -5,7 +5,9 @@ extends CanvasLayer
 ## with the cause of an aborted session (placeholder until the Phase 8 summary). In
 ## learn mode only (Q10, Q11) it also shows the live score and, under each side mirror,
 ## a blind-spot warning (icon and text, never colour alone) while a vehicle sits in
-## that side's blind spot (`LaneQuery.blind_spot_occupied`). Only reads session state.
+## that side's blind spot (`LaneQuery.blind_spot_occupied`) while driving — shown under
+## where the mirror sits even with mirrors off. The score stays up through the countdown
+## and under the end screen. Only reads session state.
 ## Placeholder styling until the UI theme lands (Phase 10).
 
 const MARGIN: float = 24.0
@@ -120,12 +122,9 @@ func setup(view_config: ViewConfig) -> void:
 	score_panel.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT, Control.PRESET_MODE_MINSIZE, int(MARGIN))
 	score_panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 
-	# The right side mirror is the left one reflected across the screen's centreline.
-	var right_mirror_rect: Rect2 = view.left_mirror_rect
-	right_mirror_rect.position.x = 1.0 - view.left_mirror_rect.end.x
 	blind_spot_left = _blind_spot("BlindSpotLeft", view.left_mirror_rect)
 	root.add_child(blind_spot_left)
-	blind_spot_right = _blind_spot("BlindSpotRight", right_mirror_rect)
+	blind_spot_right = _blind_spot("BlindSpotRight", view.right_mirror_rect())
 	root.add_child(blind_spot_right)
 
 	countdown_label = _centered_label("Countdown", COUNTDOWN_FONT_SIZE)

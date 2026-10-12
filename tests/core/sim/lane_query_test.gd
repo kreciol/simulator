@@ -156,6 +156,27 @@ func test_blind_spot_occupied(
 			.override_failure_message(case_name).is_equal(expected)
 
 
+## The ego vehicle changes from lane 0 to lane 1 at s = 0; the other vehicle is just
+## behind it on `other_lane`. Sides follow the lane it is mostly on.
+func test_blind_spot_follows_the_lane_change_from_halfway(
+		case_name: String,
+		progress: float,
+		dir: VehicleState.Dir,
+		other_lane: int,
+		expected: bool,
+		test_parameters: Array = [
+			["early: left is the target lane", 0.25, LEFT, 1, true],
+			["early: right of the origin lane is off the road", 0.25, RIGHT, 0, false],
+			["late: right is the origin lane", 0.75, RIGHT, 0, true],
+			["late: left of the target lane is off the road", 0.75, LEFT, 1, false],
+		]) -> void:
+	var me: VehicleState = _vehicle(0.0, 0, 30.0, 1)
+	me.lane_change_progress = progress
+	var vehicles: Array[VehicleState] = [_vehicle(-5.0, other_lane), me]
+	assert_bool(LaneQuery.blind_spot_occupied(_lanes(vehicles), me, dir, 1.0, 8.0)) \
+			.override_failure_message(case_name).is_equal(expected)
+
+
 ## The ego vehicle drives 30 m/s; `right` is the vehicle on the lane to its right.
 func test_is_overtaking(
 		case_name: String,

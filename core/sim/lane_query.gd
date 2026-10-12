@@ -48,9 +48,14 @@ static func is_lane_free(
 	return true
 
 
+## Halfway through a lane change a vehicle is more on its target lane than its origin.
+const LANE_CHANGE_HALFWAY: float = 0.5
+
+
 ## Whether a vehicle body reaches into `vehicle`'s blind spot on its `dir` side: the
-## lane beside `vehicle.lane` (the origin lane while changing), from `behind_m` behind
-## to `ahead_m` ahead of its centre. Beyond the road edge no vehicle is ever found.
+## lane beside the one it is mostly on (its target lane from halfway through a lane
+## change), from `behind_m` behind to `ahead_m` ahead of its centre. Beyond the road
+## edge no vehicle is ever found.
 static func blind_spot_occupied(
 		lanes: LaneIndex,
 		vehicle: VehicleState,
@@ -59,7 +64,10 @@ static func blind_spot_occupied(
 		behind_m: float) -> bool:
 	if dir == VehicleState.Dir.NONE:
 		return false
-	return not is_lane_free(lanes, vehicle.lane + int(dir), vehicle.s, ahead_m, behind_m, vehicle)
+	var lane: int = vehicle.lane
+	if vehicle.lane_change_active and vehicle.lane_change_progress >= LANE_CHANGE_HALFWAY:
+		lane = vehicle.lane_change_to
+	return not is_lane_free(lanes, lane + int(dir), vehicle.s, ahead_m, behind_m, vehicle)
 
 
 ## Distance from `vehicle`'s front to the rear of the nearest vehicle ahead in its

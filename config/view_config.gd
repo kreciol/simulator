@@ -102,6 +102,14 @@ func covered_behind_m() -> float:
 	return float(segments_behind) * segment_length_m
 
 
+## Where the right side mirror sits on screen: the left one reflected across the
+## screen's vertical centreline.
+func right_mirror_rect() -> Rect2:
+	var rect: Rect2 = left_mirror_rect
+	rect.position.x = 1.0 - left_mirror_rect.end.x
+	return rect
+
+
 ## How far the mirrors see: exactly the road always kept behind, so they never show
 ## where it ends.
 func mirror_range_m() -> float:
