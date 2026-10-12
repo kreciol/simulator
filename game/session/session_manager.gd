@@ -14,6 +14,8 @@ const TIME_EPSILON: float = 1e-6
 
 var sim: TrafficSim
 var player: VehicleState
+## What the session was started with; null when set up directly through `setup`.
+var options: LaunchOptions
 var state: State = State.INTRO
 ## Time spent in the intro countdown, seconds.
 var intro_elapsed_s: float = 0.0
@@ -21,7 +23,15 @@ var intro_elapsed_s: float = 0.0
 var elapsed_s: float = 0.0
 
 
+## Sets the session up on the launch options' profile and seed, keeping the options
+## (mode, level) for the rules that depend on them.
+func start(launch_options: LaunchOptions, sim_config: SimConfig) -> void:
+	setup(launch_options.profile, sim_config, launch_options.seed_value)
+	options = launch_options
+
+
 func setup(road_profile: RoadProfile, sim_config: SimConfig, seed_value: int = 0) -> void:
+	options = null
 	sim = TrafficSim.new(road_profile, sim_config, seed_value)
 	# Right lane at the start speed (requirements §9.3).
 	player = sim.add_vehicle(0.0, 0, sim_config.start_speed_kmh / TrafficSim.KMH_PER_MPS)

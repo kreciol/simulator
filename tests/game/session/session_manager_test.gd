@@ -100,3 +100,18 @@ func test_nothing_advances_after_the_end() -> void:
 	assert_float(_session.player.s).is_equal(s_at_end)
 	assert_float(_session.sim.time_s).is_equal(time_at_end)
 	assert_float(_session.time_left_s()).is_equal(0.0)
+
+
+func test_start_uses_the_launch_options_profile_and_seed() -> void:
+	var launcher: DevLauncherConfig = load("res://config/dev_launcher.tres") as DevLauncherConfig
+	var options: LaunchOptions = DevLauncher.resolve(
+			DevLauncher.parse_query("?mode=exam&profile=expressway&level=2&seed=42"), launcher, 0)
+	var session: SessionManager = auto_free(SessionManager.new()) as SessionManager
+	session.start(options, _config)
+	assert_object(session.options).is_same(options)
+	assert_str(session.options.mode).is_equal(LaunchOptions.MODE_EXAM)
+	assert_int(session.options.level).is_equal(2)
+	assert_str(session.sim.road.id).is_equal(&"expressway")
+	assert_int(session.sim.rng_seed).is_equal(42)
+	assert_int(session.state).is_equal(SessionManager.State.INTRO)
+	assert_int(session.player.lane).is_equal(0)

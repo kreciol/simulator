@@ -52,6 +52,14 @@ func test_limit_is_the_road_profiles(profile_path: String, limit: String, test_p
 	assert_str(_hud.limit_label.text).is_equal(limit)
 
 
+func test_expressway_from_the_url_shows_a_120_limit() -> void:
+	var launcher: DevLauncherConfig = load("res://config/dev_launcher.tres") as DevLauncherConfig
+	var options: LaunchOptions = DevLauncher.resolve(DevLauncher.parse_query("?profile=expressway"), launcher, 0)
+	var session: SessionManager = auto_free(SessionManager.new()) as SessionManager
+	session.start(options, load("res://config/sim_config.tres") as SimConfig)
+	_hud.update(session)
+	assert_str(_hud.limit_label.text).is_equal("120")
+
 func test_signal_arrow_blinks_on_its_side_only() -> void:
 	_finish_countdown()
 	assert_object(_hud.signal_left.color).is_equal(Hud.ARROW_OFF)

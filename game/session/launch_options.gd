@@ -1,0 +1,20 @@
+class_name LaunchOptions
+extends RefCounted
+## What one session is started with: mode, road profile, difficulty level and seed.
+## Built by `DevLauncher` until the Phase 10 menus exist.
+
+const MODE_LEARN: StringName = &"learn"
+const MODE_EXAM: StringName = &"exam"
+const MODES: Array[StringName] = [MODE_LEARN, MODE_EXAM]
+
+var mode: StringName
+var profile: RoadProfile
+## Difficulty level, 1-based.
+var level: int
+var seed_value: int
+## False when the seed was missing or invalid and a random one was drawn instead.
+var seed_given: bool
+
+
+func describe() -> String:
+	return "mode=%s profile=%s level=%d seed=%d" % [mode, profile.id, level, seed_value]

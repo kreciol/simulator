@@ -1,7 +1,7 @@
 [gd_scene load_steps=12 format=3]
 
 [ext_resource type="Script" path="res://game/main.gd" id="1_main"]
-[ext_resource type="Resource" path="res://config/road_profiles/motorway.tres" id="2_road"]
+[ext_resource type="Resource" path="res://config/dev_launcher.tres" id="2_launcher"]
 [ext_resource type="Resource" path="res://config/sim_config.tres" id="3_sim"]
 [ext_resource type="Resource" path="res://config/view_config.tres" id="4_view"]
 [ext_resource type="Script" path="res://game/world/road_view.gd" id="5_road_view"]
@@ -34,7 +34,7 @@ fog_depth_end = 480.0
 
 [node name="Main" type="Node3D"]
 script = ExtResource("1_main")
-road_profile = ExtResource("2_road")
+launcher_config = ExtResource("2_launcher")
 sim_config = ExtResource("3_sim")
 view_config = ExtResource("4_view")
 

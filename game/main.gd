@@ -2,12 +2,15 @@ extends Node3D
 ## Drivable scene (spec Phase 3): the player's vehicle in the simulation, driven by
 ## the keyboard, seen from the cockpit on the endless road. `SessionManager` runs the
 ## session flow and the sim; this node feeds it input and hands its state to the views
-## and the HUD.
+## and the HUD. What the session starts with comes from the dev launcher (URL params
+## on web, user args on desktop) until the Phase 10 menus exist.
 
-@export var road_profile: RoadProfile
+@export var launcher_config: DevLauncherConfig
 @export var sim_config: SimConfig
 @export var view_config: ViewConfig
 
+var launch_options: LaunchOptions
+var road_profile: RoadProfile
 var sim: TrafficSim
 var player: VehicleState
 
@@ -21,7 +24,11 @@ var _input: PlayerInput = PlayerInput.new()
 
 
 func _ready() -> void:
-	session.setup(road_profile, sim_config)
+	launch_options = DevLauncher.from_environment(launcher_config)
+	# Printed so a tester can replay the session with the same seed.
+	print("Dev launcher: ", launch_options.describe())
+	road_profile = launch_options.profile
+	session.start(launch_options, sim_config)
 	sim = session.sim
 	player = session.player
 	_road_view.setup(road_profile, view_config)

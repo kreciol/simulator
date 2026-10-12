@@ -19,6 +19,26 @@ Open the project in the Godot editor and press **F5**, or from a terminal:
 godot --path .
 ```
 
+### Dev launcher
+
+Until the menus exist, the session's mode, road profile, difficulty level and seed come from URL query params on the web build, or user args after `--` on desktop:
+
+```text
+# Web (GitHub Pages or a local export)
+https://<pages-url>/?mode=exam&profile=expressway&level=3&seed=42
+# Desktop
+godot --path . -- --mode=exam --profile=expressway --level=3 --seed=42
+```
+
+| Param | Values | Default |
+|---|---|---|
+| `mode` | `learn`, `exam` | `learn` |
+| `profile` | `motorway`, `expressway` | `motorway` |
+| `level` | `1`–`4` | `1` |
+| `seed` | integer ≥ 0 | random |
+
+A missing or invalid value falls back to its default (with a warning in the console); defaults live in `config/dev_launcher.tres`. The resolved options, including the seed, are printed at start (`Dev launcher: mode=… seed=…`), so a session can be replayed with the same seed.
+
 ## Run the tests
 
 The same two commands form the validation gate in CI; both must exit 0:
