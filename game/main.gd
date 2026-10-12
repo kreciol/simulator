@@ -8,6 +8,9 @@ extends Node3D
 ## args on desktop) until the Phase 10 menus exist.
 ## With `perf=1` an FPS probe samples the drive and prints its result (Phase 5 step 2);
 ## sustained low FPS suggests the low preset once per session (spec Edge Cases).
+## `screen=history` opens the history screen instead of a session (Phase 9 step 2).
+
+const HISTORY_SCENE: String = "res://ui/history_screen.tscn"
 
 @export var launcher_config: DevLauncherConfig
 @export var sim_config: SimConfig
@@ -22,6 +25,8 @@ var sim: TrafficSim
 var player: VehicleState
 ## The FPS probe's printed line, empty until it has reported (or without `perf=1`).
 var perf_report: String = ""
+## Switches to another scene by path; tests replace it to watch instead.
+var change_scene: Callable = func(path: String) -> void: get_tree().change_scene_to_file(path)
 
 var _input: PlayerInput = PlayerInput.new()
 ## Null unless the launch asked for the probe.
@@ -43,6 +48,13 @@ func _ready() -> void:
 		launch_options = DevLauncher.from_environment(launcher_config)
 	# Printed so a tester can replay the session with the same seed.
 	print("Dev launcher: ", launch_options.describe())
+	if launch_options.screen == LaunchOptions.SCREEN_HISTORY:
+		# No session starts: nothing to step, draw or steer until the scene is swapped.
+		set_process(false)
+		set_physics_process(false)
+		set_process_unhandled_input(false)
+		change_scene.call_deferred(HISTORY_SCENE)
+		return
 	road_profile = launch_options.profile
 	quality = launch_options.quality
 	# The preset sets the draw distance; the shared config resource stays untouched.
