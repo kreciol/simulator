@@ -26,6 +26,7 @@ In learn mode, short Polish hints warn before a penalty and explain events with 
 ## Risks
 
 - Hint wording and thresholds are first guesses; all thresholds live in `feedback.tres` for Phase 11 tuning.
+- Review (independent pass) found that a new hint could push out one shown in the same step; fixed with `hint_min_display_s` and a priority order (4c3c9b5, 5335437). Desktop capture found a wrapped unit in the gap hint; fixed in 8f3a325.
 
 ## Implementation Plan
 
@@ -42,6 +43,8 @@ In learn mode, short Polish hints warn before a penalty and explain events with 
 3. Session, HUD and docs (AGENTS.md) updates with tests.
 
 ## Progress
+
+PR: #65
 
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
