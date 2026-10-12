@@ -157,8 +157,8 @@ func _read_sessions(entries: Variant) -> void:
 
 ## Makes `entry` its combination's best when it beats the current one. Only completed
 ## sessions count, and a tie keeps the earlier best.
-## TODO(open): neither the requirements nor the spec say whether an aborted session may set a best.
 func _offer_best(entry: Dictionary) -> void:
+	# TODO(open): requirements §13 and the spec do not say whether an aborted session may set a best.
 	if not _counts_for_best(entry):
 		return
 	var key: String = _key_of(entry)
