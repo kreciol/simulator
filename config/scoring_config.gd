@@ -36,3 +36,39 @@ extends Resource
 ## being overtaken while alongside or at most this far ahead of the player's front.
 ## K1 and K2 are not charged while overtaking.
 @export var overtake_look_ahead_m: float
+
+## N1 — correct lane change (requirements §8.3): one-off reward for a change that is
+## signalled in time, into a free lane, and justified.
+@export var n1_reward: float
+## No N1 again until this long after the previous one (anti-farming).
+@export var n1_cooldown_s: float
+## A slower vehicle ahead on the player's lane within this distance justifies
+## overtaking it...
+@export var n1_overtake_reason_m: float
+## ...when it is slower than the player, or this far below the speed limit.
+@export var n1_slow_vehicle_margin_kmh: float
+## Free road the target lane needs beyond the player's body, ahead and behind, so the
+## change forces nobody to brake.
+@export var n1_clear_ahead_m: float
+@export var n1_clear_behind_m: float
+
+## N2 — keeping the rightmost lane when there is no need to overtake (§8.3), per second.
+@export var n2_reward_per_s: float
+
+## N3 — keeping at least the legal gap (§8.3), per second, while a leader is within
+## `n3_range_m` of the player's front.
+@export var n3_reward_per_s: float
+@export var n3_range_m: float
+## Share of `n3_reward_per_s` granted with no leader in range (Q8).
+@export_range(0.0, 1.0) var n3_empty_road_factor: float
+
+## S1 — speeding (Q4): per second above the limit plus the tolerance.
+@export var speed_rule_enabled: bool
+@export var speed_tolerance_kmh: float
+@export var s1_penalty_per_s: float
+
+## K4 — collision or leaving the road (requirements §8.2, §9.2): one-off penalty.
+@export var k4_penalty: float
+
+## The session total never goes below this (Q6); category sub-scores may.
+@export var score_floor: float

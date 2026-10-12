@@ -12,7 +12,7 @@ func before_test() -> void:
 func test_no_penalty_inside_the_grace_period() -> void:
 	var world: ScoringTestHelper = ScoringTestHelper.new(1, 120.0)
 	world.drive(_config.k2_grace_s - 0.5)
-	assert_float(world.total_for(KeepRightRule.CATEGORY)).is_equal(0.0)
+	assert_float(world.total_of_type(KeepRightRule.TYPE)).is_equal(0.0)
 	assert_bool(world.scoring.event_log.is_open(KeepRightRule.KEY)).is_true()
 	assert_float(world.scoring.keep_right_rule.grace_remaining_s()).is_equal_approx(0.5, 1e-6)
 
@@ -20,7 +20,7 @@ func test_no_penalty_inside_the_grace_period() -> void:
 func test_penalty_accrues_per_second_after_the_grace_period() -> void:
 	var world: ScoringTestHelper = ScoringTestHelper.new(1, 120.0)
 	world.drive(_config.k2_grace_s + 2.0)
-	assert_float(world.total_for(KeepRightRule.CATEGORY)).is_equal_approx(-2.0 * _config.k2_penalty_per_s, 1e-6)
+	assert_float(world.total_of_type(KeepRightRule.TYPE)).is_equal_approx(-2.0 * _config.k2_penalty_per_s, 1e-6)
 	assert_float(world.scoring.keep_right_rule.grace_remaining_s()).is_less(0.0)
 
 
@@ -38,14 +38,14 @@ func test_the_segment_spans_the_grace_period_and_closes_on_return() -> void:
 	# Penalty stops once the return starts; the segment covers grace + 1 s.
 	assert_float(segments[0].duration_s()).is_equal_approx(_config.k2_grace_s + 1.0, 1e-6)
 	assert_float(segments[0].extreme).is_equal_approx(_config.k2_grace_s + 1.0, 1e-6)
-	assert_float(world.total_for(KeepRightRule.CATEGORY)).is_equal_approx(-_config.k2_penalty_per_s, 1e-6)
+	assert_float(world.total_of_type(KeepRightRule.TYPE)).is_equal_approx(-_config.k2_penalty_per_s, 1e-6)
 	assert_float(world.scoring.keep_right_rule.grace_remaining_s()).is_equal(INF)
 
 
 func test_no_k2_on_the_rightmost_lane() -> void:
 	var world: ScoringTestHelper = ScoringTestHelper.new(0, 120.0)
 	world.drive(_config.k2_grace_s + 2.0)
-	assert_array(world.scoring.event_log.events).is_empty()
+	assert_array(world.scoring.event_log.events_of_type(KeepRightRule.TYPE)).is_empty()
 
 
 func test_no_k2_while_overtaking() -> void:
@@ -55,7 +55,7 @@ func test_no_k2_while_overtaking() -> void:
 	world.add_car_ahead(0, 5.0, 135.0)
 	world.drive(_config.k2_grace_s + 2.0)
 	assert_bool(LaneQuery.is_overtaking(world.player, world.sim.lanes, world.scoring.config.overtake_look_ahead_m)).is_true()
-	assert_float(world.total_for(KeepRightRule.CATEGORY)).is_equal(0.0)
+	assert_float(world.total_of_type(KeepRightRule.TYPE)).is_equal(0.0)
 
 
 func test_no_k2_when_a_slower_car_ahead_on_the_right_would_soon_force_another_overtake() -> void:
@@ -79,4 +79,4 @@ func test_no_k2_when_a_car_is_beside_on_the_right() -> void:
 	# Same speed, alongside: not overtaking it, but the right lane is not free.
 	world.sim.add_vehicle(world.player.s - 3.0, 0, world.player.speed_mps)
 	world.drive(_config.k2_grace_s + 2.0)
-	assert_float(world.total_for(KeepRightRule.CATEGORY)).is_equal(0.0)
+	assert_float(world.total_of_type(KeepRightRule.TYPE)).is_equal(0.0)

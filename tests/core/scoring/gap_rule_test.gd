@@ -6,7 +6,7 @@ func _k1_after_one_second(gap_m: float, speed_kmh: float = 140.0) -> float:
 	var world: ScoringTestHelper = ScoringTestHelper.new(0, speed_kmh)
 	world.add_car_ahead(0, gap_m, speed_kmh)
 	world.drive(1.0)
-	return world.total_for(GapRule.CATEGORY)
+	return world.total_of_type(GapRule.TYPE)
 
 
 func test_at_140_kmh_a_50_m_gap_is_penalised() -> void:
@@ -34,14 +34,14 @@ func test_no_k1_while_overtaking() -> void:
 	world.add_car_ahead(0, 10.0, 120.0)
 	world.drive(1.0)
 	assert_bool(LaneQuery.is_overtaking(world.player, world.sim.lanes, world.scoring.config.overtake_look_ahead_m)).is_true()
-	assert_float(world.total_for(GapRule.CATEGORY)).is_equal(0.0)
+	assert_float(world.total_of_type(GapRule.TYPE)).is_equal(0.0)
 
 
 func test_no_leader_means_no_k1() -> void:
 	var world: ScoringTestHelper = ScoringTestHelper.new(0, 140.0)
 	world.add_car_ahead(1, 10.0, 140.0)
 	world.drive(1.0)
-	assert_array(world.scoring.event_log.events).is_empty()
+	assert_array(world.scoring.event_log.events_of_type(GapRule.TYPE)).is_empty()
 
 
 func test_one_segment_per_stretch_with_lowest_ratio_and_its_numbers() -> void:
