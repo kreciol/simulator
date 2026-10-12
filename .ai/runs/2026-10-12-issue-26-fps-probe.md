@@ -64,23 +64,25 @@ non-blocking toast suggesting the low preset, at most once per session.
 
 ## Progress
 
+PR: #57
+
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: Config and launcher
 
-- [ ] 1.1 PerfConfig resource wired into the main scene
-- [ ] 1.2 Dev launcher perf param
+- [x] 1.1 PerfConfig resource wired into the main scene — 11c9aa0
+- [x] 1.2 Dev launcher perf param — 11c9aa0
 
 ### Phase 2: FPS probe
 
-- [ ] 2.1 FpsProbe with unit tests
-- [ ] 2.2 Main scene feeds and prints the probe
+- [x] 2.1 FpsProbe with unit tests — 08fc1bd
+- [x] 2.2 Main scene feeds and prints the probe — 08fc1bd
 
 ### Phase 3: Low-FPS toast
 
-- [ ] 3.1 LowFpsWatch with unit tests
-- [ ] 3.2 HUD toast, Polish string and main scene wiring
+- [x] 3.1 LowFpsWatch with unit tests — 1c6e108
+- [x] 3.2 HUD toast, Polish string and main scene wiring — 1c6e108
 
 ### Phase 4: Docs
 
-- [ ] 4.1 README and AGENTS.md
+- [x] 4.1 README and AGENTS.md — ff02648
