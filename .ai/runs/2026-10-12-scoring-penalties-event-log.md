@@ -41,6 +41,8 @@ The three core motorway habits are judged: following too closely (K1), staying i
 
 ## Progress
 
+PR: #49
+
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: Event log and scoring config
@@ -51,4 +53,4 @@ The three core motorway habits are judged: following too closely (K1), staying i
 
 - [x] 2.1 ScoringSystem and K1 gap rule — 3a6e742
 - [x] 2.2 K2 keep-right rule with grace period — cbf3474
-- [ ] 2.3 K3 signal rule, observer-only check, docs
+- [x] 2.3 K3 signal rule, observer-only check, docs — 6f3d4ac
