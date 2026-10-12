@@ -48,6 +48,26 @@ extends Resource
 ## Brake lights light while a vehicle decelerates harder than this.
 @export var brake_light_decel_mps2: float
 
+## Mirrors (requirements §5.2, spec Phase 5 step 1). Where each mirror sits on screen,
+## as shares of the screen (position and size); the right side mirror is the left one
+## reflected across the screen's vertical centreline.
+@export var rear_mirror_rect: Rect2
+@export var left_mirror_rect: Rect2
+## Mirror camera positions relative to the player's rig (car centreline at x = 0, road
+## at y = 0, forward is -z); the right side mirror is the left one reflected (x → -x).
+@export var rear_mirror_position: Vector3
+@export var left_mirror_position: Vector3
+## Vertical fields of view of the rear-view and the side mirror cameras.
+@export var rear_mirror_fov_deg: float
+@export var side_mirror_fov_deg: float
+## Side mirrors turn outwards by this much, to show the neighbouring lane.
+@export var side_mirror_outward_deg: float
+## Downward tilt of every mirror camera.
+@export var mirror_pitch_down_deg: float
+## Fog in the mirrors starts at this share of their range, so the road's end behind
+## the player fades out instead of showing.
+@export_range(0.0, 1.0) var mirror_fog_begin_share: float
+
 
 ## A copy with `quality`'s draw distance; the shared resource stays untouched.
 func for_quality(quality: QualityPreset) -> ViewConfig:
@@ -74,3 +94,9 @@ func draw_distance_m() -> float:
 ## Distance behind the player always covered by road.
 func covered_behind_m() -> float:
 	return float(segments_behind) * segment_length_m
+
+
+## How far the mirrors see: exactly the road always kept behind, so they never show
+## where it ends.
+func mirror_range_m() -> float:
+	return covered_behind_m()
