@@ -4,8 +4,13 @@ extends CanvasLayer
 ## the session time left, plus the 3-2-1 countdown, the learn-mode respawn fade with
 ## what happened, the pause screen and the plain end-of-session screen with the cause
 ## of an aborted session (placeholder until the Phase 8 summary), and a timed,
-## non-blocking notice (the low-FPS suggestion). Only reads session state. Placeholder
-## styling until the UI theme lands (Phase 10).
+## non-blocking notice (the low-FPS suggestion). In learn mode only (Q10, Q11) it also
+## shows the live score and, under each side mirror, a blind-spot warning (icon and
+## text, never colour alone) while driving with a vehicle in that side's blind spot
+## (`LaneQuery.blind_spot_occupied`) — shown under where the mirror sits even with
+## mirrors off. The score stays up through the countdown, a respawn and under the end
+## screen. Only reads session state. Placeholder styling until the UI theme lands
+## (Phase 10).
 
 const MARGIN: float = 24.0
 const OUTLINE_SIZE: int = 8
@@ -20,6 +25,15 @@ const SAVE_STATUS_FONT_SIZE: int = 24
 const SAVE_STATUS_WIDTH: float = 760.0
 const HINT_FONT_SIZE: int = 28
 const CAUSE_FONT_SIZE: int = 36
+const SCORE_FONT_SIZE: int = 40
+const SCORE_CAPTION_FONT_SIZE: int = 22
+const BLIND_SPOT_FONT_SIZE: int = 22
+## Warning triangle of the blind-spot icon, with an exclamation mark inside.
+const BLIND_SPOT_ICON_SIZE: Vector2 = Vector2(44.0, 38.0)
+const BLIND_SPOT_ICON_COLOR: Color = Color(1.0, 0.75, 0.1)
+const BLIND_SPOT_MARK_FONT_SIZE: int = 26
+## Space between a side mirror's lower edge and its blind-spot warning.
+const BLIND_SPOT_GAP: float = 8.0
 ## Translation key of the cause shown for each aborted session status.
 const END_CAUSES: Dictionary[StringName, StringName] = {
 	SessionRecord.STATUS_ABORTED_COLLISION: &"END_CAUSE_COLLISION",
@@ -70,6 +84,11 @@ var fade_screen: ColorRect
 var respawn_notice: VBoxContainer
 var respawn_label: Label
 var respawn_hint_label: Label
+## Learn mode only: the live score and the blind-spot warnings by the side mirrors.
+var score_panel: VBoxContainer
+var score_label: Label
+var blind_spot_left: VBoxContainer
+var blind_spot_right: VBoxContainer
 ## Whether the finished session was saved, or why not; hidden until it is known.
 var save_status_label: Label
 var toast: PanelContainer
@@ -122,6 +141,24 @@ func setup(view_config: ViewConfig) -> void:
 	signals.add_child(signal_left)
 	signal_right = _arrow("SignalRight", VehicleState.Dir.RIGHT, ARROW_SIZE.x + ARROW_GAP)
 	signals.add_child(signal_right)
+
+	score_panel = VBoxContainer.new()
+	score_panel.name = "Score"
+	score_panel.add_theme_constant_override("separation", 0)
+	score_panel.visible = false
+	root.add_child(score_panel)
+	var score_caption: Label = _label("ScoreCaption", SCORE_CAPTION_FONT_SIZE)
+	score_caption.text = tr(&"HUD_SCORE")
+	score_panel.add_child(score_caption)
+	score_label = _label("ScoreValue", SCORE_FONT_SIZE)
+	score_panel.add_child(score_label)
+	score_panel.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT, Control.PRESET_MODE_MINSIZE, int(MARGIN))
+	score_panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+
+	blind_spot_left = _blind_spot("BlindSpotLeft", view.left_mirror_rect)
+	root.add_child(blind_spot_left)
+	blind_spot_right = _blind_spot("BlindSpotRight", view.right_mirror_rect())
+	root.add_child(blind_spot_right)
 
 	countdown_label = _centered_label("Countdown", COUNTDOWN_FONT_SIZE)
 	root.add_child(countdown_label)
@@ -207,6 +244,17 @@ func update(session: SessionManager) -> void:
 	var lit: bool = SignalBlink.is_lit(player, sim.time_s, view.signal_blink_hz)
 	signal_left.color = ARROW_ON if lit and player.signal_dir == VehicleState.Dir.LEFT else ARROW_OFF
 	signal_right.color = ARROW_ON if lit and player.signal_dir == VehicleState.Dir.RIGHT else ARROW_OFF
+
+	# Learn mode only: the exam shows neither the score nor blind-spot help (Q10, Q11).
+	var learn: bool = not session.is_exam()
+	score_panel.visible = learn and session.scoring != null
+	if score_panel.visible:
+		score_label.text = str(roundi(session.scoring.total_score()))
+	var driving: bool = learn and session.state == SessionManager.State.DRIVING and not session.paused
+	blind_spot_left.visible = driving and LaneQuery.blind_spot_occupied(
+			sim.lanes, player, VehicleState.Dir.LEFT, view.blind_spot_ahead_m, view.blind_spot_behind_m)
+	blind_spot_right.visible = driving and LaneQuery.blind_spot_occupied(
+			sim.lanes, player, VehicleState.Dir.RIGHT, view.blind_spot_ahead_m, view.blind_spot_behind_m)
 
 	paused_screen.visible = session.paused
 	countdown_label.visible = session.state == SessionManager.State.INTRO and not session.paused
@@ -339,6 +387,50 @@ func _limit_sign() -> PanelContainer:
 	limit_label.add_theme_color_override("font_color", Color.BLACK)
 	plate.add_child(limit_label)
 	return plate
+
+
+## Blind-spot warning centred under the mirror at `mirror_rect` (shares of the screen):
+## a warning triangle above a text label, hidden until a vehicle is in the blind spot.
+func _blind_spot(node_name: String, mirror_rect: Rect2) -> VBoxContainer:
+	var warning: VBoxContainer = VBoxContainer.new()
+	warning.name = node_name
+	warning.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	warning.add_theme_constant_override("separation", 0)
+	warning.visible = false
+	warning.anchor_left = mirror_rect.position.x
+	warning.anchor_right = mirror_rect.end.x
+	warning.anchor_top = mirror_rect.end.y
+	warning.anchor_bottom = mirror_rect.end.y
+	warning.offset_top = BLIND_SPOT_GAP
+	warning.offset_bottom = BLIND_SPOT_GAP
+
+	var icon: Control = Control.new()
+	icon.name = "Icon"
+	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	icon.custom_minimum_size = BLIND_SPOT_ICON_SIZE
+	icon.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	warning.add_child(icon)
+	var triangle: Polygon2D = Polygon2D.new()
+	triangle.name = "Triangle"
+	triangle.polygon = PackedVector2Array([
+		Vector2(BLIND_SPOT_ICON_SIZE.x / 2.0, 0.0), Vector2(BLIND_SPOT_ICON_SIZE.x, BLIND_SPOT_ICON_SIZE.y),
+		Vector2(0.0, BLIND_SPOT_ICON_SIZE.y)])
+	triangle.color = BLIND_SPOT_ICON_COLOR
+	icon.add_child(triangle)
+	var mark: Label = Label.new()
+	mark.name = "Mark"
+	mark.text = "!"
+	mark.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	mark.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
+	mark.add_theme_font_size_override("font_size", BLIND_SPOT_MARK_FONT_SIZE)
+	mark.add_theme_color_override("font_color", Color.BLACK)
+	mark.set_anchors_preset(Control.PRESET_FULL_RECT)
+	icon.add_child(mark)
+
+	var text: Label = _label("Text", BLIND_SPOT_FONT_SIZE)
+	text.text = tr(&"HUD_BLIND_SPOT")
+	warning.add_child(text)
+	return warning
 
 
 ## Triangle pointing towards `dir`, `x` from the left of the arrow row.

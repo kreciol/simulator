@@ -36,10 +36,8 @@ func setup(view_config: ViewConfig, quality_preset: QualityPreset, enabled: bool
 			_mount(view.rear_mirror_position, PI, pitch), view.rear_mirror_fov_deg, environment)
 	left = _mirror("LeftMirror", view.left_mirror_rect,
 			_mount(view.left_mirror_position, PI - outward, pitch), view.side_mirror_fov_deg, environment)
-	var right_rect: Rect2 = view.left_mirror_rect
-	right_rect.position.x = 1.0 - view.left_mirror_rect.end.x
 	var right_position: Vector3 = view.left_mirror_position * Vector3(-1.0, 1.0, 1.0)
-	right = _mirror("RightMirror", right_rect,
+	right = _mirror("RightMirror", view.right_mirror_rect(),
 			_mount(right_position, PI + outward, pitch), view.side_mirror_fov_deg, environment)
 	_mirrors = [rear, left, right]
 
