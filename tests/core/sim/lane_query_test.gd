@@ -123,6 +123,60 @@ func test_neighbour_queries_skip_the_ignored_vehicle() -> void:
 	assert_object(LaneQuery.leader_in_lane(lanes, 1, 0.0)).is_same(me)
 
 
+## The ego vehicle is at s = 0 on `my_lane`; the zone reaches 1 m ahead of and 8 m
+## behind its centre. Entries are [s, lane] or [s, lane, lane_change_to].
+func test_blind_spot_occupied(
+		case_name: String,
+		my_lane: int,
+		dir: VehicleState.Dir,
+		entries: Array,
+		expected: bool,
+		test_parameters: Array = [
+			["empty road", 0, LEFT, [], false],
+			["left: just behind", 0, LEFT, [[-5.0, 1]], true],
+			["left: alongside", 0, LEFT, [[0.0, 1]], true],
+			["left: front reaches the zone's back edge", 0, LEFT, [[-10.0, 1]], true],
+			["left: further back", 0, LEFT, [[-11.0, 1]], false],
+			["left: rear reaches the zone's front edge", 0, LEFT, [[3.0, 1]], true],
+			["left: ahead of the zone", 0, LEFT, [[4.0, 1]], false],
+			["left: vehicle on the right lane", 1, LEFT, [[-5.0, 0]], false],
+			["left: vehicle changing into the left lane", 0, LEFT, [[-5.0, 0, 1]], true],
+			["right: just behind", 1, RIGHT, [[-5.0, 0]], true],
+			["right: further back", 1, RIGHT, [[-11.0, 0]], false],
+			["right: ahead of the zone", 1, RIGHT, [[4.0, 0]], false],
+			["right: vehicle on the left lane", 0, RIGHT, [[-5.0, 1]], false],
+			["right: beyond the road edge", 0, RIGHT, [], false],
+			["own lane is never a blind spot", 0, LEFT, [[-5.0, 0]], false],
+			["no side", 0, NO_DIR, [[-5.0, 1]], false],
+		]) -> void:
+	var me: VehicleState = _vehicle(0.0, my_lane)
+	var vehicles: Array[VehicleState] = _vehicles(entries)
+	vehicles.append(me)
+	assert_bool(LaneQuery.blind_spot_occupied(_lanes(vehicles), me, dir, 1.0, 8.0)) \
+			.override_failure_message(case_name).is_equal(expected)
+
+
+## The ego vehicle changes from lane 0 to lane 1 at s = 0; the other vehicle is just
+## behind it on `other_lane`. Sides follow the lane it is mostly on.
+func test_blind_spot_follows_the_lane_change_from_halfway(
+		case_name: String,
+		progress: float,
+		dir: VehicleState.Dir,
+		other_lane: int,
+		expected: bool,
+		test_parameters: Array = [
+			["early: left is the target lane", 0.25, LEFT, 1, true],
+			["early: right of the origin lane is off the road", 0.25, RIGHT, 0, false],
+			["late: right is the origin lane", 0.75, RIGHT, 0, true],
+			["late: left of the target lane is off the road", 0.75, LEFT, 1, false],
+		]) -> void:
+	var me: VehicleState = _vehicle(0.0, 0, 30.0, 1)
+	me.lane_change_progress = progress
+	var vehicles: Array[VehicleState] = [_vehicle(-5.0, other_lane), me]
+	assert_bool(LaneQuery.blind_spot_occupied(_lanes(vehicles), me, dir, 1.0, 8.0)) \
+			.override_failure_message(case_name).is_equal(expected)
+
+
 ## The ego vehicle drives 30 m/s; `right` is the vehicle on the lane to its right.
 func test_is_overtaking(
 		case_name: String,

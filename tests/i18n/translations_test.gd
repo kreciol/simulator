@@ -25,6 +25,8 @@ func test_hud_strings_are_translated_to_polish(key: StringName, polish: String, 
 		[&"SAVE_READ_ONLY", "Twoja historia pochodzi z nowszej wersji gry, więc nie dopisujemy do niej wyników, żeby jej nie uszkodzić."],
 		[&"HISTORY_CORRUPT_RECOVERED", "Zapisana historia była uszkodzona. Zachowaliśmy jej kopię i zaczęliśmy nową."],
 		[&"TOAST_LOW_FPS", "Gra działa wolno na tym komputerze. Spróbuj niskiej jakości grafiki."],
+		[&"HUD_SCORE", "Punkty"],
+		[&"HUD_BLIND_SPOT", "Martwe pole"],
 		]) -> void:
 	assert_str(TranslationServer.translate(key)).is_equal(polish)
 
