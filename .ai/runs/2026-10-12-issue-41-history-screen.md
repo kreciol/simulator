@@ -43,6 +43,8 @@ Saved results show the player their progress (requirements §11.3, §13; spec Ph
 
 ## Progress
 
+PR: #64
+
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: Queries and comparison
@@ -58,4 +60,4 @@ Saved results show the player their progress (requirements §11.3, §13; spec Ph
 
 ### Phase 3: Docs
 
-- [ ] 3.1 AGENTS.md status and routing, README params
+- [x] 3.1 AGENTS.md status and routing, README params — c5720ae
