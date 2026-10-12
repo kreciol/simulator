@@ -9,8 +9,9 @@ const MODES: Array[StringName] = [MODE_LEARN, MODE_EXAM]
 
 var mode: StringName
 var profile: RoadProfile
-## Difficulty level, 1-based.
+## Difficulty level, 1-based, and its resource.
 var level: int
+var difficulty: DifficultyLevel
 var seed_value: int
 ## False when the seed was missing or invalid and a random one was drawn instead.
 var seed_given: bool
