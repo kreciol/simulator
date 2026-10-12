@@ -217,6 +217,52 @@ func test_hitting_a_car_ends_the_session_with_the_end_screen() -> void:
 	assert_str(hud.ended_label.text).is_equal("Koniec sesji")
 
 
+## One key press delivered to the scene exactly once. The scene runner hands each
+## simulated event to the scene twice (through `Input` and directly), which a toggle
+## like pause cannot tell apart from two presses.
+func _tap(key: Key) -> void:
+	for pressed: bool in [true, false]:
+		var event: InputEventKey = InputEventKey.new()
+		event.physical_keycode = key
+		event.keycode = key
+		event.pressed = pressed
+		_main._unhandled_input(event)
+
+
+func test_esc_pauses_and_p_resumes_the_drive() -> void:
+	# Issue #34: Esc or P freezes the drive until pressed again.
+	var hud: Hud = _main.get_node("Hud") as Hud
+	_tap(KEY_ESCAPE)
+	assert_bool(_main.session.paused).is_true()
+	_runner.simulate_key_press(KEY_W)
+	_runner.simulate_key_press(KEY_A)
+	_runner.simulate_key_release(KEY_A)
+	await _runner.await_input_processed()
+	var s_before: float = _player().s
+	var time_left: float = _main.session.time_left_s()
+	_drive(60)
+	assert_float(_player().s).is_equal(s_before)
+	assert_float(_main.session.time_left_s()).is_equal(time_left)
+	assert_bool(_player().lane_change_active).is_false()
+	assert_bool(hud.paused_screen.visible).is_true()
+
+	_tap(KEY_P)
+	assert_bool(_main.session.paused).is_false()
+	_drive(1)
+	assert_float(_player().s).is_greater(s_before)
+	assert_bool(hud.paused_screen.visible).is_false()
+	_runner.simulate_key_release(KEY_W)
+	await _runner.await_input_processed()
+
+
+func test_losing_focus_pauses_the_drive() -> void:
+	_main.propagate_notification(Node.NOTIFICATION_APPLICATION_FOCUS_OUT)
+	assert_bool(_main.session.paused).is_true()
+	var s_before: float = _player().s
+	_drive(60)
+	assert_float(_player().s).is_equal(s_before)
+
+
 func test_a_finished_session_is_saved_and_survives_a_reload() -> void:
 	var hud: Hud = _main.get_node("Hud") as Hud
 	_main.sim.add_vehicle(_player().s + _player().length_m + 1.0, 0, 0.0)

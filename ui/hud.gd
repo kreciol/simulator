@@ -1,9 +1,10 @@
 class_name Hud
 extends CanvasLayer
 ## Driving HUD (requirements §5.3): speed, the road's limit, blinking signal arrows and
-## the session time left, plus the 3-2-1 countdown and the plain end-of-session screen
-## (placeholder until the Phase 7/8 summary). Only reads session state. Placeholder
-## styling until the UI theme lands (Phase 10).
+## the session time left, plus the 3-2-1 countdown, the pause screen and the plain
+## end-of-session screen with the cause of an aborted session (placeholder until the
+## Phase 8 summary). Only reads session state. Placeholder styling until the UI theme
+## lands (Phase 10).
 
 const MARGIN: float = 24.0
 const OUTLINE_SIZE: int = 8
@@ -16,8 +17,13 @@ const NOTICE_FONT_SIZE: int = 64
 const SAVE_STATUS_FONT_SIZE: int = 24
 ## Width of the save status under the end notice; longer messages wrap.
 const SAVE_STATUS_WIDTH: float = 760.0
-## How far below the screen's centre the save status starts, clear of the end notice.
-const SAVE_STATUS_OFFSET: float = 64.0
+const HINT_FONT_SIZE: int = 28
+const CAUSE_FONT_SIZE: int = 36
+## Translation key of the cause shown for each aborted session status.
+const END_CAUSES: Dictionary[StringName, StringName] = {
+	SessionRecord.STATUS_ABORTED_COLLISION: &"END_CAUSE_COLLISION",
+	SessionRecord.STATUS_ABORTED_OFFROAD: &"END_CAUSE_OFFROAD",
+}
 ## Round limit sign: white disc with a red ring, as on Polish B-33 signs.
 const LIMIT_SIGN_SIZE: float = 76.0
 const LIMIT_RING_WIDTH: int = 9
@@ -26,8 +32,8 @@ const ARROW_GAP: float = 120.0
 ## Arrows stay faintly visible when off, so the player knows where to look.
 const ARROW_OFF: Color = Color(1.0, 1.0, 1.0, 0.2)
 const ARROW_ON: Color = Color(0.2, 1.0, 0.3)
-## Dims the frozen scene behind the end-of-session notice.
-const ENDED_BACKDROP: Color = Color(0.0, 0.0, 0.0, 0.55)
+## Dims the frozen scene behind the pause and end-of-session notices.
+const NOTICE_BACKDROP: Color = Color(0.0, 0.0, 0.0, 0.55)
 ## Absorbs float drift so a whole second left never reads as the next one up.
 const TIME_EPSILON: float = 1e-6
 
@@ -39,9 +45,14 @@ var time_label: Label
 var signal_left: Polygon2D
 var signal_right: Polygon2D
 var countdown_label: Label
+var paused_screen: ColorRect
+var paused_label: Label
+var paused_hint_label: Label
 var ended_screen: ColorRect
 var ended_label: Label
-## Whether the finished session was saved, or why not; empty until it is known.
+## Why an aborted session ended; hidden after a completed one.
+var ended_cause_label: Label
+## Whether the finished session was saved, or why not; hidden until it is known.
 var save_status_label: Label
 
 
@@ -91,26 +102,40 @@ func setup(view_config: ViewConfig) -> void:
 
 	countdown_label = _centered_label("Countdown", COUNTDOWN_FONT_SIZE)
 	root.add_child(countdown_label)
-	ended_screen = ColorRect.new()
-	ended_screen.name = "EndedScreen"
-	ended_screen.color = ENDED_BACKDROP
-	ended_screen.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	ended_screen.set_anchors_preset(Control.PRESET_FULL_RECT)
-	ended_screen.visible = false
+	paused_screen = _backdrop("PausedScreen")
+	root.add_child(paused_screen)
+	var paused_box: VBoxContainer = VBoxContainer.new()
+	paused_box.name = "PausedNotice"
+	paused_box.alignment = BoxContainer.ALIGNMENT_CENTER
+	paused_box.set_anchors_preset(Control.PRESET_FULL_RECT)
+	paused_screen.add_child(paused_box)
+	paused_label = _label("Paused", NOTICE_FONT_SIZE)
+	paused_label.text = tr(&"SESSION_PAUSED")
+	paused_box.add_child(paused_label)
+	paused_hint_label = _label("PausedHint", HINT_FONT_SIZE)
+	paused_hint_label.text = tr(&"SESSION_PAUSED_HINT")
+	paused_box.add_child(paused_hint_label)
+	ended_screen = _backdrop("EndedScreen")
 	root.add_child(ended_screen)
-	ended_label = _centered_label("Ended", NOTICE_FONT_SIZE)
-	ended_label.text = tr(&"SESSION_ENDED")
-	ended_screen.add_child(ended_label)
+	var ended_notice: VBoxContainer = VBoxContainer.new()
+	ended_notice.name = "EndedNotice"
+	ended_notice.add_theme_constant_override("separation", int(MARGIN))
+	ended_screen.add_child(ended_notice)
+	ended_notice.set_anchors_and_offsets_preset(Control.PRESET_CENTER, Control.PRESET_MODE_MINSIZE)
+	ended_notice.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	ended_notice.grow_vertical = Control.GROW_DIRECTION_BOTH
+	ended_label = _label("Ended", NOTICE_FONT_SIZE)
+	ended_label.visible = false
+	ended_notice.add_child(ended_label)
+	ended_cause_label = _label("EndedCause", CAUSE_FONT_SIZE)
+	ended_cause_label.visible = false
+	ended_notice.add_child(ended_cause_label)
 	save_status_label = _label("SaveStatus", SAVE_STATUS_FONT_SIZE)
 	save_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	ended_screen.add_child(save_status_label)
-	# Hangs from just below the screen's centre and grows down as lines wrap.
-	save_status_label.set_anchors_preset(Control.PRESET_CENTER)
-	save_status_label.offset_left = -SAVE_STATUS_WIDTH / 2.0
-	save_status_label.offset_right = SAVE_STATUS_WIDTH / 2.0
-	save_status_label.offset_top = SAVE_STATUS_OFFSET
-	save_status_label.offset_bottom = SAVE_STATUS_OFFSET
-	save_status_label.grow_vertical = Control.GROW_DIRECTION_END
+	# A wrapping label needs a width; the notice centres it under the cause.
+	save_status_label.custom_minimum_size = Vector2(SAVE_STATUS_WIDTH, 0.0)
+	save_status_label.visible = false
+	ended_notice.add_child(save_status_label)
 
 
 func update(session: SessionManager) -> void:
@@ -124,11 +149,19 @@ func update(session: SessionManager) -> void:
 	signal_left.color = ARROW_ON if lit and player.signal_dir == VehicleState.Dir.LEFT else ARROW_OFF
 	signal_right.color = ARROW_ON if lit and player.signal_dir == VehicleState.Dir.RIGHT else ARROW_OFF
 
-	countdown_label.visible = session.state == SessionManager.State.INTRO
+	paused_screen.visible = session.paused
+	countdown_label.visible = session.state == SessionManager.State.INTRO and not session.paused
 	if countdown_label.visible:
 		countdown_label.text = str(maxi(1, ceili(session.countdown_left_s() - TIME_EPSILON)))
 	ended_screen.visible = session.state == SessionManager.State.ENDED
 	ended_label.visible = ended_screen.visible
+	var cause: StringName = END_CAUSES.get(session.status(), &"")
+	ended_cause_label.visible = ended_screen.visible and cause != &""
+	if ended_screen.visible:
+		# The exam ends as failed on a collision or leaving the road (requirements §9.2).
+		var failed: bool = session.is_exam() and cause != &""
+		ended_label.text = tr(&"EXAM_FAILED" if failed else &"SESSION_ENDED")
+		ended_cause_label.text = tr(cause) if cause != &"" else ""
 
 
 ## Shows the outcome of saving the finished session under the end notice.
@@ -137,6 +170,7 @@ func show_save_status(saved: bool, history: HistoryStore) -> void:
 	for key: StringName in save_status_keys(saved, history):
 		lines.append(tr(key))
 	save_status_label.text = "\n".join(lines)
+	save_status_label.visible = not lines.is_empty()
 
 
 ## Translation keys explaining the save outcome (spec Edge Cases): a recovered corrupt
@@ -176,6 +210,17 @@ func _centered_label(node_name: String, font_size: int) -> Label:
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	label.visible = false
 	return label
+
+
+## Full-screen dimmed backdrop, hidden until its notice is due.
+func _backdrop(node_name: String) -> ColorRect:
+	var backdrop: ColorRect = ColorRect.new()
+	backdrop.name = node_name
+	backdrop.color = NOTICE_BACKDROP
+	backdrop.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
+	backdrop.visible = false
+	return backdrop
 
 
 func _limit_sign() -> PanelContainer:

@@ -2,13 +2,17 @@ class_name SessionManager
 extends Node
 ## Session flow (requirements §9.3, spec Architecture: Session): a 3-2-1 intro, then
 ## `SimConfig.session_length_s` of driving, then the end. Owns the sim and is the only
-## node that drives it; views and the HUD only read its state. Placeholder until the
-## Phase 7 modes: the player colliding or leaving the road ends the session early.
+## node that drives it; views and the HUD only read its state. In the exam the player
+## colliding or leaving the road ends the session at once as aborted, with the cause
+## (requirements §9.2). The countdown and the drive can be paused (spec Edge Cases):
+## everything stands still until resumed, and losing window focus pauses on its own.
 ## With a `scoring_config` it also scores the drive and, at the end, builds the
 ## session's `SessionRecord` for `SaveManager`.
 
 signal session_started
 signal session_ended
+signal session_paused
+signal session_resumed
 
 enum State { INTRO, DRIVING, ENDED }
 ## Why the session ended; NONE until it has.
@@ -24,6 +28,8 @@ var sim: TrafficSim
 var player: VehicleState
 ## What the session was started with; null when set up directly through `setup`.
 var options: LaunchOptions
+## `LaunchOptions.MODE_LEARN` or `MODE_EXAM`.
+var mode: StringName = LaunchOptions.MODE_LEARN
 var state: State = State.INTRO
 var end_reason: EndReason = EndReason.NONE
 ## Time spent in the intro countdown, seconds.
@@ -36,6 +42,11 @@ var scoring: ScoringSystem
 var started_at: String = ""
 ## The finished session's record; null until the end, or without scoring.
 var record: SessionRecord
+## While set, `step` does nothing: the sim, its lane-change animation and signals, the
+## countdown and the session timer stand still and commands are dropped. A flag rather
+## than a state because both the intro and the drive can be paused; `state` says
+## which one resumes.
+var paused: bool = false
 
 ## The player's collision or off-road seen during the current sim step; the session
 ## ends once the step is over.
@@ -46,14 +57,16 @@ var _player_end_reason: EndReason = EndReason.NONE
 ## options' difficulty level, keeping the options (mode, level) for the rules that
 ## depend on them.
 func start(launch_options: LaunchOptions, sim_config: SimConfig) -> void:
-	setup(launch_options.profile, sim_config, launch_options.seed_value)
+	setup(launch_options.profile, sim_config, launch_options.seed_value, launch_options.mode)
 	options = launch_options
 	if launch_options.difficulty != null:
 		Spawner.new(launch_options.difficulty).attach(sim)
 
 
-func setup(road_profile: RoadProfile, sim_config: SimConfig, seed_value: int = 0) -> void:
+func setup(road_profile: RoadProfile, sim_config: SimConfig, seed_value: int = 0,
+		session_mode: StringName = LaunchOptions.MODE_LEARN) -> void:
 	options = null
+	mode = session_mode
 	sim = TrafficSim.new(road_profile, sim_config, seed_value)
 	# Right lane at the start speed (requirements §9.3).
 	player = sim.add_vehicle(0.0, 0, sim_config.start_speed_kmh / TrafficSim.KMH_PER_MPS)
@@ -66,13 +79,16 @@ func setup(road_profile: RoadProfile, sim_config: SimConfig, seed_value: int = 0
 	state = State.INTRO
 	end_reason = EndReason.NONE
 	_player_end_reason = EndReason.NONE
+	paused = false
 	intro_elapsed_s = 0.0
 	elapsed_s = 0.0
 
 
 ## Advances the session by one fixed step. The sim only runs while driving: during
-## the intro and after the end it is frozen and `commands` are dropped.
+## the intro, while paused and after the end it is frozen and `commands` are dropped.
 func step(dt: float, commands: PlayerCommands = null) -> void:
+	if paused:
+		return
 	match state:
 		State.INTRO:
 			intro_elapsed_s += dt
@@ -85,10 +101,33 @@ func step(dt: float, commands: PlayerCommands = null) -> void:
 			if scoring != null:
 				scoring.observe(dt)
 			elapsed_s += dt
+			# TODO(E08-S02): in learn mode, K4 and a respawn instead of ending the session.
 			if _player_end_reason != EndReason.NONE:
 				_end(_player_end_reason)
 			elif elapsed_s >= sim.config.session_length_s - TIME_EPSILON:
 				_end(EndReason.TIME_UP)
+
+
+## Pauses the countdown or the drive; does nothing once the session has ended.
+func pause() -> void:
+	if paused or state == State.ENDED:
+		return
+	paused = true
+	session_paused.emit()
+
+
+func resume() -> void:
+	if not paused:
+		return
+	paused = false
+	session_resumed.emit()
+
+
+func toggle_pause() -> void:
+	if paused:
+		resume()
+	else:
+		pause()
 
 
 func countdown_left_s() -> float:
@@ -101,6 +140,30 @@ func time_left_s() -> float:
 	if state == State.ENDED:
 		return 0.0
 	return maxf(0.0, sim.config.session_length_s - elapsed_s)
+
+
+func _notification(what: int) -> void:
+	# A hidden tab or a window in the background must not run the clock (§9.3). The
+	# player resumes on purpose rather than on focus returning. Platforms report focus
+	# loss as either notification (the web build through the window), so both pause.
+	if what == NOTIFICATION_APPLICATION_FOCUS_OUT or what == NOTIFICATION_WM_WINDOW_FOCUS_OUT:
+		pause()
+
+
+func is_exam() -> bool:
+	return mode == LaunchOptions.MODE_EXAM
+
+
+## The §13 record status of an ended session; empty until it has ended.
+func status() -> StringName:
+	match end_reason:
+		EndReason.TIME_UP:
+			return SessionRecord.STATUS_COMPLETED
+		EndReason.COLLISION:
+			return SessionRecord.STATUS_ABORTED_COLLISION
+		EndReason.OFF_ROAD:
+			return SessionRecord.STATUS_ABORTED_OFFROAD
+	return &""
 
 
 func _end(reason: EndReason) -> void:
@@ -120,15 +183,9 @@ func _build_record() -> SessionRecord:
 	builder.road_profile = sim.road.id
 	builder.seed_value = sim.rng_seed
 	builder.duration_s = elapsed_s
-	match end_reason:
-		EndReason.COLLISION:
-			builder.status = SessionRecord.STATUS_ABORTED_COLLISION
-		EndReason.OFF_ROAD:
-			builder.status = SessionRecord.STATUS_ABORTED_OFFROAD
-		_:
-			builder.status = SessionRecord.STATUS_COMPLETED
+	builder.status = status()
+	builder.mode = mode
 	if options != null:
-		builder.mode = options.mode
 		builder.difficulty = options.level
 		if options.difficulty != null:
 			builder.exam_pass_score = options.difficulty.exam_pass_score

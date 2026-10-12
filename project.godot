@@ -88,6 +88,10 @@ pause={
 locale/translations=PackedStringArray("res://i18n/strings.pl.translation")
 locale/fallback="pl"
 
+[physics]
+
+common/max_physics_steps_per_frame=4
+
 [rendering]
 
 renderer/rendering_method="gl_compatibility"
