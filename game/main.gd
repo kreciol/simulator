@@ -54,7 +54,11 @@ func _ready() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if _input.handle_event(event):
+	# Esc or P (the `pause` action) stops and resumes the session (requirements §9.3).
+	if event.is_action_pressed(&"pause"):
+		session.toggle_pause()
+		get_viewport().set_input_as_handled()
+	elif _input.handle_event(event):
 		get_viewport().set_input_as_handled()
 
 
@@ -69,7 +73,8 @@ func _process(_delta: float) -> void:
 
 func _notification(what: int) -> void:
 	# Key releases are not delivered while unfocused; never leave a key stuck down.
-	if what == NOTIFICATION_APPLICATION_FOCUS_OUT:
+	# `SessionManager` pauses itself on the same notification.
+	if what == NOTIFICATION_APPLICATION_FOCUS_OUT or what == NOTIFICATION_WM_WINDOW_FOCUS_OUT:
 		_input.reset()
 
 

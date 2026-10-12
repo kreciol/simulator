@@ -8,10 +8,13 @@ extends Node
 ## with the cause; in learn mode it starts a respawn instead (requirements §9.2): the
 ## sim freezes and input is dropped for `SimConfig.respawn_fade_s`, the player is put
 ## back on the right lane at the fade's midpoint (`Respawn`), and the timer keeps
-## running throughout.
+## running throughout. The countdown, the drive and a respawn can be paused (spec Edge
+## Cases): everything stands still until resumed, and losing window focus pauses on its own.
 
 signal session_started
 signal session_ended
+signal session_paused
+signal session_resumed
 ## The player was put back on the right lane after `respawn_cause` (learn mode).
 signal player_respawned
 
@@ -46,6 +49,11 @@ var respawn_cause: EndReason = EndReason.NONE
 var respawn_elapsed_s: float = 0.0
 ## Respawns so far this session.
 var respawn_count: int = 0
+## While set, `step` does nothing: the sim, its lane-change animation and signals, the
+## countdown and the session timer stand still and commands are dropped. A flag rather
+## than a state because both the intro and the drive can be paused; `state` says
+## which one resumes.
+var paused: bool = false
 
 ## The player's collision or off-road seen during the current sim step; the session
 ## ends once the step is over.
@@ -76,6 +84,7 @@ func setup(road_profile: RoadProfile, sim_config: SimConfig, seed_value: int = 0
 	state = State.INTRO
 	end_reason = EndReason.NONE
 	_player_end_reason = EndReason.NONE
+	paused = false
 	intro_elapsed_s = 0.0
 	elapsed_s = 0.0
 	respawn_cause = EndReason.NONE
@@ -84,8 +93,11 @@ func setup(road_profile: RoadProfile, sim_config: SimConfig, seed_value: int = 0
 
 
 ## Advances the session by one fixed step. The sim only runs while driving: during
-## the intro, a respawn and after the end it is frozen and `commands` are dropped.
+## the intro, a respawn, while paused and after the end it is frozen and `commands`
+## are dropped.
 func step(dt: float, commands: PlayerCommands = null) -> void:
+	if paused:
+		return
 	match state:
 		State.INTRO:
 			intro_elapsed_s += dt
@@ -115,6 +127,28 @@ func step(dt: float, commands: PlayerCommands = null) -> void:
 				_end(EndReason.TIME_UP)
 			elif respawn_elapsed_s >= sim.config.respawn_fade_s - TIME_EPSILON:
 				state = State.DRIVING
+
+
+## Pauses the countdown or the drive; does nothing once the session has ended.
+func pause() -> void:
+	if paused or state == State.ENDED:
+		return
+	paused = true
+	session_paused.emit()
+
+
+func resume() -> void:
+	if not paused:
+		return
+	paused = false
+	session_resumed.emit()
+
+
+func toggle_pause() -> void:
+	if paused:
+		resume()
+	else:
+		pause()
 
 
 func countdown_left_s() -> float:
@@ -147,6 +181,14 @@ func fade_amount() -> float:
 	return (1.0 - progress) / (1.0 - RESPAWN_MIDPOINT)
 
 
+func _notification(what: int) -> void:
+	# A hidden tab or a window in the background must not run the clock (§9.3). The
+	# player resumes on purpose rather than on focus returning. Platforms report focus
+	# loss as either notification (the web build through the window), so both pause.
+	if what == NOTIFICATION_APPLICATION_FOCUS_OUT or what == NOTIFICATION_WM_WINDOW_FOCUS_OUT:
+		pause()
+
+
 func is_exam() -> bool:
 	return mode == LaunchOptions.MODE_EXAM
 
@@ -168,9 +210,13 @@ func _time_up() -> bool:
 
 
 func _start_respawn(cause: EndReason) -> void:
-	state = State.RESPAWNING
 	respawn_cause = cause
 	respawn_elapsed_s = 0.0
+	if sim.config.respawn_fade_s <= 0.0:
+		# No fade configured: straight back on the road.
+		_respawn()
+		return
+	state = State.RESPAWNING
 
 
 func _respawn() -> void:

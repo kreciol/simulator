@@ -183,7 +183,7 @@ func test_learn_leaving_the_road_shows_the_respawn_message_and_fade() -> void:
 	assert_int(_session.state).is_equal(SessionManager.State.RESPAWNING)
 	assert_bool(_hud.ended_screen.visible).is_false()
 	assert_bool(_hud.respawn_notice.is_visible_in_tree()).is_true()
-	assert_str(_hud.respawn_label.text).is_equal("Zjazd z drogi")
+	assert_str(_hud.respawn_label.text).is_equal("Zjechanie z drogi")
 	assert_str(_hud.respawn_hint_label.text).is_equal("Wracasz na prawy pas. Czas sesji biegnie dalej.")
 	assert_bool(_hud.fade_screen.visible).is_true()
 	# Darkest at the midpoint, where the player is put back.
@@ -215,3 +215,25 @@ func test_no_respawn_notice_while_driving() -> void:
 	_step(1.0)
 	assert_bool(_hud.respawn_notice.visible).is_false()
 	assert_bool(_hud.fade_screen.visible).is_false()
+
+
+func test_pause_screen_shows_only_while_paused() -> void:
+	assert_bool(_hud.paused_screen.visible).is_false()
+	_session.pause()
+	_hud.update(_session)
+	# Paused during the countdown: the pause screen replaces the 3-2-1.
+	assert_bool(_hud.paused_screen.is_visible_in_tree()).is_true()
+	assert_bool(_hud.countdown_label.visible).is_false()
+	assert_str(_hud.paused_label.text).is_equal("Pauza")
+	assert_str(_hud.paused_hint_label.text).is_equal("Naciśnij Esc lub P, aby jechać dalej")
+	_session.resume()
+	_finish_countdown()
+	assert_bool(_hud.paused_screen.visible).is_false()
+	_session.pause()
+	_step(5.0)
+	assert_bool(_hud.paused_screen.visible).is_true()
+	assert_str(_hud.time_label.text).is_equal("1:30")
+	assert_bool(_hud.ended_screen.visible).is_false()
+	_session.resume()
+	_hud.update(_session)
+	assert_bool(_hud.paused_screen.visible).is_false()
