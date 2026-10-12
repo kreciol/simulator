@@ -2,8 +2,8 @@ class_name Hud
 extends CanvasLayer
 ## Driving HUD (requirements §5.3): speed, the road's limit, blinking signal arrows and
 ## the session time left, plus the 3-2-1 countdown, the pause screen and the plain
-## end-of-session screen (placeholder until the Phase 7/8 summary). Only reads session state. Placeholder
-## styling until the UI theme lands (Phase 10).
+## end-of-session screen (placeholder until the Phase 7/8 summary). Only reads session
+## state. Placeholder styling until the UI theme lands (Phase 10).
 
 const MARGIN: float = 24.0
 const OUTLINE_SIZE: int = 8

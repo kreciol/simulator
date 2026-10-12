@@ -268,6 +268,12 @@ func test_toggle_pause_pauses_then_resumes_with_one_signal_each() -> void:
 	assert_int(resumed[0]).is_equal(1)
 
 
+func test_window_focus_out_notification_pauses_the_session() -> void:
+	_start_driving()
+	_session.notification(Node.NOTIFICATION_WM_WINDOW_FOCUS_OUT)
+	assert_bool(_session.paused).is_true()
+
+
 func test_focus_out_notification_pauses_the_session() -> void:
 	_start_driving()
 	_session.notification(Node.NOTIFICATION_APPLICATION_FOCUS_OUT)

@@ -62,7 +62,7 @@ func _process(_delta: float) -> void:
 func _notification(what: int) -> void:
 	# Key releases are not delivered while unfocused; never leave a key stuck down.
 	# `SessionManager` pauses itself on the same notification.
-	if what == NOTIFICATION_APPLICATION_FOCUS_OUT:
+	if what == NOTIFICATION_APPLICATION_FOCUS_OUT or what == NOTIFICATION_WM_WINDOW_FOCUS_OUT:
 		_input.reset()
 
 

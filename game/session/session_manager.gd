@@ -122,8 +122,9 @@ func time_left_s() -> float:
 
 func _notification(what: int) -> void:
 	# A hidden tab or a window in the background must not run the clock (§9.3). The
-	# player resumes on purpose rather than on focus returning.
-	if what == NOTIFICATION_APPLICATION_FOCUS_OUT:
+	# player resumes on purpose rather than on focus returning. Platforms report focus
+	# loss as either notification (the web build through the window), so both pause.
+	if what == NOTIFICATION_APPLICATION_FOCUS_OUT or what == NOTIFICATION_WM_WINDOW_FOCUS_OUT:
 		pause()
 
 
