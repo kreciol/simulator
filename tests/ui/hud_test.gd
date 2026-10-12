@@ -133,3 +133,53 @@ func test_end_notice_shows_only_after_the_session_ends() -> void:
 	assert_bool(_hud.ended_label.is_visible_in_tree()).is_true()
 	assert_str(_hud.ended_label.text).is_equal("Koniec sesji")
 	assert_bool(_hud.countdown_label.visible).is_false()
+	assert_bool(_hud.ended_cause_label.visible).is_false()
+
+
+func _new_exam() -> void:
+	_session = auto_free(SessionManager.new()) as SessionManager
+	_session.setup(load("res://config/road_profiles/motorway.tres") as RoadProfile,
+			load("res://config/sim_config.tres") as SimConfig, 0, LaunchOptions.MODE_EXAM)
+	_finish_countdown()
+
+
+func _leave_the_road() -> void:
+	_step(DT, PlayerCommands.create(VehicleState.Longitudinal.NONE, VehicleState.Dir.RIGHT, VehicleState.Dir.NONE))
+	_step(_session.sim.config.lane_change_duration_s)
+
+
+func test_exam_collision_names_the_cause() -> void:
+	_new_exam()
+	var player: VehicleState = _session.player
+	_session.sim.add_vehicle(player.s + player.length_m + 1.0, 0, 0.0)
+	_step(2.0)
+	assert_int(_session.state).is_equal(SessionManager.State.ENDED)
+	assert_bool(_hud.ended_screen.visible).is_true()
+	assert_str(_hud.ended_label.text).is_equal("Egzamin niezaliczony")
+	assert_bool(_hud.ended_cause_label.is_visible_in_tree()).is_true()
+	assert_str(_hud.ended_cause_label.text).is_equal("Przyczyna: kolizja z innym pojazdem")
+
+
+func test_exam_leaving_the_road_names_the_cause() -> void:
+	_new_exam()
+	_leave_the_road()
+	assert_int(_session.state).is_equal(SessionManager.State.ENDED)
+	assert_str(_hud.ended_label.text).is_equal("Egzamin niezaliczony")
+	assert_bool(_hud.ended_cause_label.visible).is_true()
+	assert_str(_hud.ended_cause_label.text).is_equal("Przyczyna: zjechanie z drogi")
+
+
+func test_exam_completed_without_an_incident_shows_no_cause() -> void:
+	_new_exam()
+	_step(_session.sim.config.session_length_s)
+	assert_int(_session.state).is_equal(SessionManager.State.ENDED)
+	assert_str(_hud.ended_label.text).is_equal("Koniec sesji")
+	assert_bool(_hud.ended_cause_label.visible).is_false()
+
+
+func test_learn_session_ended_off_road_is_not_an_exam_failure() -> void:
+	_finish_countdown()
+	_leave_the_road()
+	assert_int(_session.state).is_equal(SessionManager.State.ENDED)
+	assert_str(_hud.ended_label.text).is_equal("Koniec sesji")
+	assert_str(_hud.ended_cause_label.text).is_equal("Przyczyna: zjechanie z drogi")
