@@ -21,7 +21,7 @@ godot --path .
 
 ### Dev launcher
 
-Until the menus exist, the session's mode, road profile, difficulty level and seed — and the graphics quality and mirrors — come from URL query params on the web build, or user args after `--` on desktop:
+Until the menus exist, the session's mode, road profile, difficulty level and seed — and the graphics quality, mirrors and FPS probe — come from URL query params on the web build, or user args after `--` on desktop:
 
 ```text
 # Web (GitHub Pages or a local export)
@@ -38,8 +38,46 @@ godot --path . -- --mode=exam --profile=expressway --level=3 --seed=42 --quality
 | `seed` | integer ≥ 0 | random |
 | `quality` | `low`, `high` — mirror resolution and refresh, shadows, draw distance (`config/quality_presets/`) | `high` |
 | `mirrors` | `0` (off), `1` (on) | `1` |
+| `perf` | `0` (off), `1` — print average and 5th-percentile FPS after 60 s of driving (see [Performance measurement](#performance-measurement)) | `0` |
 
 A missing or invalid value falls back to its default (with a warning in the console); defaults live in `config/dev_launcher.tres`. The resolved options, including the seed, are printed at start (`Dev launcher: mode=… seed=…`), so a session can be replayed with the same seed.
+
+## Performance measurement
+
+Web performance is the project's main risk (spec Phase 5 step 2, requirements §14 and §16). It is measured the same way every time, on one reference machine, so results compare across builds.
+
+### Reference machine
+
+The product owner's laptop, measured on its integrated GPU:
+
+| | |
+|---|---|
+| Laptop model | Dell Latitude 5540 |
+| CPU / integrated GPU | Intel Core i7-1370P / Intel Iris Xe Graphics (Chrome renders on it: `chrome://gpu` shows `ANGLE (Intel, Intel(R) Iris(R) Xe Graphics … Direct3D11 …)`; the laptop also has an NVIDIA MX550, which must not be the one in use) |
+| OS | Windows 11 Pro (build 26200) |
+| Browser | Google Chrome 154.0.8037.98 |
+
+### Method
+
+1. Plug the laptop in (no battery saver), close other tabs and apps, and open the deployed build (GitHub Pages) or a local Web export in Chrome at full screen.
+2. Open DevTools → Console, then load the page with:
+   - `?perf=1&level=4&profile=motorway&seed=1&quality=low`
+   - `?perf=1&level=4&profile=motorway&seed=1&quality=high`
+3. Drive for the whole session, keeping right at about the speed limit; do not switch tabs. FPS is read from `Performance.TIME_FPS` every frame over the first 60 s of driving, each reading weighted by its frame time; the countdown and stalls (frames over `max_frame_s`, such as a hidden tab) are not counted.
+4. Copy the console line `FPS probe: avg=… p5=… over 60.0 s (… frames) | mode=… quality=…` for each preset into the PR. A line marked `incomplete` means the session ended early (a crash) — run it again.
+
+**Exit criterion (§16):** on the `low` preset, average ≥ 30 FPS and 5th percentile ≥ 25 FPS. The probe's settings live in `config/perf_config.tres`.
+
+### Results
+
+| Date | Build | Preset | avg FPS | p5 FPS | Frames (60 s) |
+|---|---|---|---|---|---|
+| 2026-10-12 | PR #57 (`1a09a3e`), local Web export | `low` | 60.0 | 60.0 | 3599 |
+| 2026-10-12 | PR #57 (`1a09a3e`), local Web export | `high` | 60.0 | 60.0 | 3599 |
+
+Both presets hold the display's 60 Hz vsync cap at level 4 with mirrors on, so the §16 criterion is met with margin.
+
+Separately from the probe, any session whose FPS stays below 30 for a few seconds shows a short notice suggesting the low preset — once per session at most, and never when already on `low`.
 
 ## Run the tests
 

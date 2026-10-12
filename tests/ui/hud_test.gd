@@ -188,9 +188,9 @@ func test_learn_session_ended_off_road_is_not_an_exam_failure() -> void:
 ## A learn session scored with the shipped config, past its countdown.
 func _new_scored(session_mode: StringName = LaunchOptions.MODE_LEARN) -> void:
 	_session = auto_free(SessionManager.new()) as SessionManager
+	_session.scoring_config = load("res://config/scoring.tres") as ScoringConfig
 	_session.setup(load("res://config/road_profiles/motorway.tres") as RoadProfile,
-			load("res://config/sim_config.tres") as SimConfig, 0, session_mode,
-			load("res://config/scoring.tres") as ScoringConfig)
+			load("res://config/sim_config.tres") as SimConfig, 0, session_mode)
 	_finish_countdown()
 
 
@@ -273,3 +273,55 @@ func test_blind_spot_warning_is_an_icon_and_text_under_its_mirror() -> void:
 		assert_float(warning.anchor_top).is_equal(_view.left_mirror_rect.end.y)
 	assert_float(_hud.blind_spot_left.anchor_left).is_equal(_view.left_mirror_rect.position.x)
 	assert_float(_hud.blind_spot_right.anchor_right).is_equal_approx(1.0 - _view.left_mirror_rect.position.x, 1e-6)
+
+
+func test_pause_screen_shows_only_while_paused() -> void:
+	assert_bool(_hud.paused_screen.visible).is_false()
+	_session.pause()
+	_hud.update(_session)
+	# Paused during the countdown: the pause screen replaces the 3-2-1.
+	assert_bool(_hud.paused_screen.is_visible_in_tree()).is_true()
+	assert_bool(_hud.countdown_label.visible).is_false()
+	assert_str(_hud.paused_label.text).is_equal("Pauza")
+	assert_str(_hud.paused_hint_label.text).is_equal("Naciśnij Esc lub P, aby jechać dalej")
+	_session.resume()
+	_finish_countdown()
+	assert_bool(_hud.paused_screen.visible).is_false()
+	_session.pause()
+	_step(5.0)
+	assert_bool(_hud.paused_screen.visible).is_true()
+	assert_str(_hud.time_label.text).is_equal("1:30")
+	assert_bool(_hud.ended_screen.visible).is_false()
+	_session.resume()
+	_hud.update(_session)
+	assert_bool(_hud.paused_screen.visible).is_false()
+
+
+func _history(read_only: bool, corrupt: bool) -> HistoryStore:
+	var history: HistoryStore = HistoryStore.new("user://unused/history.json", 1)
+	history.read_only = read_only
+	history.notice = HistoryStore.Notice.CORRUPT_RECOVERED if corrupt else HistoryStore.Notice.NONE
+	return history
+
+
+func test_save_status_explains_the_outcome(saved: bool, read_only: bool, corrupt: bool,
+		keys: Array, test_parameters: Array = [
+			[true, false, false, [&"SAVE_DONE"]],
+			[false, false, false, [&"SAVE_UNAVAILABLE"]],
+			[false, true, false, [&"SAVE_READ_ONLY"]],
+			[true, false, true, [&"HISTORY_CORRUPT_RECOVERED", &"SAVE_DONE"]],
+			[false, false, true, [&"HISTORY_CORRUPT_RECOVERED", &"SAVE_UNAVAILABLE"]],
+		]) -> void:
+	assert_array(Hud.save_status_keys(saved, _history(read_only, corrupt))).contains_exactly(keys)
+
+
+func test_save_status_is_shown_in_polish_on_the_end_screen() -> void:
+	assert_str(_hud.save_status_label.text).is_empty()
+	assert_bool(_hud.save_status_label.visible).is_false()
+	_hud.show_save_status(true, _history(false, true))
+	assert_str(_hud.save_status_label.text).is_equal(
+			"Zapisana historia była uszkodzona. Zachowaliśmy jej kopię i zaczęliśmy nową.\nWynik zapisany w tej przeglądarce.")
+	assert_bool(_hud.save_status_label.visible).is_true()
+	# Stacked under the end title and its cause, on the end screen.
+	assert_object(_hud.save_status_label.get_parent()).is_same(_hud.ended_label.get_parent())
+	assert_bool(_hud.ended_screen.is_ancestor_of(_hud.save_status_label)).is_true()
