@@ -14,12 +14,14 @@ var config: ScoringConfig
 var event_log: EventLog = EventLog.new()
 
 var gap_rule: GapRule
+var keep_right_rule: KeepRightRule
 
 
 func _init(observed_sim: TrafficSim, scoring_config: ScoringConfig) -> void:
 	sim = observed_sim
 	config = scoring_config
 	gap_rule = GapRule.new(self)
+	keep_right_rule = KeepRightRule.new(self)
 
 
 ## Scores the step of length `dt` that `sim` just finished and returns the events it
@@ -29,6 +31,7 @@ func observe(dt: float) -> Array[ScoreEvent]:
 	var player: VehicleState = sim.player
 	var active: bool = player != null and not player.off_road
 	gap_rule.observe(player if active else null, dt, completed)
+	keep_right_rule.observe(player if active else null, dt, completed)
 	for event: ScoreEvent in completed:
 		score_event_emitted.emit(event)
 	return completed
