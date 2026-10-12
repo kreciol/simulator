@@ -117,6 +117,27 @@ func remove_vehicle(vehicle: VehicleState) -> void:
 	vehicle_removed.emit(vehicle.id)
 
 
+## Puts `vehicle` on `lane` at `s` driving `speed_mps`, as if it had just been added:
+## no lane change, signal, command or off-road left, and no contact remembered, so a
+## later touch counts as a new collision. For the learn-mode respawn (requirements §9.2).
+func place_vehicle(vehicle: VehicleState, s: float, lane: int, speed_mps: float) -> void:
+	lanes.remove(vehicle)
+	vehicle.longitudinal = VehicleState.Longitudinal.NONE
+	vehicle.lane_change_active = false
+	vehicle.lane_change_from = lane
+	vehicle.lane_change_to = lane
+	vehicle.lane_change_progress = 0.0
+	vehicle.signal_dir = VehicleState.Dir.NONE
+	vehicle.off_road = false
+	vehicle.s = s
+	vehicle.lane = lane
+	vehicle.speed_mps = clampf(speed_mps, 0.0, max_speed_mps())
+	lanes.add(vehicle)
+	for key: Vector2i in _contacts.keys():
+		if key.x == vehicle.id or key.y == vehicle.id:
+			_contacts.erase(key)
+
+
 ## The vehicle on the road with `vehicle_id`, or null.
 func find_vehicle(vehicle_id: int) -> VehicleState:
 	for vehicle: VehicleState in vehicles:

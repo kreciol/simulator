@@ -129,3 +129,34 @@ func test_repeated_pointless_lane_changes_do_not_raise_the_score() -> void:
 
 	assert_float(_world.total_of_type(LaneChangeRule.TYPE)).is_equal(0.0)
 	assert_float(_world.scoring.event_log.total()).is_less(steady.scoring.event_log.total())
+
+
+## Overtakes the slow car, then the player is put back on the right lane with the car
+## gone; an aimless change left and back follows.
+func _overtake_respawn_and_swing(restart: bool) -> void:
+	_behind_slow_car()
+	var slow_car: VehicleState = _world.sim.vehicles[1]
+	_signal(LEFT, 1.5)
+	_change_lane(LEFT)
+	_world.sim.remove_vehicle(slow_car)
+	Respawn.respawn_player(_world.sim)
+	if restart:
+		_world.scoring.restart_after_respawn()
+	_world.drive(_config.n1_cooldown_s)
+	_signal(LEFT, 1.5)
+	_change_lane(LEFT)
+	_world.drive(_config.n1_cooldown_s)
+	_signal(RIGHT, 1.5)
+	_change_lane(RIGHT)
+
+
+func test_a_respawn_forgets_the_overtake_so_a_later_right_change_is_no_return() -> void:
+	_overtake_respawn_and_swing(true)
+	var events: Array[ScoreEvent] = _n1_events()
+	assert_array(events).has_size(1)
+	assert_str(events[0].context["reason"] as StringName).is_equal(LaneChangeRule.REASON_OVERTAKE)
+
+
+func test_without_the_reset_the_interrupted_overtake_would_reward_the_swing() -> void:
+	_overtake_respawn_and_swing(false)
+	assert_array(_n1_events()).has_size(2)

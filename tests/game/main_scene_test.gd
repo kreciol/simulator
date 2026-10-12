@@ -201,20 +201,28 @@ func test_scene_shows_traffic_at_the_launch_level() -> void:
 	assert_int(_traffic_view().live_count()).is_equal(sim.vehicles.size() - 1)
 
 
-func test_hitting_a_car_ends_the_session_with_the_end_screen() -> void:
+func test_hitting_a_car_in_learn_mode_charges_k4_fades_and_drives_on() -> void:
 	var hud: Hud = _main.get_node("Hud") as Hud
-	assert_bool(hud.ended_screen.visible).is_false()
+	var session: SessionManager = _main.session
+	assert_bool(session.is_exam()).is_false()
+	assert_object(session.scoring).is_not_null()
 	# A stopped car right ahead of the player.
 	var wreck: VehicleState = _main.sim.add_vehicle(_player().s + _player().length_m + 1.0, 0, 0.0)
 	assert_object(_traffic_view().view_of(wreck.id)).is_not_null()
 	var steps: int = 0
-	while _main.session.state == SessionManager.State.DRIVING and steps < 120:
+	while session.state == SessionManager.State.DRIVING and steps < 120:
 		_drive(1)
 		steps += 1
-	assert_int(_main.session.state).is_equal(SessionManager.State.ENDED)
-	assert_int(_main.session.end_reason).is_equal(SessionManager.EndReason.COLLISION)
-	assert_bool(hud.ended_screen.visible).is_true()
-	assert_str(hud.ended_label.text).is_equal("Koniec sesji")
+	assert_int(session.state).is_equal(SessionManager.State.RESPAWNING)
+	assert_float(session.scoring.category_score(CollisionRule.CATEGORY)).is_equal(-session.scoring.config.k4_penalty)
+	assert_bool(hud.respawn_notice.visible).is_true()
+	assert_bool(hud.ended_screen.visible).is_false()
+	_drive(roundi(_main.sim_config.respawn_fade_s / DT))
+	assert_int(session.state).is_equal(SessionManager.State.DRIVING)
+	assert_int(_player().lane).is_equal(0)
+	assert_bool(hud.respawn_notice.visible).is_false()
+	assert_bool(hud.fade_screen.visible).is_false()
+	assert_bool(_main.sim.vehicles_overlap(_player(), wreck)).is_false()
 
 
 ## One key press delivered to the scene exactly once. The scene runner hands each
@@ -263,13 +271,19 @@ func test_losing_focus_pauses_the_drive() -> void:
 	assert_float(_player().s).is_equal(s_before)
 
 
+## Drives until the session ends; in learn mode a crash respawns, so only time ends it.
+func _drive_to_the_end() -> void:
+	var steps: int = 0
+	var limit: int = roundi((_main.sim_config.session_length_s + _main.sim_config.countdown_s) / DT) + 10
+	while _main.session.state != SessionManager.State.ENDED and steps < limit:
+		_main._physics_process(DT)
+		steps += 1
+	_main._process(DT)
+
+
 func test_a_finished_session_is_saved_and_survives_a_reload() -> void:
 	var hud: Hud = _main.get_node("Hud") as Hud
-	_main.sim.add_vehicle(_player().s + _player().length_m + 1.0, 0, 0.0)
-	var steps: int = 0
-	while _main.session.state == SessionManager.State.DRIVING and steps < 120:
-		_drive(1)
-		steps += 1
+	_drive_to_the_end()
 	assert_int(_main.session.state).is_equal(SessionManager.State.ENDED)
 	assert_str(hud.save_status_label.text).is_equal("Wynik zapisany w tej przeglądarce.")
 
@@ -280,7 +294,7 @@ func test_a_finished_session_is_saved_and_survives_a_reload() -> void:
 	assert_int(reloaded.sessions.size()).is_equal(1)
 	var record: SessionRecord = SessionRecord.from_dict(reloaded.last_session())
 	assert_str(record.id).is_equal(_main.session.record.id)
-	assert_str(record.status).is_equal(SessionRecord.STATUS_ABORTED_COLLISION)
+	assert_str(record.status).is_equal(SessionRecord.STATUS_COMPLETED)
 	assert_int(record.seed_value).is_equal(_main.launch_options.seed_value)
 
 
@@ -288,11 +302,7 @@ func test_with_storage_unavailable_the_session_still_ends_and_explains_why() -> 
 	SaveManager.store.userfs_persistent = false
 	SaveManager.store.load_history()
 	var hud: Hud = _main.get_node("Hud") as Hud
-	_main.sim.add_vehicle(_player().s + _player().length_m + 1.0, 0, 0.0)
-	var steps: int = 0
-	while _main.session.state == SessionManager.State.DRIVING and steps < 120:
-		_drive(1)
-		steps += 1
+	_drive_to_the_end()
 	assert_int(_main.session.state).is_equal(SessionManager.State.ENDED)
 	assert_bool(hud.ended_screen.visible).is_true()
 	assert_str(hud.save_status_label.text).starts_with("Tym razem wyniku nie zapisaliśmy")
