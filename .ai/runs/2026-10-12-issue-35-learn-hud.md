@@ -50,7 +50,7 @@ PR: #59
 
 ### Phase 2: Live score in the session
 
-- [x] 2.1 Session owns the scoring system — 87e1908
+- [x] 2.1 Session owns the scoring system — 87e1908 (superseded on merge by main's #54, which wires the same scoring into `SessionManager`)
 
 ### Phase 3: Learn-only HUD
 

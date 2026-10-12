@@ -325,3 +325,15 @@ func test_save_status_is_shown_in_polish_on_the_end_screen() -> void:
 	# Stacked under the end title and its cause, on the end screen.
 	assert_object(_hud.save_status_label.get_parent()).is_same(_hud.ended_label.get_parent())
 	assert_bool(_hud.ended_screen.is_ancestor_of(_hud.save_status_label)).is_true()
+
+
+func test_blind_spot_warning_hides_while_paused() -> void:
+	_new_scored()
+	_add_beside(1, 5.0)
+	assert_bool(_hud.blind_spot_left.visible).is_true()
+	_session.pause()
+	_hud.update(_session)
+	assert_bool(_hud.blind_spot_left.visible).is_false()
+	_session.resume()
+	_hud.update(_session)
+	assert_bool(_hud.blind_spot_left.visible).is_true()
