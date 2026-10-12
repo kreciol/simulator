@@ -25,7 +25,7 @@ Every session ends with one record of its score, category sub-scores and stats, 
   - It holds the limit and keeps a gap above the legal minimum.
   - It overtakes a slower vehicle with a signal held for `signal_min_on_s`, and returns right once the right lane is free.
   - It reuses `LaneQuery`, `ScoringSystem.overtake_justified` and `KeepRightRule.right_lane_free`.
-- **`ExamCalibration`** (`core/scoring/`): runs one seeded 90 s bot session per level, with the spawner and scoring attached, and returns the score. A headless tool script prints 60% of each level's score; those values are written into the `.tres` files.
+- **`ExamCalibration`** (`core/scoring/`): runs one seeded 90 s bot session per level, with the spawner and scoring attached, and returns the score. The calibration test prints the measured pass marks and fails when a stored value drifts; the values are written into the `.tres` files.
 - gdUnit4 tests that mirror every acceptance criterion of #30.
 
 ## Non-goals
@@ -41,7 +41,7 @@ Every session ends with one record of its score, category sub-scores and stats, 
 
 ### Phase 2 — Ideal-driver bot and pass marks
 1. `IdealDriverBot` and `ExamCalibration`. *Tests:* the same seed gives the same score twice. The bot drives a whole session without collision, K1, K3 or speeding, and overtakes.
-2. Calibration tool script; `exam_pass_score` written to `level_1..4.tres`; AGENTS.md status. *Tests:* each level's `exam_pass_score` is 60% of the bot's measured score.
+2. `exam_pass_score` written to `level_1..4.tres`; AGENTS.md status. *Tests:* each level's `exam_pass_score` is 60% of the bot's measured score.
 
 ## Risks
 
@@ -50,13 +50,15 @@ Every session ends with one record of its score, category sub-scores and stats, 
 
 ## Progress
 
+PR: #51
+
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: Session record
 
-- [ ] 1.1 SessionRecord, SessionRecordBuilder and exam_pass_score field
+- [x] 1.1 SessionRecord, SessionRecordBuilder and exam_pass_score field — eff17b5
 
 ### Phase 2: Ideal-driver bot and pass marks
 
-- [ ] 2.1 IdealDriverBot and ExamCalibration
-- [ ] 2.2 Calibration tool and per-level exam_pass_score values
+- [x] 2.1 IdealDriverBot and ExamCalibration — e6347d6
+- [x] 2.2 Calibration tool and per-level exam_pass_score values — be925f2
