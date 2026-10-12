@@ -6,7 +6,7 @@ extends RefCounted
 
 const SCHEMA_VERSION: int = 1
 
-## The same values as `LaunchOptions.MODES`; core does not depend on the game layer.
+## Session modes; `LaunchOptions` reuses them (core does not depend on the game layer).
 const MODE_LEARN: StringName = &"learn"
 const MODE_EXAM: StringName = &"exam"
 

@@ -3,8 +3,8 @@ extends RefCounted
 ## What one session is started with: mode, road profile, difficulty level and seed.
 ## Built by `DevLauncher` until the Phase 10 menus exist.
 
-const MODE_LEARN: StringName = &"learn"
-const MODE_EXAM: StringName = &"exam"
+const MODE_LEARN: StringName = SessionRecord.MODE_LEARN
+const MODE_EXAM: StringName = SessionRecord.MODE_EXAM
 const MODES: Array[StringName] = [MODE_LEARN, MODE_EXAM]
 
 var mode: StringName
