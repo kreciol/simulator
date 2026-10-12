@@ -1,3 +1,5 @@
 keys,pl
 HUD_SPEED_UNIT,km/h
 SESSION_ENDED,Koniec sesji
+SESSION_PAUSED,Pauza
+SESSION_PAUSED_HINT,"Naciśnij Esc lub P, aby jechać dalej"

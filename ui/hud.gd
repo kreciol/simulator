@@ -1,8 +1,8 @@
 class_name Hud
 extends CanvasLayer
 ## Driving HUD (requirements §5.3): speed, the road's limit, blinking signal arrows and
-## the session time left, plus the 3-2-1 countdown and the plain end-of-session screen
-## (placeholder until the Phase 7/8 summary). Only reads session state. Placeholder
+## the session time left, plus the 3-2-1 countdown, the pause screen and the plain
+## end-of-session screen (placeholder until the Phase 7/8 summary). Only reads session state. Placeholder
 ## styling until the UI theme lands (Phase 10).
 
 const MARGIN: float = 24.0
@@ -13,6 +13,7 @@ const LIMIT_FONT_SIZE: int = 30
 const TIME_FONT_SIZE: int = 40
 const COUNTDOWN_FONT_SIZE: int = 160
 const NOTICE_FONT_SIZE: int = 64
+const HINT_FONT_SIZE: int = 28
 ## Round limit sign: white disc with a red ring, as on Polish B-33 signs.
 const LIMIT_SIGN_SIZE: float = 76.0
 const LIMIT_RING_WIDTH: int = 9
@@ -21,8 +22,8 @@ const ARROW_GAP: float = 120.0
 ## Arrows stay faintly visible when off, so the player knows where to look.
 const ARROW_OFF: Color = Color(1.0, 1.0, 1.0, 0.2)
 const ARROW_ON: Color = Color(0.2, 1.0, 0.3)
-## Dims the frozen scene behind the end-of-session notice.
-const ENDED_BACKDROP: Color = Color(0.0, 0.0, 0.0, 0.55)
+## Dims the frozen scene behind the pause and end-of-session notices.
+const NOTICE_BACKDROP: Color = Color(0.0, 0.0, 0.0, 0.55)
 ## Absorbs float drift so a whole second left never reads as the next one up.
 const TIME_EPSILON: float = 1e-6
 
@@ -34,6 +35,9 @@ var time_label: Label
 var signal_left: Polygon2D
 var signal_right: Polygon2D
 var countdown_label: Label
+var paused_screen: ColorRect
+var paused_label: Label
+var paused_hint_label: Label
 var ended_screen: ColorRect
 var ended_label: Label
 
@@ -84,12 +88,20 @@ func setup(view_config: ViewConfig) -> void:
 
 	countdown_label = _centered_label("Countdown", COUNTDOWN_FONT_SIZE)
 	root.add_child(countdown_label)
-	ended_screen = ColorRect.new()
-	ended_screen.name = "EndedScreen"
-	ended_screen.color = ENDED_BACKDROP
-	ended_screen.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	ended_screen.set_anchors_preset(Control.PRESET_FULL_RECT)
-	ended_screen.visible = false
+	paused_screen = _backdrop("PausedScreen")
+	root.add_child(paused_screen)
+	var paused_box: VBoxContainer = VBoxContainer.new()
+	paused_box.name = "PausedNotice"
+	paused_box.alignment = BoxContainer.ALIGNMENT_CENTER
+	paused_box.set_anchors_preset(Control.PRESET_FULL_RECT)
+	paused_screen.add_child(paused_box)
+	paused_label = _label("Paused", NOTICE_FONT_SIZE)
+	paused_label.text = tr(&"SESSION_PAUSED")
+	paused_box.add_child(paused_label)
+	paused_hint_label = _label("PausedHint", HINT_FONT_SIZE)
+	paused_hint_label.text = tr(&"SESSION_PAUSED_HINT")
+	paused_box.add_child(paused_hint_label)
+	ended_screen = _backdrop("EndedScreen")
 	root.add_child(ended_screen)
 	ended_label = _centered_label("Ended", NOTICE_FONT_SIZE)
 	ended_label.text = tr(&"SESSION_ENDED")
@@ -107,7 +119,8 @@ func update(session: SessionManager) -> void:
 	signal_left.color = ARROW_ON if lit and player.signal_dir == VehicleState.Dir.LEFT else ARROW_OFF
 	signal_right.color = ARROW_ON if lit and player.signal_dir == VehicleState.Dir.RIGHT else ARROW_OFF
 
-	countdown_label.visible = session.state == SessionManager.State.INTRO
+	paused_screen.visible = session.paused
+	countdown_label.visible = session.state == SessionManager.State.INTRO and not session.paused
 	if countdown_label.visible:
 		countdown_label.text = str(maxi(1, ceili(session.countdown_left_s() - TIME_EPSILON)))
 	ended_screen.visible = session.state == SessionManager.State.ENDED
@@ -136,6 +149,17 @@ func _centered_label(node_name: String, font_size: int) -> Label:
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	label.visible = false
 	return label
+
+
+## Full-screen dimmed backdrop, hidden until its notice is due.
+func _backdrop(node_name: String) -> ColorRect:
+	var backdrop: ColorRect = ColorRect.new()
+	backdrop.name = node_name
+	backdrop.color = NOTICE_BACKDROP
+	backdrop.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
+	backdrop.visible = false
+	return backdrop
 
 
 func _limit_sign() -> PanelContainer:
