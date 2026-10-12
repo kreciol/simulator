@@ -11,15 +11,16 @@ extends Control
 
 const MARGIN: int = 32
 const SEPARATION: int = 12
-const COLUMN_SEPARATION: int = 48
+const COLUMN_SEPARATION: int = 36
 const OUTLINE_SIZE: int = 6
 const TITLE_FONT_SIZE: int = 44
 const HEADING_FONT_SIZE: int = 26
 const TEXT_FONT_SIZE: int = 18
-const ROW_FONT_SIZE: int = 17
-## Width of the recent list's column; with the bests and the trend beside it the
-## page fits the 1280×720 minimum window.
-const TEXT_WIDTH: float = 620.0
+const ROW_FONT_SIZE: int = 16
+## Widths of the recent list and of the bests and trend beside it: together they fit
+## the 1280×720 minimum window. A row too long for its column wraps.
+const RECENT_WIDTH: float = 720.0
+const SIDE_WIDTH: float = ScoreTrendChart.SIZE.x
 ## Wrap width of the notices above the lists.
 const NOTICE_WIDTH: float = 1100.0
 const BACKGROUND: Color = Color(0.08, 0.1, 0.13)
@@ -105,7 +106,7 @@ func _init() -> void:
 	content.visible = false
 	page.add_child(content)
 	var recent_column: VBoxContainer = _column("Recent", &"HISTORY_RECENT")
-	recent_column.custom_minimum_size = Vector2(TEXT_WIDTH, 0.0)
+	recent_column.custom_minimum_size = Vector2(RECENT_WIDTH, 0.0)
 	content.add_child(recent_column)
 	recent_rows = _rows("Rows")
 	recent_column.add_child(recent_rows)
@@ -113,15 +114,13 @@ func _init() -> void:
 	content.add_child(side_column)
 	best_rows = _rows("Rows")
 	side_column.add_child(best_rows)
-	no_bests_label = _label("NoBests", ROW_FONT_SIZE)
+	no_bests_label = _row_label("NoBests", SIDE_WIDTH)
 	no_bests_label.text = tr(&"HISTORY_NO_BESTS")
 	side_column.add_child(no_bests_label)
 	side_column.add_child(_label_with_key("TrendHeading", HEADING_FONT_SIZE, &"HISTORY_TREND"))
 	trend_chart = ScoreTrendChart.new()
 	side_column.add_child(trend_chart)
-	trend_caption_label = _label("TrendCaption", ROW_FONT_SIZE)
-	trend_caption_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	trend_caption_label.custom_minimum_size = Vector2(ScoreTrendChart.SIZE.x, 0.0)
+	trend_caption_label = _row_label("TrendCaption", SIDE_WIDTH)
 	side_column.add_child(trend_caption_label)
 
 
@@ -145,9 +144,9 @@ func show_history(history: HistoryStore) -> void:
 	if not has_sessions:
 		return
 
-	_fill(recent_rows, history.recent(recent_count).map(row_text))
+	_fill(recent_rows, history.recent(recent_count).map(row_text), RECENT_WIDTH)
 	var bests: Array[Dictionary] = history.bests()
-	_fill(best_rows, bests.map(best_text))
+	_fill(best_rows, bests.map(best_text), SIDE_WIDTH)
 	no_bests_label.visible = bests.is_empty()
 	var scores: Array[float] = history.trend_scores(trend_count)
 	trend_chart.scores = scores
@@ -182,12 +181,11 @@ func row_text(entry: Dictionary) -> String:
 	})
 
 
-## The best session of a combination: the combination, its points and when it was set.
+## The best session of a combination: the combination and its points.
 func best_text(entry: Dictionary) -> String:
 	return tr(&"HISTORY_BEST_ROW").format({
 		"combination": combination_text(entry),
 		"points": floori(float(entry.get("score_total", 0.0))),
-		"date": format_date(str(entry.get("started_at", "")), _time_zone_bias_min()),
 	})
 
 
@@ -230,14 +228,22 @@ func _time_zone_bias_min() -> int:
 	return int(Time.get_time_zone_from_system().get("bias", 0))
 
 
-func _fill(rows: VBoxContainer, texts: Array) -> void:
+func _fill(rows: VBoxContainer, texts: Array, width: float) -> void:
 	for child: Node in rows.get_children():
 		rows.remove_child(child)
 		child.queue_free()
 	for text: Variant in texts:
-		var row: Label = _label("Row", ROW_FONT_SIZE)
+		var row: Label = _row_label("Row", width)
 		row.text = str(text)
 		rows.add_child(row)
+
+
+## A line of a list, wrapping at `width`.
+func _row_label(node_name: String, width: float) -> Label:
+	var label: Label = _label(node_name, ROW_FONT_SIZE)
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	label.custom_minimum_size = Vector2(width, 0.0)
+	return label
 
 
 func _column(node_name: String, heading_key: StringName) -> VBoxContainer:

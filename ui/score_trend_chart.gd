@@ -5,7 +5,7 @@ extends Control
 ## highest of them. The numbers themselves are in the caption beside it, so the chart
 ## is never the only way to read them. Placeholder styling until the Phase 10 theme.
 
-const SIZE: Vector2 = Vector2(520.0, 180.0)
+const SIZE: Vector2 = Vector2(440.0, 170.0)
 ## Space kept free inside the frame so the dots at the edges are whole.
 const PADDING: float = 12.0
 const FRAME_COLOR: Color = Color(1.0, 1.0, 1.0, 0.35)

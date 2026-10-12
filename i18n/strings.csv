@@ -72,7 +72,7 @@ HISTORY_NO_BESTS,Rekord ustanawia dopiero ukończony przejazd.
 HISTORY_TREND,Trend wyniku
 HISTORY_TREND_CAPTION,"Ostatnie wyniki ({count}): najniższy {min} pkt, najwyższy {max} pkt, ostatni {last} pkt."
 HISTORY_ROW,{date} · {combination} — {points} pkt · {status}
-HISTORY_BEST_ROW,{combination}: {points} pkt ({date})
+HISTORY_BEST_ROW,{combination}: {points} pkt
 HISTORY_COMBINATION,{mode} · {profile} · poziom {level}
 HISTORY_STATUS_COMPLETED,ukończony
 HISTORY_STATUS_COLLISION,przerwany — kolizja

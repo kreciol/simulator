@@ -132,8 +132,8 @@ func test_lists_the_best_per_combination() -> void:
 	_save("exam3", 20.0, SessionRecord.STATUS_COMPLETED, SessionRecord.MODE_EXAM, 3)
 	_screen.show_history(_store)
 	assert_array(_texts(_screen.best_rows)).contains_exactly([
-		"Egzamin · Autostrada · poziom 3: 20 pkt (%s)" % _date(),
-		"Nauka · Autostrada · poziom 2: 48 pkt (%s)" % _date(),
+		"Egzamin · Autostrada · poziom 3: 20 pkt",
+		"Nauka · Autostrada · poziom 2: 48 pkt",
 	])
 	assert_bool(_screen.no_bests_label.visible).is_false()
 
