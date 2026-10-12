@@ -48,14 +48,14 @@ Web performance is the project's main risk (spec Phase 5 step 2, requirements §
 
 ### Reference machine
 
-The product owner's integrated-GPU laptop. *To be filled in by the product owner with the first measurement:*
+The product owner's laptop, measured on its integrated GPU:
 
 | | |
 |---|---|
-| Laptop model | _not yet recorded_ |
-| CPU / integrated GPU | _not yet recorded_ |
-| OS | _not yet recorded_ |
-| Browser | Google Chrome _version not yet recorded_ |
+| Laptop model | Dell Latitude 5540 |
+| CPU / integrated GPU | Intel Core i7-1370P / Intel Iris Xe Graphics (Chrome renders on it: `chrome://gpu` shows `ANGLE (Intel, Intel(R) Iris(R) Xe Graphics … Direct3D11 …)`; the laptop also has an NVIDIA MX550, which must not be the one in use) |
+| OS | Windows 11 Pro (build 26200) |
+| Browser | Google Chrome 154.0.8037.98 |
 
 ### Method
 
@@ -67,6 +67,15 @@ The product owner's integrated-GPU laptop. *To be filled in by the product owner
 4. Copy the console line `FPS probe: avg=… p5=… over 60.0 s (… frames) | mode=… quality=…` for each preset into the PR. A line marked `incomplete` means the session ended early (a crash) — run it again.
 
 **Exit criterion (§16):** on the `low` preset, average ≥ 30 FPS and 5th percentile ≥ 25 FPS. The probe's settings live in `config/perf_config.tres`.
+
+### Results
+
+| Date | Build | Preset | avg FPS | p5 FPS | Frames (60 s) |
+|---|---|---|---|---|---|
+| 2026-10-12 | PR #57 (`1a09a3e`), local Web export | `low` | 60.0 | 60.0 | 3599 |
+| 2026-10-12 | PR #57 (`1a09a3e`), local Web export | `high` | 60.0 | 60.0 | 3599 |
+
+Both presets hold the display's 60 Hz vsync cap at level 4 with mirrors on, so the §16 criterion is met with margin.
 
 Separately from the probe, any session whose FPS stays below 30 for a few seconds shows a short notice suggesting the low preset — once per session at most, and never when already on `low`.
 
