@@ -2,7 +2,7 @@ extends Node3D
 ## Drivable scene (spec Phase 3): the player's vehicle in the simulation, driven by
 ## the keyboard, seen from the cockpit on the endless road among AI traffic (Phase 4). `SessionManager` runs the
 ## session flow and the sim; this node feeds it input and hands its state to the views
-## and the HUD. What the session starts with comes from the dev launcher (URL params
+## and the HUD, and saves the finished session through `SaveManager`. What the session starts with comes from the dev launcher (URL params
 ## on web, user args on desktop) until the Phase 10 menus exist.
 
 @export var launcher_config: DevLauncherConfig
@@ -30,6 +30,7 @@ func _ready() -> void:
 	print("Dev launcher: ", launch_options.describe())
 	road_profile = launch_options.profile
 	session.start(launch_options, sim_config)
+	session.session_ended.connect(_on_session_ended)
 	sim = session.sim
 	player = session.player
 	_road_view.setup(road_profile, view_config)
@@ -59,6 +60,15 @@ func _notification(what: int) -> void:
 	# Key releases are not delivered while unfocused; never leave a key stuck down.
 	if what == NOTIFICATION_APPLICATION_FOCUS_OUT:
 		_input.reset()
+
+
+## Saves the finished session to the local history and tells the player how it went.
+## Play never depends on it: with saving disabled the session just is not kept.
+func _on_session_ended() -> void:
+	if session.record == null:
+		return
+	var saved: bool = SaveManager.save_record(session.record)
+	_hud.show_save_status(saved, SaveManager.store)
 
 
 func _update_views() -> void:

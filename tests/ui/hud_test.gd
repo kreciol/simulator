@@ -133,3 +133,29 @@ func test_end_notice_shows_only_after_the_session_ends() -> void:
 	assert_bool(_hud.ended_label.is_visible_in_tree()).is_true()
 	assert_str(_hud.ended_label.text).is_equal("Koniec sesji")
 	assert_bool(_hud.countdown_label.visible).is_false()
+
+
+func _history(read_only: bool, corrupt: bool) -> HistoryStore:
+	var history: HistoryStore = HistoryStore.new("user://unused/history.json", 1)
+	history.read_only = read_only
+	history.notice = HistoryStore.Notice.CORRUPT_RECOVERED if corrupt else HistoryStore.Notice.NONE
+	return history
+
+
+func test_save_status_explains_the_outcome(saved: bool, read_only: bool, corrupt: bool,
+		keys: Array, test_parameters: Array = [
+			[true, false, false, [&"SAVE_DONE"]],
+			[false, false, false, [&"SAVE_UNAVAILABLE"]],
+			[false, true, false, [&"SAVE_READ_ONLY"]],
+			[true, false, true, [&"HISTORY_CORRUPT_RECOVERED", &"SAVE_DONE"]],
+			[false, false, true, [&"HISTORY_CORRUPT_RECOVERED", &"SAVE_UNAVAILABLE"]],
+		]) -> void:
+	assert_array(Hud.save_status_keys(saved, _history(read_only, corrupt))).contains_exactly(keys)
+
+
+func test_save_status_is_shown_in_polish_on_the_end_screen() -> void:
+	assert_str(_hud.save_status_label.text).is_empty()
+	_hud.show_save_status(true, _history(false, true))
+	assert_str(_hud.save_status_label.text).is_equal(
+			"Zapisana historia była uszkodzona. Zachowaliśmy jej kopię i zaczęliśmy nową.\nWynik zapisany w tej przeglądarce.")
+	assert_object(_hud.save_status_label.get_parent()).is_same(_hud.ended_screen)

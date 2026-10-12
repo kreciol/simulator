@@ -4,15 +4,37 @@ extends GdUnitTestSuite
 ## countdown is over (issue #8, step 3).
 
 const DT: float = 1.0 / 60.0
+## Sessions finished here are saved to this file, never to the player's real history.
+const TEST_HISTORY: String = "user://test_main_scene/history.json"
 
 var _runner: GdUnitSceneRunner
 var _main: Node3D
+var _real_store: HistoryStore
 
 
 func before_test() -> void:
+	_real_store = SaveManager.store
+	_clear_test_history()
+	SaveManager.store = HistoryStore.new(TEST_HISTORY, 5)
+	SaveManager.store.userfs_persistent = true
+	SaveManager.store.load_history()
 	_runner = scene_runner("res://game/main.tscn")
 	_main = _runner.scene() as Node3D
 	_finish_countdown()
+
+
+func after_test() -> void:
+	SaveManager.store = _real_store
+	_clear_test_history()
+
+
+func _clear_test_history() -> void:
+	var dir: String = TEST_HISTORY.get_base_dir()
+	if not DirAccess.dir_exists_absolute(dir):
+		return
+	for file_name: String in DirAccess.get_files_at(dir):
+		DirAccess.remove_absolute(dir.path_join(file_name))
+	DirAccess.remove_absolute(dir)
 
 
 func _finish_countdown() -> void:
@@ -193,3 +215,39 @@ func test_hitting_a_car_ends_the_session_with_the_end_screen() -> void:
 	assert_int(_main.session.end_reason).is_equal(SessionManager.EndReason.COLLISION)
 	assert_bool(hud.ended_screen.visible).is_true()
 	assert_str(hud.ended_label.text).is_equal("Koniec sesji")
+
+
+func test_a_finished_session_is_saved_and_survives_a_reload() -> void:
+	var hud: Hud = _main.get_node("Hud") as Hud
+	_main.sim.add_vehicle(_player().s + _player().length_m + 1.0, 0, 0.0)
+	var steps: int = 0
+	while _main.session.state == SessionManager.State.DRIVING and steps < 120:
+		_drive(1)
+		steps += 1
+	assert_int(_main.session.state).is_equal(SessionManager.State.ENDED)
+	assert_str(hud.save_status_label.text).is_equal("Wynik zapisany w tej przeglądarce.")
+
+	# A reload reads the file afresh.
+	var reloaded: HistoryStore = HistoryStore.new(TEST_HISTORY, 5)
+	reloaded.userfs_persistent = true
+	reloaded.load_history()
+	assert_int(reloaded.sessions.size()).is_equal(1)
+	var record: SessionRecord = SessionRecord.from_dict(reloaded.last_session())
+	assert_str(record.id).is_equal(_main.session.record.id)
+	assert_str(record.status).is_equal(SessionRecord.STATUS_ABORTED_COLLISION)
+	assert_int(record.seed_value).is_equal(_main.launch_options.seed_value)
+
+
+func test_with_storage_unavailable_the_session_still_ends_and_explains_why() -> void:
+	SaveManager.store.userfs_persistent = false
+	SaveManager.store.load_history()
+	var hud: Hud = _main.get_node("Hud") as Hud
+	_main.sim.add_vehicle(_player().s + _player().length_m + 1.0, 0, 0.0)
+	var steps: int = 0
+	while _main.session.state == SessionManager.State.DRIVING and steps < 120:
+		_drive(1)
+		steps += 1
+	assert_int(_main.session.state).is_equal(SessionManager.State.ENDED)
+	assert_bool(hud.ended_screen.visible).is_true()
+	assert_str(hud.save_status_label.text).starts_with("Tym razem wyniku nie zapisaliśmy")
+	assert_bool(FileAccess.file_exists(TEST_HISTORY)).is_false()
