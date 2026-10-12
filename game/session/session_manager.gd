@@ -23,11 +23,14 @@ var intro_elapsed_s: float = 0.0
 var elapsed_s: float = 0.0
 
 
-## Sets the session up on the launch options' profile and seed, keeping the options
-## (mode, level) for the rules that depend on them.
+## Sets the session up on the launch options' profile and seed with traffic at the
+## options' difficulty level, keeping the options (mode, level) for the rules that
+## depend on them.
 func start(launch_options: LaunchOptions, sim_config: SimConfig) -> void:
 	setup(launch_options.profile, sim_config, launch_options.seed_value)
 	options = launch_options
+	if launch_options.difficulty != null:
+		Spawner.new(launch_options.difficulty).attach(sim)
 
 
 func setup(road_profile: RoadProfile, sim_config: SimConfig, seed_value: int = 0) -> void:

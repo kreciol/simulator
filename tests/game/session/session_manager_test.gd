@@ -115,3 +115,22 @@ func test_start_uses_the_launch_options_profile_and_seed() -> void:
 	assert_int(session.sim.rng_seed).is_equal(42)
 	assert_int(session.state).is_equal(SessionManager.State.INTRO)
 	assert_int(session.player.lane).is_equal(0)
+
+
+func test_start_brings_traffic_at_the_launch_options_level() -> void:
+	var launcher: DevLauncherConfig = load("res://config/dev_launcher.tres") as DevLauncherConfig
+	var options: LaunchOptions = DevLauncher.resolve(DevLauncher.parse_query("?level=3&seed=5"), launcher, 0)
+	var session: SessionManager = auto_free(SessionManager.new()) as SessionManager
+	session.start(options, _config)
+	var spawner: Spawner = session.sim.spawner
+	assert_object(spawner).is_not_null()
+	assert_object(spawner.level).is_same(options.difficulty)
+	assert_int(spawner.level.id).is_equal(3)
+	# The window is filled before the countdown, so traffic is there from the first frame.
+	assert_int(spawner.count_in_window(session.sim)).is_greater(0)
+	assert_int(session.sim.vehicles.size()).is_equal(spawner.count_in_window(session.sim) + 1)
+
+
+func test_setup_alone_leaves_the_road_empty() -> void:
+	assert_object(_session.sim.spawner).is_null()
+	assert_int(_session.sim.vehicles.size()).is_equal(1)

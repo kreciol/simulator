@@ -20,6 +20,7 @@ func _assert_defaults(options: LaunchOptions) -> void:
 	assert_str(options.mode).is_equal(_config.default_mode)
 	assert_str(options.profile.id).is_equal(_config.default_profile)
 	assert_int(options.level).is_equal(_config.default_level)
+	assert_int(options.difficulty.id).is_equal(_config.default_level)
 	assert_int(options.seed_value).is_equal(RANDOM_SEED)
 	assert_bool(options.seed_given).is_false()
 
@@ -28,10 +29,10 @@ func test_config_offers_both_profiles_and_four_levels() -> void:
 	assert_object(_config.find_profile(&"motorway")).is_not_null()
 	assert_object(_config.find_profile(&"expressway")).is_not_null()
 	assert_object(_config.find_profile(&"country_road")).is_null()
-	assert_int(_config.level_count).is_equal(4)
+	assert_int(_config.levels.size()).is_equal(4)
 	assert_bool(_config.default_mode in LaunchOptions.MODES).is_true()
 	assert_object(_config.find_profile(_config.default_profile)).is_not_null()
-	assert_int(_config.default_level).is_between(1, _config.level_count)
+	assert_int(_config.default_level).is_between(1, _config.levels.size())
 
 
 func test_all_params_are_used() -> void:
@@ -76,12 +77,16 @@ func test_one_invalid_value_leaves_the_others_alone() -> void:
 	assert_str(options.mode).is_equal(LaunchOptions.MODE_EXAM)
 	assert_str(options.profile.id).is_equal(&"expressway")
 	assert_int(options.level).is_equal(_config.default_level)
+	assert_int(options.difficulty.id).is_equal(_config.default_level)
 	assert_int(options.seed_value).is_equal(7)
 
 
 func test_every_level_in_range_is_accepted() -> void:
-	for level: int in range(1, _config.level_count + 1):
-		assert_int(_from_query("?level=%d" % level).level).is_equal(level)
+	for level: int in range(1, _config.levels.size() + 1):
+		var options: LaunchOptions = _from_query("?level=%d" % level)
+		assert_int(options.level).is_equal(level)
+		# The level's resource comes with it, for the spawner.
+		assert_int(options.difficulty.id).is_equal(level)
 
 
 func test_keys_and_values_are_case_insensitive_and_url_decoded() -> void:
