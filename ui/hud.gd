@@ -132,6 +132,8 @@ func setup(view_config: ViewConfig) -> void:
 	fade_screen.set_anchors_preset(Control.PRESET_FULL_RECT)
 	fade_screen.visible = false
 	root.add_child(fade_screen)
+	# Under the dashboard and the time left, so the running timer stays readable.
+	root.move_child(fade_screen, 0)
 	respawn_notice = _notice("RespawnNotice")
 	respawn_notice.visible = false
 	root.add_child(respawn_notice)

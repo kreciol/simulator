@@ -613,6 +613,28 @@ func test_a_crash_gives_an_aborted_record() -> void:
 	assert_that(session.record.exam_passed).is_equal(false)
 
 
+func test_a_learn_session_with_a_respawn_ends_with_a_completed_record_carrying_k4() -> void:
+	var session: SessionManager = _scored_session("?mode=learn&seed=5")
+	for i: int in _steps_for(_config.countdown_s) + 30:
+		session.step(DT)
+	var player: VehicleState = session.player
+	session.sim.add_vehicle(player.s + player.length_m + 1.0, 0, 0.0)
+	var steps: int = 0
+	while session.respawn_count == 0 and steps < 300:
+		session.step(DT)
+		steps += 1
+	assert_int(session.respawn_count).is_equal(1)
+	while session.state != SessionManager.State.ENDED:
+		session.step(DT)
+	var record: SessionRecord = session.record
+	assert_str(record.status).is_equal(SessionRecord.STATUS_COMPLETED)
+	assert_float(record.duration_s).is_equal_approx(_config.session_length_s, 1e-6)
+	# K4 shows in the total, not as a score bar (`SessionRecord.SCORED_CATEGORIES`).
+	assert_float(session.scoring.category_score(CollisionRule.CATEGORY)).is_equal(-session.scoring_config.k4_penalty)
+	assert_float(record.score_total).is_equal(session.scoring.total_score())
+	assert_that(record.exam_passed).is_null()
+
+
 func test_leaving_the_road_gives_an_aborted_offroad_record() -> void:
 	var session: SessionManager = _scored_session("?mode=exam&seed=3")
 	for i: int in _steps_for(_config.countdown_s):
