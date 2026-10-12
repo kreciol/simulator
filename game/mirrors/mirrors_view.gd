@@ -11,6 +11,9 @@ var rear: Mirror
 var left: Mirror
 var right: Mirror
 
+## Built once, so the per-frame update allocates nothing.
+var _mirrors: Array[Mirror] = []
+
 
 ## Builds the mirrors when `enabled`; `world_environment` is the scene's, copied with
 ## the mirrors' own fog distance.
@@ -38,18 +41,17 @@ func setup(view_config: ViewConfig, quality_preset: QualityPreset, enabled: bool
 	var right_position: Vector3 = view.left_mirror_position * Vector3(-1.0, 1.0, 1.0)
 	right = _mirror("RightMirror", right_rect,
 			_mount(right_position, PI + outward, pitch), view.side_mirror_fov_deg, environment)
+	_mirrors = [rear, left, right]
 
 
 ## Mirrors built: none when off.
 func mirrors() -> Array[Mirror]:
-	if rear == null:
-		return []
-	return [rear, left, right]
+	return _mirrors
 
 
 ## Follows the player's rig at `rig_position`.
 func update(rig_position: Vector3) -> void:
-	for mirror: Mirror in mirrors():
+	for mirror: Mirror in _mirrors:
 		mirror.update(rig_position)
 
 

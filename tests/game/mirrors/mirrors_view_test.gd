@@ -61,11 +61,18 @@ func test_render_size_follows_the_preset() -> void:
 	for i: int in 3:
 		var low_mirror: Mirror = low.mirrors()[i]
 		var high_mirror: Mirror = high.mirrors()[i]
-		var shown: Vector2 = high_mirror.size - Vector2(2.0 * Mirror.FRAME_PX, 2.0 * Mirror.FRAME_PX)
+		var shown: Vector2 = (high_mirror.size - Vector2(2.0 * Mirror.FRAME_PX, 2.0 * Mirror.FRAME_PX)) 				* high_mirror.screen_scale()
 		assert_float(shown.x).is_greater(0.0)
 		assert_int(high_mirror.viewport.size.x).is_equal(roundi(shown.x * 0.5))
 		assert_int(low_mirror.viewport.size.x).is_equal(roundi(shown.x * 0.25))
 		assert_int(low_mirror.viewport.size.y).is_less(high_mirror.viewport.size.y)
+
+
+func test_updating_reuses_the_same_mirror_list() -> void:
+	var mirrors: MirrorsView = _mirrors(_high)
+	var list: Array[Mirror] = mirrors.mirrors()
+	mirrors.update(Vector3.ZERO)
+	assert_bool(is_same(mirrors.mirrors(), list)).is_true()
 
 
 func test_high_renders_every_frame_and_low_every_second() -> void:
