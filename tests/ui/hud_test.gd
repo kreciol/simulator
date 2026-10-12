@@ -285,3 +285,5 @@ func test_save_status_is_shown_in_polish_on_the_end_screen() -> void:
 	# Stacked under the end title and its cause, on the end screen.
 	assert_object(_hud.save_status_label.get_parent()).is_same(_hud.ended_label.get_parent())
 	assert_bool(_hud.ended_screen.is_ancestor_of(_hud.save_status_label)).is_true()
+	# Right under the summary.
+	assert_int(_hud.save_status_label.get_index()).is_equal(_hud.summary_panel.get_index() + 1)

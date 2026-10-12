@@ -458,6 +458,17 @@ func test_a_scoring_config_alone_records_without_a_summary() -> void:
 	assert_object(_session.summary).is_null()
 
 
+func test_start_records_the_launch_level() -> void:
+	# Through a real `start`, with the level's spawner attached.
+	_session.scoring_config = load("res://config/scoring.tres") as ScoringConfig
+	var launcher: DevLauncherConfig = load("res://config/dev_launcher.tres") as DevLauncherConfig
+	var options: LaunchOptions = DevLauncher.resolve(DevLauncher.parse_query("?level=3&mode=exam"), launcher, 0)
+	_session.start(options, _config)
+	_step(_steps_for(_config.countdown_s + _config.session_length_s))
+	assert_int(_session.state).is_equal(SessionManager.State.ENDED)
+	assert_int(_session.record.difficulty).is_equal(3)
+	assert_str(_session.record.mode).is_equal(LaunchOptions.MODE_EXAM)
+
 
 func test_a_session_that_runs_out_of_time_ends_with_a_completed_record() -> void:
 	var session: SessionManager = _scored_session("?mode=learn&profile=expressway&level=2&seed=42")
