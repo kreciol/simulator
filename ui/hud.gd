@@ -2,15 +2,15 @@ class_name Hud
 extends CanvasLayer
 ## Driving HUD (requirements §5.3): speed, the road's limit, blinking signal arrows and
 ## the session time left, plus the 3-2-1 countdown, the learn-mode respawn fade with
-## what happened, the pause screen and the plain end-of-session screen with the cause
-## of an aborted session (placeholder until the Phase 8 summary), and a timed,
-## non-blocking notice (the low-FPS suggestion). In learn mode only (Q10, Q11) it also
-## shows the live score and, under each side mirror, a blind-spot warning (icon and
-## text, never colour alone) while driving with a vehicle in that side's blind spot
-## (`LaneQuery.blind_spot_occupied`) — shown under where the mirror sits even with
-## mirrors off. The score stays up through the countdown, a respawn and under the end
-## screen. Only reads session state. Placeholder styling until the UI theme lands
-## (Phase 10).
+## what happened, the pause screen, the end-of-session summary — status, cause of an
+## aborted session, score, categories, description and tip (requirements §11.3) — with
+## whether the result was saved, and a timed, non-blocking notice (the low-FPS
+## suggestion). In learn mode only (Q10, Q11) it also shows the live score and, under
+## each side mirror, a blind-spot warning (icon and text, never colour alone) while
+## driving with a vehicle in that side's blind spot (`LaneQuery.blind_spot_occupied`) —
+## shown under where the mirror sits even with mirrors off. The score stays up through
+## the countdown, a respawn and under the end screen. Only reads session state.
+## Placeholder styling until the UI theme lands (Phase 10).
 
 const MARGIN: float = 24.0
 const OUTLINE_SIZE: int = 8
@@ -20,11 +20,15 @@ const LIMIT_FONT_SIZE: int = 30
 const TIME_FONT_SIZE: int = 40
 const COUNTDOWN_FONT_SIZE: int = 160
 const NOTICE_FONT_SIZE: int = 64
-const SAVE_STATUS_FONT_SIZE: int = 24
-## Width of the save status under the end notice; longer messages wrap.
-const SAVE_STATUS_WIDTH: float = 760.0
+const SAVE_STATUS_FONT_SIZE: int = SummaryPanel.TEXT_FONT_SIZE
+## Width of the save status under the summary; longer messages wrap.
+const SAVE_STATUS_WIDTH: float = SummaryPanel.TEXT_WIDTH
 const HINT_FONT_SIZE: int = 28
-const CAUSE_FONT_SIZE: int = 36
+const CAUSE_FONT_SIZE: int = 30
+## The end screen is tighter than the other notices so the longest summary fits in
+## the 1280×720 minimum window.
+const ENDED_FONT_SIZE: int = 52
+const ENDED_SEPARATION: int = 10
 const SCORE_FONT_SIZE: int = 40
 const SCORE_CAPTION_FONT_SIZE: int = 22
 const BLIND_SPOT_FONT_SIZE: int = 22
@@ -61,6 +65,8 @@ const ARROW_OFF: Color = Color(1.0, 1.0, 1.0, 0.2)
 const ARROW_ON: Color = Color(0.2, 1.0, 0.3)
 ## Dims the frozen scene behind the pause and end-of-session notices.
 const NOTICE_BACKDROP: Color = Color(0.0, 0.0, 0.0, 0.55)
+## Darker behind the summary, which has more text to read than a notice.
+const SUMMARY_BACKDROP: Color = Color(0.0, 0.0, 0.0, 0.8)
 ## Absorbs float drift so a whole second left never reads as the next one up.
 const TIME_EPSILON: float = 1e-6
 
@@ -79,6 +85,8 @@ var ended_screen: ColorRect
 var ended_label: Label
 ## Why an aborted session ended; hidden after a completed one.
 var ended_cause_label: Label
+## Score, categories, description and tip of a scored session; hidden without one.
+var summary_panel: SummaryPanel
 ## Learn-mode respawn: the fade over the scene and the message on top of it.
 var fade_screen: ColorRect
 var respawn_notice: VBoxContainer
@@ -94,6 +102,11 @@ var save_status_label: Label
 var toast: PanelContainer
 var toast_label: Label
 
+## The summary the panel shows, so it is filled once rather than every frame.
+var _shown_summary: Summary
+## Speed, limit, time and signals: hidden once the session has ended, so they never
+## overlap the summary.
+var _driving_widgets: Array[Control] = []
 ## Time the notice stays on screen; it hides at 0.
 var _toast_left_s: float = 0.0
 
@@ -141,6 +154,7 @@ func setup(view_config: ViewConfig) -> void:
 	signals.add_child(signal_left)
 	signal_right = _arrow("SignalRight", VehicleState.Dir.RIGHT, ARROW_SIZE.x + ARROW_GAP)
 	signals.add_child(signal_right)
+	_driving_widgets = [dashboard, time_label, signals]
 
 	score_panel = VBoxContainer.new()
 	score_panel.name = "Score"
@@ -194,19 +208,24 @@ func setup(view_config: ViewConfig) -> void:
 	paused_hint_label.text = tr(&"SESSION_PAUSED_HINT")
 	paused_box.add_child(paused_hint_label)
 	ended_screen = _backdrop("EndedScreen")
+	ended_screen.color = SUMMARY_BACKDROP
 	root.add_child(ended_screen)
 	var ended_notice: VBoxContainer = _notice("EndedNotice")
+	ended_notice.add_theme_constant_override("separation", ENDED_SEPARATION)
 	ended_screen.add_child(ended_notice)
 	_center(ended_notice)
-	ended_label = _label("Ended", NOTICE_FONT_SIZE)
+	ended_label = _label("Ended", ENDED_FONT_SIZE)
 	ended_label.visible = false
 	ended_notice.add_child(ended_label)
 	ended_cause_label = _label("EndedCause", CAUSE_FONT_SIZE)
 	ended_cause_label.visible = false
 	ended_notice.add_child(ended_cause_label)
+	summary_panel = SummaryPanel.new()
+	summary_panel.visible = false
+	ended_notice.add_child(summary_panel)
 	save_status_label = _label("SaveStatus", SAVE_STATUS_FONT_SIZE)
 	save_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	# A wrapping label needs a width; the notice centres it under the cause.
+	# A wrapping label needs a width; the notice centres it under the summary.
 	save_status_label.custom_minimum_size = Vector2(SAVE_STATUS_WIDTH, 0.0)
 	save_status_label.visible = false
 	ended_notice.add_child(save_status_label)
@@ -268,11 +287,22 @@ func update(session: SessionManager) -> void:
 		var respawn_cause: StringName = RESPAWN_CAUSES.get(session.respawn_cause, &"RESPAWN_COLLISION")
 		respawn_label.text = tr(respawn_cause)
 	ended_screen.visible = session.state == SessionManager.State.ENDED
+	for widget: Control in _driving_widgets:
+		widget.visible = not ended_screen.visible
 	ended_label.visible = ended_screen.visible
-	var cause: StringName = END_CAUSES.get(session.status(), &"")
+	var summary: Summary = session.summary if ended_screen.visible else null
+	summary_panel.visible = summary != null
+	var cause: StringName = summary.cause_key if summary != null else END_CAUSES.get(session.status(), &"")
 	ended_cause_label.visible = ended_screen.visible and cause != &""
-	if ended_screen.visible:
-		# The exam ends as failed on a collision or leaving the road (requirements §9.2).
+	if summary != null:
+		if summary != _shown_summary:
+			_shown_summary = summary
+			ended_label.text = tr(summary.status_key)
+			ended_cause_label.text = tr(cause) if cause != &"" else ""
+			summary_panel.show_summary(summary)
+	elif ended_screen.visible:
+		# Unscored session: the exam ends as failed on a collision or leaving the road
+		# (requirements §9.2).
 		var failed: bool = session.is_exam() and cause != &""
 		ended_label.text = tr(&"EXAM_FAILED" if failed else &"SESSION_ENDED")
 		ended_cause_label.text = tr(cause) if cause != &"" else ""

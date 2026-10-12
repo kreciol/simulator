@@ -1,4 +1,4 @@
-[gd_scene load_steps=16 format=3]
+[gd_scene load_steps=17 format=3]
 
 [ext_resource type="Script" path="res://game/main.gd" id="1_main"]
 [ext_resource type="Resource" path="res://config/dev_launcher.tres" id="2_launcher"]
@@ -12,6 +12,7 @@
 [ext_resource type="Script" path="res://game/mirrors/mirrors_view.gd" id="10_mirrors_view"]
 [ext_resource type="Resource" path="res://config/scoring.tres" id="11_scoring"]
 [ext_resource type="Resource" path="res://config/perf_config.tres" id="12_perf"]
+[ext_resource type="Resource" path="res://config/feedback.tres" id="13_feedback"]
 
 [sub_resource type="ProceduralSkyMaterial" id="SkyMaterial_1"]
 sky_top_color = Color(0.32, 0.52, 0.82, 1)
@@ -47,6 +48,7 @@ perf_config = ExtResource("12_perf")
 [node name="SessionManager" type="Node" parent="."]
 script = ExtResource("7_session")
 scoring_config = ExtResource("11_scoring")
+feedback_config = ExtResource("13_feedback")
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("Environment_1")

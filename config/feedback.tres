@@ -1,0 +1,7 @@
+[gd_resource type="Resource" script_class="FeedbackConfig" format=3]
+
+[ext_resource type="Script" path="res://config/feedback_config.gd" id="1_feedback"]
+
+[resource]
+script = ExtResource("1_feedback")
+improve_penalty_threshold = 4.0

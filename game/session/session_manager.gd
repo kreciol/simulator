@@ -10,7 +10,8 @@ extends Node
 ## running throughout. The countdown, the drive and a respawn can be paused (spec Edge
 ## Cases): everything stands still until resumed, and losing window focus pauses on its
 ## own. With a `scoring_config` it also scores the drive and, at the end, builds the
-## session's `SessionRecord` for `SaveManager`.
+## session's `SessionRecord` for `SaveManager` and — with a `feedback_config` — its
+## `Summary`.
 
 signal session_started
 signal session_ended
@@ -28,8 +29,10 @@ const TIME_EPSILON: float = 1e-6
 ## Share of the respawn fade after which the player is put back: when it is darkest.
 const RESPAWN_MIDPOINT: float = 0.5
 
-## Scores the session when set; without it there is no scoring and no record.
+## Scores the session when set; without it there is no scoring, record or summary.
 @export var scoring_config: ScoringConfig
+## Writes the end-of-session summary when set along with `scoring_config`.
+@export var feedback_config: FeedbackConfig
 
 var sim: TrafficSim
 var player: VehicleState
@@ -62,6 +65,8 @@ var record: SessionRecord
 ## than a state because both the intro and the drive can be paused; `state` says
 ## which one resumes.
 var paused: bool = false
+## The ended session's summary; null until the end, or without both configs.
+var summary: Summary
 
 ## The player's collision or off-road seen during the current sim step; the session
 ## ends once the step is over.
@@ -91,6 +96,7 @@ func setup(road_profile: RoadProfile, sim_config: SimConfig, seed_value: int = 0
 	scoring = ScoringSystem.new(sim, scoring_config) if scoring_config != null else null
 	started_at = ""
 	record = null
+	summary = null
 	state = State.INTRO
 	end_reason = EndReason.NONE
 	_player_end_reason = EndReason.NONE
@@ -244,6 +250,9 @@ func _end(reason: EndReason) -> void:
 	if scoring != null:
 		scoring.finish()
 		record = _build_record()
+		if feedback_config != null:
+			summary = SummaryGenerator.new(feedback_config, scoring_config).generate(
+					scoring.event_log, record, _exam_pass_score())
 	session_ended.emit()
 
 
@@ -257,11 +266,17 @@ func _build_record() -> SessionRecord:
 	builder.duration_s = elapsed_s
 	builder.status = status()
 	builder.mode = mode
+	builder.exam_pass_score = _exam_pass_score()
 	if options != null:
 		builder.difficulty = options.level
-		if options.difficulty != null:
-			builder.exam_pass_score = options.difficulty.exam_pass_score
 	return builder.build(scoring.event_log)
+
+
+## The launch level's exam pass mark; 0 when set up without a level.
+func _exam_pass_score() -> float:
+	if options == null or options.difficulty == null:
+		return 0.0
+	return options.difficulty.exam_pass_score
 
 
 ## A random UUID (version 4), as §13 asks for the record's `id`. Not drawn from the

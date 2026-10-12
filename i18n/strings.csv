@@ -6,6 +6,44 @@ SESSION_PAUSED_HINT,"Naciśnij Esc lub P, aby jechać dalej"
 EXAM_FAILED,Egzamin niezaliczony
 END_CAUSE_COLLISION,Przyczyna: kolizja z innym pojazdem
 END_CAUSE_OFFROAD,Przyczyna: zjechanie z drogi
+SUMMARY_STATUS_COMPLETED,Sesja ukończona
+SUMMARY_STATUS_ABORTED,Sesja przerwana
+SUMMARY_STATUS_EXAM_PASSED,Egzamin zaliczony
+SUMMARY_TOTAL,Wynik: {points} pkt
+SUMMARY_CATEGORY_ROW,{category}: {points} pkt — {rating}
+SUMMARY_CATEGORY_GAP,Odstęp
+SUMMARY_CATEGORY_LANE,Pas
+SUMMARY_CATEGORY_SIGNAL,Kierunkowskaz
+SUMMARY_CATEGORY_SPEED,Prędkość
+SUMMARY_RATING_GOOD,dobrze
+SUMMARY_RATING_IMPROVE,do poprawy
+SUMMARY_TIP_TITLE,Wskazówka na następny raz
+SUMMARY_RATING_OFF,bez oceny
+SUMMARY_STRENGTH_GAP,Najlepiej wyszło utrzymywanie bezpiecznego odstępu od poprzedzającego pojazdu.
+SUMMARY_STRENGTH_LANE,Najlepiej wyszło trzymanie się prawego pasa.
+SUMMARY_STRENGTH_SIGNAL,Najlepiej wyszło sygnalizowanie zmian pasa kierunkowskazem.
+SUMMARY_STRENGTH_SPEED,Najlepiej wyszło trzymanie się limitu prędkości.
+SUMMARY_STRENGTH_RELATIVE_GAP,Stosunkowo najlepiej wyszło utrzymywanie bezpiecznego odstępu od poprzedzającego pojazdu.
+SUMMARY_STRENGTH_RELATIVE_LANE,Stosunkowo najlepiej wyszło trzymanie się prawego pasa.
+SUMMARY_STRENGTH_RELATIVE_SIGNAL,Stosunkowo najlepiej wyszło sygnalizowanie zmian pasa kierunkowskazem.
+SUMMARY_STRENGTH_RELATIVE_SPEED,Stosunkowo najlepiej wyszło trzymanie się limitu prędkości.
+SUMMARY_IMPROVE_GAP,"Przez {seconds} s odstęp był mniejszy niż wymagane minimum, czyli połowa prędkości w km/h wyrażona w metrach."
+SUMMARY_IMPROVE_LANE,"Przez {seconds} s jazda odbywała się lewym pasem, choć prawy był wolny — przepisy nakazują wracać na prawo."
+SUMMARY_IMPROVE_SIGNAL,Zmiany pasa bez właściwego kierunkowskazu włączonego zawczasu: {missed} z {total} — inni kierowcy powinni znać zamiar przed manewrem.
+SUMMARY_IMPROVE_SPEED,"Przez {seconds} s prędkość przekraczała limit, a wraz z nią rośnie wymagany odstęp."
+SUMMARY_ALL_GOOD,Pozostałe zasady też były przestrzegane — tak trzymać.
+SUMMARY_EXAM_BELOW_PASS,Do zaliczenia zabrakło {missing} pkt — próg na tym poziomie to {pass} pkt.
+SUMMARY_ABORTED_COLLISION,Jazda zakończyła się kolizją — większy odstęp i spojrzenie w lusterko przed zmianą pasa dają czas na reakcję.
+SUMMARY_ABORTED_OFFROAD,"Jazda zakończyła się zjechaniem z drogi — zmiana pasa jest możliwa tylko wtedy, gdy obok jest kolejny pas."
+TIP_GAP,Licz minimalny odstęp w metrach jako połowę prędkości w km/h — przy 120 km/h to 60 m.
+TIP_LANE,"Po wyprzedzeniu włącz prawy kierunkowskaz i wróć na prawy pas, gdy tylko będzie wolny."
+TIP_SIGNAL,"Najpierw kierunkowskaz i lusterko, a zmiana pasa dopiero po chwili."
+TIP_SPEED,Zerkaj na znak z limitem w lewym dolnym rogu ekranu i nie przekraczaj podanej na nim prędkości.
+TIP_COLLISION,Przed każdą zmianą pasa sprawdź lusterko i martwe pole.
+TIP_OFFROAD,"Zmieniaj pas tylko wtedy, gdy obok naprawdę jest kolejny pas jezdni."
+TIP_GENERAL,Spróbuj tej samej jazdy w trybie egzaminu albo na wyższym poziomie ruchu.
+TIP_GENERAL_EXAM,"Utrwal te nawyki, powtarzając jazdę na tym samym albo wyższym poziomie ruchu."
+TIP_EXAM_POINTS,Punkty zdobywa się za jazdę prawym pasem z bezpiecznym odstępem i za poprawnie zasygnalizowane wyprzedzanie.
 RESPAWN_COLLISION,Kolizja z innym pojazdem
 RESPAWN_OFFROAD,Zjechanie z drogi
 RESPAWN_BACK_ON_ROAD,Wracasz na prawy pas. Czas sesji biegnie dalej.

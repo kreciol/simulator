@@ -286,6 +286,13 @@ func test_a_finished_session_is_saved_and_survives_a_reload() -> void:
 	_drive_to_the_end()
 	assert_int(_main.session.state).is_equal(SessionManager.State.ENDED)
 	assert_str(hud.save_status_label.text).is_equal("Wynik zapisany w tej przeglądarce.")
+	# The scene scores the drive, so the end screen is its summary (issue #38).
+	assert_str(hud.ended_label.text).is_equal("Sesja ukończona")
+	assert_bool(hud.ended_cause_label.visible).is_false()
+	assert_bool(hud.summary_panel.is_visible_in_tree()).is_true()
+	assert_str(hud.summary_panel.total_label.text).starts_with("Wynik: ")
+	assert_str(hud.summary_panel.tip_label.text).starts_with("Wskazówka na następny raz
+")
 
 	# A reload reads the file afresh.
 	var reloaded: HistoryStore = HistoryStore.new(TEST_HISTORY, 5)

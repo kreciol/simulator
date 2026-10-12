@@ -549,11 +549,85 @@ func _scored_session(query: String) -> SessionManager:
 	return session
 
 
-func test_without_a_scoring_config_there_is_no_record() -> void:
+## A session scored and summarised with the shipped configs (issue #38).
+func _scored(session_mode: StringName = LaunchOptions.MODE_LEARN) -> void:
+	_session.scoring_config = load("res://config/scoring.tres") as ScoringConfig
+	_session.feedback_config = load("res://config/feedback.tres") as FeedbackConfig
+	_session.setup(load("res://config/road_profiles/motorway.tres") as RoadProfile, _config, 7,
+			session_mode)
+
+
+func test_without_a_scoring_config_there_is_no_record_or_summary() -> void:
 	_step(_steps_for(_config.countdown_s + _config.session_length_s))
 	assert_int(_session.state).is_equal(SessionManager.State.ENDED)
 	assert_object(_session.scoring).is_null()
 	assert_object(_session.record).is_null()
+	assert_object(_session.summary).is_null()
+
+
+func test_scoring_runs_only_while_driving() -> void:
+	_scored()
+	_step(_steps_for(_config.countdown_s))
+	assert_array(_session.scoring.event_log.events).is_empty()
+	_step(_steps_for(5.0))
+	# Right lane on an empty road: N2 and N3 reward the drive.
+	assert_float(_session.scoring.total_score()).is_greater(0.0)
+
+
+func test_a_completed_scored_session_ends_with_its_record_and_summary() -> void:
+	_scored()
+	_step(_steps_for(_config.countdown_s + _config.session_length_s))
+	assert_int(_session.state).is_equal(SessionManager.State.ENDED)
+	var record: SessionRecord = _session.record
+	assert_object(record).is_not_null()
+	assert_str(record.status).is_equal(SessionRecord.STATUS_COMPLETED)
+	assert_str(record.road_profile).is_equal(&"motorway")
+	assert_int(record.seed_value).is_equal(7)
+	assert_float(record.duration_s).is_equal_approx(_config.session_length_s, 1e-3)
+	assert_float(record.score_total).is_equal(_session.scoring.total_score())
+	var summary: Summary = _session.summary
+	assert_object(summary).is_not_null()
+	assert_str(summary.status_key).is_equal(SummaryGenerator.STATUS_COMPLETED)
+	assert_float(summary.score_total).is_equal(record.score_total)
+	assert_int(summary.categories.size()).is_equal(4)
+	assert_int(summary.sentences.size()).is_between(2, 4)
+	assert_object(summary.tip).is_not_null()
+
+
+func test_an_exam_collision_is_summarised_as_failed_with_the_cause() -> void:
+	_scored(LaunchOptions.MODE_EXAM)
+	_start_driving()
+	_step(30)
+	var player: VehicleState = _session.player
+	_session.sim.add_vehicle(player.s + player.length_m + 1.0, 0, 0.0)
+	var steps: int = 0
+	while _session.state == SessionManager.State.DRIVING and steps < 120:
+		_step(1)
+		steps += 1
+	assert_str(_session.status()).is_equal(SessionRecord.STATUS_ABORTED_COLLISION)
+	assert_bool(_session.record.exam_passed).is_false()
+	assert_str(_session.summary.status_key).is_equal(SummaryGenerator.STATUS_EXAM_FAILED)
+	assert_str(_session.summary.cause_key).is_equal(&"END_CAUSE_COLLISION")
+
+
+func test_a_scoring_config_alone_records_without_a_summary() -> void:
+	_session.scoring_config = load("res://config/scoring.tres") as ScoringConfig
+	_session.setup(load("res://config/road_profiles/motorway.tres") as RoadProfile, _config)
+	_step(_steps_for(_config.countdown_s + _config.session_length_s))
+	assert_object(_session.record).is_not_null()
+	assert_object(_session.summary).is_null()
+
+
+func test_start_records_the_launch_level() -> void:
+	# Through a real `start`, with the level's spawner attached.
+	_session.scoring_config = load("res://config/scoring.tres") as ScoringConfig
+	var launcher: DevLauncherConfig = load("res://config/dev_launcher.tres") as DevLauncherConfig
+	var options: LaunchOptions = DevLauncher.resolve(DevLauncher.parse_query("?level=3&mode=exam"), launcher, 0)
+	_session.start(options, _config)
+	_step(_steps_for(_config.countdown_s + _config.session_length_s))
+	assert_int(_session.state).is_equal(SessionManager.State.ENDED)
+	assert_int(_session.record.difficulty).is_equal(3)
+	assert_str(_session.record.mode).is_equal(LaunchOptions.MODE_EXAM)
 
 
 func test_a_session_that_runs_out_of_time_ends_with_a_completed_record() -> void:
