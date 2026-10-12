@@ -247,13 +247,13 @@ func test_speed_just_over_the_limit_never_reads_as_the_limit() -> void:
 
 
 func test_a_gap_just_short_of_the_minimum_reads_below_it() -> void:
-	# 120.8 km/h needs 60.4 m, shown as 60; a 60.2 m gap must not read as 60.
+	# 120.8 km/h needs 60.4 m, shown rounded up as 61; a 60.2 m gap reads as 60.
 	_setup(0, 120.8)
 	_world.add_car_ahead(0, 60.2, 120.8)
 	_drive(DT)
 	var hints: Array[Hint] = _shown_of_type(HintEngine.TYPE_GAP_TOO_SMALL)
 	assert_int(hints.size()).is_equal(1)
-	assert_dict(hints[0].line.args).is_equal({"speed": 121, "min_gap": 60, "gap": 59})
+	assert_dict(hints[0].line.args).is_equal({"speed": 121, "min_gap": 61, "gap": 60})
 
 
 func test_the_maximum_on_screen_comes_from_the_config() -> void:
@@ -302,3 +302,12 @@ func test_seconds_read_as_polish_numbers() -> void:
 	assert_str(HintEngine.seconds_text(1.0)).is_equal("1")
 	assert_str(HintEngine.seconds_text(1.5)).is_equal("1,5")
 	assert_str(HintEngine.seconds_text(2.04)).is_equal("2")
+
+
+func test_even_without_a_minimum_display_time_a_hint_is_not_replaced_in_its_own_step() -> void:
+	var feedback: FeedbackConfig = _feedback_copy()
+	feedback.hint_min_display_s = 0.0
+	_setup(1, 150.0, feedback)
+	_world.add_car_ahead(1, 30.0, 150.0)
+	_drive(DT)
+	assert_array(_keys_on_screen()).is_equal([HintEngine.KEEP_RIGHT, HintEngine.GAP_TOO_SMALL])

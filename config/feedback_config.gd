@@ -14,7 +14,7 @@ extends Resource
 ## At most this many hints on screen at once; a new one replaces the oldest...
 @export var hint_max_on_screen: int
 ## ...only once that has been up this long, so none vanishes before it can be read.
-## Above 0, so a hint is never replaced in the step that showed it.
+## Even at 0 a hint is never replaced in the step that showed it.
 @export var hint_min_display_s: float
 ## How long a hint stays on screen, in seconds of driving.
 @export var hint_duration_s: float

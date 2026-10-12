@@ -41,6 +41,9 @@ const TYPE_KEEP_RIGHT: StringName = &"keep_right"
 const TYPE_GAP_TOO_SMALL: StringName = &"gap_too_small"
 const TYPE_GAP_CLOSING: StringName = &"gap_closing"
 const TYPE_SPEEDING: StringName = &"speeding"
+## Float drift in a minimum gap derived from a speed in m/s (a whole km/h may convert
+## back to a hair above it).
+const MIN_GAP_EPSILON_M: float = 1e-6
 
 var sim: TrafficSim
 var scoring: ScoringSystem
@@ -116,7 +119,8 @@ func _show_preventive(player: VehicleState) -> void:
 	var min_gap_m: float = LaneQuery.min_gap(speed_kmh)
 	var gap_m: float = LaneQuery.gap_to_leader(player, sim.lanes)
 	if scoring.gap_rule.gap_ratio(player) < 1.0:
-		var shown_min_gap: int = roundi(min_gap_m)
+		# Rounded up, as half the shown speed; the epsilon absorbs km/h conversion drift.
+		var shown_min_gap: int = ceili(min_gap_m - MIN_GAP_EPSILON_M)
 		_show(_hint(TYPE_GAP_TOO_SMALL, FeedbackLine.create(GAP_TOO_SMALL, {
 			"speed": roundi(speed_kmh),
 			"min_gap": shown_min_gap,
@@ -187,7 +191,9 @@ func _show(hint: Hint) -> Shown:
 	if config.hint_max_on_screen <= 0:
 		return Shown.NO_ROOM
 	if hints.size() >= config.hint_max_on_screen:
-		if now_s - hints[0].shown_at_s < config.hint_min_display_s:
+		var held_s: float = now_s - hints[0].shown_at_s
+		# Even a minimum of 0 never replaces a hint in the step that showed it.
+		if held_s <= 0.0 or held_s < config.hint_min_display_s - LaneQuery.TIME_EPSILON:
 			return Shown.NO_ROOM
 		while hints.size() >= config.hint_max_on_screen:
 			hints.pop_front()
