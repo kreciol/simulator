@@ -54,7 +54,7 @@ func test_no_k2_while_overtaking() -> void:
 	# throughout (closing 5 km/h).
 	world.add_car_ahead(0, 5.0, 135.0)
 	world.drive(_config.k2_grace_s + 2.0)
-	assert_bool(world.scoring.is_overtaking(world.player)).is_true()
+	assert_bool(LaneQuery.is_overtaking(world.player, world.sim.lanes, world.scoring.config.overtake_look_ahead_m)).is_true()
 	assert_float(world.total_for(KeepRightRule.CATEGORY)).is_equal(0.0)
 
 

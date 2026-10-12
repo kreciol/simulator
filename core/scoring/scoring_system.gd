@@ -15,19 +15,21 @@ var event_log: EventLog = EventLog.new()
 
 var gap_rule: GapRule
 var keep_right_rule: KeepRightRule
+var signal_rule: SignalRule
 
 
 func _init(observed_sim: TrafficSim, scoring_config: ScoringConfig) -> void:
 	sim = observed_sim
 	config = scoring_config
-	gap_rule = GapRule.new(self)
-	keep_right_rule = KeepRightRule.new(self)
+	gap_rule = GapRule.new(sim, config, event_log)
+	keep_right_rule = KeepRightRule.new(sim, config, event_log)
+	signal_rule = SignalRule.new(sim, config, event_log)
 
 
 ## Scores the step of length `dt` that `sim` just finished and returns the events it
 ## completed. Continuous segments are extended to `sim.time_s`.
 func observe(dt: float) -> Array[ScoreEvent]:
-	var completed: Array[ScoreEvent] = []
+	var completed: Array[ScoreEvent] = signal_rule.take_events()
 	var player: VehicleState = sim.player
 	var active: bool = player != null and not player.off_road
 	gap_rule.observe(player if active else null, dt, completed)
@@ -39,17 +41,11 @@ func observe(dt: float) -> Array[ScoreEvent]:
 
 ## Closes every open segment at the end of a session and returns the completed events.
 func finish() -> Array[ScoreEvent]:
-	var completed: Array[ScoreEvent] = []
+	var completed: Array[ScoreEvent] = signal_rule.take_events()
 	completed.append_array(event_log.close_all())
 	for event: ScoreEvent in completed:
 		score_event_emitted.emit(event)
 	return completed
-
-
-## Whether `vehicle` is overtaking under the scoring look-ahead (§8.4); K1 and K2 are
-## not charged while it is.
-func is_overtaking(vehicle: VehicleState) -> bool:
-	return LaneQuery.is_overtaking(vehicle, sim.lanes, config.overtake_look_ahead_m)
 
 
 static func speed_kmh(vehicle: VehicleState) -> float:

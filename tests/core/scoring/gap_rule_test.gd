@@ -33,7 +33,7 @@ func test_no_k1_while_overtaking() -> void:
 	# A slower car ahead on the right lane: the player is overtaking it.
 	world.add_car_ahead(0, 10.0, 120.0)
 	world.drive(1.0)
-	assert_bool(world.scoring.is_overtaking(world.player)).is_true()
+	assert_bool(LaneQuery.is_overtaking(world.player, world.sim.lanes, world.scoring.config.overtake_look_ahead_m)).is_true()
 	assert_float(world.total_for(GapRule.CATEGORY)).is_equal(0.0)
 
 
