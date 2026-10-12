@@ -1,9 +1,9 @@
 class_name Hud
 extends CanvasLayer
 ## Driving HUD (requirements §5.3): speed, the road's limit, blinking signal arrows and
-## the session time left, plus the 3-2-1 countdown, the pause screen and the plain
-## end-of-session screen with the cause of an aborted session (placeholder until the
-## Phase 8 summary). Only reads session state. Placeholder styling until the UI theme
+## the session time left, plus the 3-2-1 countdown, the pause screen and the
+## end-of-session summary: status, cause of an aborted session, score, categories,
+## description and tip (requirements §11.3). Only reads session state. Placeholder styling until the UI theme
 ## lands (Phase 10).
 
 const MARGIN: float = 24.0
@@ -49,6 +49,11 @@ var ended_screen: ColorRect
 var ended_label: Label
 ## Why an aborted session ended; hidden after a completed one.
 var ended_cause_label: Label
+## Score, categories, description and tip of a scored session; hidden without one.
+var summary_panel: SummaryPanel
+
+## The summary the panel shows, so it is filled once rather than every frame.
+var _shown_summary: Summary
 
 
 func setup(view_config: ViewConfig) -> void:
@@ -125,6 +130,9 @@ func setup(view_config: ViewConfig) -> void:
 	ended_cause_label = _label("EndedCause", CAUSE_FONT_SIZE)
 	ended_cause_label.visible = false
 	ended_notice.add_child(ended_cause_label)
+	summary_panel = SummaryPanel.new()
+	summary_panel.visible = false
+	ended_notice.add_child(summary_panel)
 
 
 func update(session: SessionManager) -> void:
@@ -144,10 +152,19 @@ func update(session: SessionManager) -> void:
 		countdown_label.text = str(maxi(1, ceili(session.countdown_left_s() - TIME_EPSILON)))
 	ended_screen.visible = session.state == SessionManager.State.ENDED
 	ended_label.visible = ended_screen.visible
-	var cause: StringName = END_CAUSES.get(session.status(), &"")
+	var summary: Summary = session.summary if ended_screen.visible else null
+	summary_panel.visible = summary != null
+	var cause: StringName = summary.cause_key if summary != null else END_CAUSES.get(session.status(), &"")
 	ended_cause_label.visible = ended_screen.visible and cause != &""
-	if ended_screen.visible:
-		# The exam ends as failed on a collision or leaving the road (requirements §9.2).
+	if summary != null:
+		if summary != _shown_summary:
+			_shown_summary = summary
+			ended_label.text = tr(summary.status_key)
+			ended_cause_label.text = tr(cause) if cause != &"" else ""
+			summary_panel.show_summary(summary)
+	elif ended_screen.visible:
+		# Unscored session: the exam ends as failed on a collision or leaving the road
+		# (requirements §9.2).
 		var failed: bool = session.is_exam() and cause != &""
 		ended_label.text = tr(&"EXAM_FAILED" if failed else &"SESSION_ENDED")
 		ended_cause_label.text = tr(cause) if cause != &"" else ""

@@ -205,3 +205,43 @@ func test_pause_screen_shows_only_while_paused() -> void:
 	_session.resume()
 	_hud.update(_session)
 	assert_bool(_hud.paused_screen.visible).is_false()
+
+
+func test_unscored_session_shows_no_summary_panel() -> void:
+	_finish_countdown()
+	_step(_session.sim.config.session_length_s)
+	assert_bool(_hud.ended_screen.visible).is_true()
+	assert_bool(_hud.summary_panel.visible).is_false()
+
+
+func _new_scored(session_mode: StringName = LaunchOptions.MODE_LEARN) -> void:
+	_session = auto_free(SessionManager.new()) as SessionManager
+	_session.scoring_config = load("res://config/scoring.tres") as ScoringConfig
+	_session.feedback_config = load("res://config/feedback.tres") as FeedbackConfig
+	_session.setup(load("res://config/road_profiles/motorway.tres") as RoadProfile,
+			load("res://config/sim_config.tres") as SimConfig, 0, session_mode)
+	_finish_countdown()
+
+
+func test_scored_session_ends_with_the_summary() -> void:
+	_new_scored()
+	_step(_session.sim.config.session_length_s - 1.0)
+	assert_bool(_hud.summary_panel.is_visible_in_tree()).is_false()
+	_step(1.0)
+	assert_bool(_hud.summary_panel.is_visible_in_tree()).is_true()
+	assert_str(_hud.ended_label.text).is_equal("Sesja ukończona")
+	assert_bool(_hud.ended_cause_label.visible).is_false()
+	var points: int = roundi(_session.summary.score_total)
+	assert_str(_hud.summary_panel.total_label.text).is_equal("Wynik: %d pkt" % points)
+	assert_str(_hud.summary_panel.description_label.text).is_not_empty()
+
+
+func test_scored_exam_collision_shows_failed_with_the_cause() -> void:
+	_new_scored(LaunchOptions.MODE_EXAM)
+	var player: VehicleState = _session.player
+	_session.sim.add_vehicle(player.s + player.length_m + 1.0, 0, 0.0)
+	_step(2.0)
+	assert_int(_session.state).is_equal(SessionManager.State.ENDED)
+	assert_str(_hud.ended_label.text).is_equal("Egzamin niezaliczony")
+	assert_str(_hud.ended_cause_label.text).is_equal("Przyczyna: kolizja z innym pojazdem")
+	assert_bool(_hud.summary_panel.is_visible_in_tree()).is_true()

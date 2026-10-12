@@ -192,7 +192,12 @@ func test_hitting_a_car_ends_the_session_with_the_end_screen() -> void:
 	assert_int(_main.session.state).is_equal(SessionManager.State.ENDED)
 	assert_int(_main.session.end_reason).is_equal(SessionManager.EndReason.COLLISION)
 	assert_bool(hud.ended_screen.visible).is_true()
-	assert_str(hud.ended_label.text).is_equal("Koniec sesji")
+	# The scene scores the drive, so the end screen is its summary (issue #38).
+	assert_str(hud.ended_label.text).is_equal("Sesja przerwana")
+	assert_str(hud.ended_cause_label.text).is_equal("Przyczyna: kolizja z innym pojazdem")
+	assert_bool(hud.summary_panel.is_visible_in_tree()).is_true()
+	assert_str(hud.summary_panel.total_label.text).starts_with("Wynik: ")
+	assert_str(hud.summary_panel.tip_label.text).starts_with("Na następny raz: ")
 
 
 
