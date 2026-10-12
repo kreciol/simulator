@@ -162,6 +162,7 @@ func test_a_trend_count_of_zero_hides_the_trend() -> void:
 	_screen.show_history(_store)
 	assert_bool(_screen.trend_chart.visible).is_false()
 	assert_bool(_screen.trend_caption_label.visible).is_false()
+	assert_bool(_screen.trend_heading.visible).is_false()
 	assert_int(_screen.recent_rows.get_child_count()).is_equal(1)
 
 

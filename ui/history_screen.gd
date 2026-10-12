@@ -55,6 +55,7 @@ var content: HBoxContainer
 var recent_rows: VBoxContainer
 var best_rows: VBoxContainer
 var no_bests_label: Label
+var trend_heading: Label
 var trend_chart: ScoreTrendChart
 var trend_caption_label: Label
 var recent_count: int = 10
@@ -117,7 +118,8 @@ func _init() -> void:
 	no_bests_label = _row_label("NoBests", SIDE_WIDTH)
 	no_bests_label.text = tr(&"HISTORY_NO_BESTS")
 	side_column.add_child(no_bests_label)
-	side_column.add_child(_label_with_key("TrendHeading", HEADING_FONT_SIZE, &"HISTORY_TREND"))
+	trend_heading = _label_with_key("TrendHeading", HEADING_FONT_SIZE, &"HISTORY_TREND")
+	side_column.add_child(trend_heading)
 	trend_chart = ScoreTrendChart.new()
 	side_column.add_child(trend_chart)
 	trend_caption_label = _row_label("TrendCaption", SIDE_WIDTH)
@@ -156,6 +158,7 @@ func show_history(history: HistoryStore) -> void:
 	var scores: Array[float] = history.trend_scores(trend_count)
 	trend_chart.scores = scores
 	# Nothing to plot when the trend count is configured to 0.
+	trend_heading.visible = not scores.is_empty()
 	trend_chart.visible = not scores.is_empty()
 	trend_caption_label.visible = not scores.is_empty()
 	if scores.is_empty():
