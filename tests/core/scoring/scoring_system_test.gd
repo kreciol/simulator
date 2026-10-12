@@ -78,3 +78,21 @@ func test_nothing_is_scored_off_the_road() -> void:
 	world.drive(10.0)
 	assert_float(world.scoring.event_log.total()).is_equal(points_off_road)
 	assert_bool(world.scoring.event_log.is_open(KeepRightRule.KEY)).is_false()
+
+
+func test_a_restart_after_a_respawn_closes_open_segments_where_the_incident_left_them() -> void:
+	var world: ScoringTestHelper = ScoringTestHelper.new(1, 120.0)
+	world.drive(1.0)
+	var segment: ScoreEvent = world.scoring.event_log.open_segment_for(KeepRightRule.KEY)
+	assert_object(segment).is_not_null()
+	var emitted: Array[ScoreEvent] = []
+	world.scoring.score_event_emitted.connect(func(event: ScoreEvent) -> void: emitted.append(event))
+	Respawn.respawn_player(world.sim)
+	var completed: Array[ScoreEvent] = world.scoring.restart_after_respawn()
+	assert_array(completed).contains([segment])
+	assert_array(emitted).contains([segment])
+	assert_float(segment.segment_end_s).is_equal_approx(1.0, 1e-9)
+	assert_bool(world.scoring.event_log.is_open(KeepRightRule.KEY)).is_false()
+	# Scoring goes on from the new position.
+	world.drive(1.0)
+	assert_bool(world.scoring.event_log.is_open(RightLaneRule.KEY)).is_true()
