@@ -47,9 +47,9 @@ In learn mode, short Polish hints warn before a penalty and explain events with 
 
 ### Phase 1: Core hint engine
 
-- [ ] 1.1 Hint tunables in `FeedbackConfig` / `feedback.tres`
-- [ ] 1.2 `Hint` and `HintEngine` with Polish strings
-- [ ] 1.3 Hint engine unit tests
+- [x] 1.1 Hint tunables in `FeedbackConfig` / `feedback.tres` — a77d8ab
+- [x] 1.2 `Hint` and `HintEngine` with Polish strings — bd936b8
+- [x] 1.3 Hint engine unit tests — 06ec763
 
 ### Phase 2: Session and HUD
 
