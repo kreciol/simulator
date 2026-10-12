@@ -68,6 +68,12 @@ extends Resource
 ## the player fades out instead of showing.
 @export_range(0.0, 1.0) var mirror_fog_begin_share: float
 
+## Learn-mode blind-spot icons (spec Phase 7 step 3, Q10): a vehicle on the lane beside
+## the player within this zone, measured from the player's centre, lights the icon by
+## that side's mirror (`LaneQuery.blind_spot_occupied`).
+@export var blind_spot_ahead_m: float
+@export var blind_spot_behind_m: float
+
 
 ## A copy with `quality`'s draw distance; the shared resource stays untouched.
 func for_quality(quality: QualityPreset) -> ViewConfig:

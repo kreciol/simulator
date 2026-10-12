@@ -48,6 +48,20 @@ static func is_lane_free(
 	return true
 
 
+## Whether a vehicle body reaches into `vehicle`'s blind spot on its `dir` side: the
+## lane beside `vehicle.lane` (the origin lane while changing), from `behind_m` behind
+## to `ahead_m` ahead of its centre. Beyond the road edge no vehicle is ever found.
+static func blind_spot_occupied(
+		lanes: LaneIndex,
+		vehicle: VehicleState,
+		dir: VehicleState.Dir,
+		ahead_m: float,
+		behind_m: float) -> bool:
+	if dir == VehicleState.Dir.NONE:
+		return false
+	return not is_lane_free(lanes, vehicle.lane + int(dir), vehicle.s, ahead_m, behind_m, vehicle)
+
+
 ## Distance from `vehicle`'s front to the rear of the nearest vehicle ahead in its
 ## lane (`vehicle.lane`, the origin lane while changing); INF when there is none.
 static func gap_to_leader(vehicle: VehicleState, lanes: LaneIndex) -> float:
