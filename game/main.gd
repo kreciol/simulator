@@ -2,9 +2,10 @@ extends Node3D
 ## Drivable scene (spec Phase 3): the player's vehicle in the simulation, driven by
 ## the keyboard, seen from the cockpit on the endless road among AI traffic (Phase 4). `SessionManager` runs the
 ## session flow and the sim; this node feeds it input and hands its state to the views
-## and the HUD, and shows the mirrors (Phase 5). What the session starts with —
-## including graphics quality and whether mirrors are shown — comes from the dev
-## launcher (URL params on web, user args on desktop) until the Phase 10 menus exist.
+## and the HUD, shows the mirrors (Phase 5), and saves the finished session through
+## `SaveManager` (Phase 9). What the session starts with — including graphics quality
+## and whether mirrors are shown — comes from the dev launcher (URL params on web, user
+## args on desktop) until the Phase 10 menus exist.
 ## With `perf=1` an FPS probe samples the drive and prints its result (Phase 5 step 2);
 ## sustained low FPS suggests the low preset once per session (spec Edge Cases).
 
@@ -65,7 +66,11 @@ func _ready() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if _input.handle_event(event):
+	# Esc or P (the `pause` action) stops and resumes the session (requirements §9.3).
+	if event.is_action_pressed(&"pause"):
+		session.toggle_pause()
+		get_viewport().set_input_as_handled()
+	elif _input.handle_event(event):
 		get_viewport().set_input_as_handled()
 
 
@@ -80,10 +85,11 @@ func _process(delta: float) -> void:
 
 
 ## Feeds one rendered frame's FPS to the probe and the low-FPS watch; only driving is
-## measured, so the countdown's warm-up and the frozen end screen do not count, and
-## neither does a stall (a frame over `PerfConfig.max_frame_s`, e.g. a hidden tab).
+## measured, so the countdown's warm-up, a pause and the frozen end screen do not
+## count, and neither does a stall (a frame over `PerfConfig.max_frame_s`, e.g. a
+## hidden tab).
 func track_performance(fps: float, delta: float) -> void:
-	if session.state != SessionManager.State.DRIVING or delta > perf_config.max_frame_s:
+	if session.state != SessionManager.State.DRIVING or session.paused or delta > perf_config.max_frame_s:
 		return
 	if _low_fps_watch.add_sample(fps, delta):
 		_hud.show_toast(tr(&"TOAST_LOW_FPS"), perf_config.toast_duration_s)
@@ -100,16 +106,23 @@ func _report_probe() -> void:
 	print(perf_report)
 
 
-func _on_session_ended() -> void:
-	# A session that ends before the window fills still reports what it measured.
-	if _fps_probe != null and perf_report.is_empty():
-		_report_probe()
-
-
 func _notification(what: int) -> void:
 	# Key releases are not delivered while unfocused; never leave a key stuck down.
-	if what == NOTIFICATION_APPLICATION_FOCUS_OUT:
+	# `SessionManager` pauses itself on the same notification.
+	if what == NOTIFICATION_APPLICATION_FOCUS_OUT or what == NOTIFICATION_WM_WINDOW_FOCUS_OUT:
 		_input.reset()
+
+
+## Saves the finished session to the local history and tells the player how it went.
+## Play never depends on it: with saving disabled the session just is not kept.
+func _on_session_ended() -> void:
+	# A session that ends before the probe's window fills still reports what it measured.
+	if _fps_probe != null and perf_report.is_empty():
+		_report_probe()
+	if session.record == null:
+		return
+	var saved: bool = SaveManager.save_record(session.record)
+	_hud.show_save_status(saved, SaveManager.store)
 
 
 func _update_views() -> void:

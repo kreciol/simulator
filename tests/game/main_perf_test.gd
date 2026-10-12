@@ -114,3 +114,12 @@ func test_a_stall_is_not_measured_and_does_not_suggest_anything() -> void:
 	main.track_performance(1.0, main.perf_config.probe_duration_s + main.perf_config.low_fps_sustain_s)
 	assert_bool(_toast(main).visible).is_false()
 	assert_str(main.perf_report).is_empty()
+
+
+func test_a_pause_is_not_measured() -> void:
+	var main: Node3D = _main("?perf=1&quality=high&seed=1")
+	_finish_countdown(main)
+	main.session.pause()
+	_frames(main, 5.0, main.perf_config.probe_duration_s + main.perf_config.low_fps_sustain_s)
+	assert_bool(_toast(main).visible).is_false()
+	assert_str(main.perf_report).is_empty()

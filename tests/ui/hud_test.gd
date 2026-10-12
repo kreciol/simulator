@@ -133,3 +133,105 @@ func test_end_notice_shows_only_after_the_session_ends() -> void:
 	assert_bool(_hud.ended_label.is_visible_in_tree()).is_true()
 	assert_str(_hud.ended_label.text).is_equal("Koniec sesji")
 	assert_bool(_hud.countdown_label.visible).is_false()
+	assert_bool(_hud.ended_cause_label.visible).is_false()
+
+
+func _new_exam() -> void:
+	_session = auto_free(SessionManager.new()) as SessionManager
+	_session.setup(load("res://config/road_profiles/motorway.tres") as RoadProfile,
+			load("res://config/sim_config.tres") as SimConfig, 0, LaunchOptions.MODE_EXAM)
+	_finish_countdown()
+
+
+func _leave_the_road() -> void:
+	_step(DT, PlayerCommands.create(VehicleState.Longitudinal.NONE, VehicleState.Dir.RIGHT, VehicleState.Dir.NONE))
+	_step(_session.sim.config.lane_change_duration_s)
+
+
+func test_exam_collision_names_the_cause() -> void:
+	_new_exam()
+	var player: VehicleState = _session.player
+	_session.sim.add_vehicle(player.s + player.length_m + 1.0, 0, 0.0)
+	_step(2.0)
+	assert_int(_session.state).is_equal(SessionManager.State.ENDED)
+	assert_bool(_hud.ended_screen.visible).is_true()
+	assert_str(_hud.ended_label.text).is_equal("Egzamin niezaliczony")
+	assert_bool(_hud.ended_cause_label.is_visible_in_tree()).is_true()
+	assert_str(_hud.ended_cause_label.text).is_equal("Przyczyna: kolizja z innym pojazdem")
+
+
+func test_exam_leaving_the_road_names_the_cause() -> void:
+	_new_exam()
+	_leave_the_road()
+	assert_int(_session.state).is_equal(SessionManager.State.ENDED)
+	assert_str(_hud.ended_label.text).is_equal("Egzamin niezaliczony")
+	assert_bool(_hud.ended_cause_label.visible).is_true()
+	assert_str(_hud.ended_cause_label.text).is_equal("Przyczyna: zjechanie z drogi")
+
+
+func test_exam_completed_without_an_incident_shows_no_cause() -> void:
+	_new_exam()
+	_step(_session.sim.config.session_length_s)
+	assert_int(_session.state).is_equal(SessionManager.State.ENDED)
+	assert_str(_hud.ended_label.text).is_equal("Koniec sesji")
+	assert_bool(_hud.ended_cause_label.visible).is_false()
+
+
+func test_learn_session_ended_off_road_is_not_an_exam_failure() -> void:
+	_finish_countdown()
+	_leave_the_road()
+	assert_int(_session.state).is_equal(SessionManager.State.ENDED)
+	assert_str(_hud.ended_label.text).is_equal("Koniec sesji")
+	assert_str(_hud.ended_cause_label.text).is_equal("Przyczyna: zjechanie z drogi")
+
+
+func test_pause_screen_shows_only_while_paused() -> void:
+	assert_bool(_hud.paused_screen.visible).is_false()
+	_session.pause()
+	_hud.update(_session)
+	# Paused during the countdown: the pause screen replaces the 3-2-1.
+	assert_bool(_hud.paused_screen.is_visible_in_tree()).is_true()
+	assert_bool(_hud.countdown_label.visible).is_false()
+	assert_str(_hud.paused_label.text).is_equal("Pauza")
+	assert_str(_hud.paused_hint_label.text).is_equal("Naciśnij Esc lub P, aby jechać dalej")
+	_session.resume()
+	_finish_countdown()
+	assert_bool(_hud.paused_screen.visible).is_false()
+	_session.pause()
+	_step(5.0)
+	assert_bool(_hud.paused_screen.visible).is_true()
+	assert_str(_hud.time_label.text).is_equal("1:30")
+	assert_bool(_hud.ended_screen.visible).is_false()
+	_session.resume()
+	_hud.update(_session)
+	assert_bool(_hud.paused_screen.visible).is_false()
+
+
+func _history(read_only: bool, corrupt: bool) -> HistoryStore:
+	var history: HistoryStore = HistoryStore.new("user://unused/history.json", 1)
+	history.read_only = read_only
+	history.notice = HistoryStore.Notice.CORRUPT_RECOVERED if corrupt else HistoryStore.Notice.NONE
+	return history
+
+
+func test_save_status_explains_the_outcome(saved: bool, read_only: bool, corrupt: bool,
+		keys: Array, test_parameters: Array = [
+			[true, false, false, [&"SAVE_DONE"]],
+			[false, false, false, [&"SAVE_UNAVAILABLE"]],
+			[false, true, false, [&"SAVE_READ_ONLY"]],
+			[true, false, true, [&"HISTORY_CORRUPT_RECOVERED", &"SAVE_DONE"]],
+			[false, false, true, [&"HISTORY_CORRUPT_RECOVERED", &"SAVE_UNAVAILABLE"]],
+		]) -> void:
+	assert_array(Hud.save_status_keys(saved, _history(read_only, corrupt))).contains_exactly(keys)
+
+
+func test_save_status_is_shown_in_polish_on_the_end_screen() -> void:
+	assert_str(_hud.save_status_label.text).is_empty()
+	assert_bool(_hud.save_status_label.visible).is_false()
+	_hud.show_save_status(true, _history(false, true))
+	assert_str(_hud.save_status_label.text).is_equal(
+			"Zapisana historia była uszkodzona. Zachowaliśmy jej kopię i zaczęliśmy nową.\nWynik zapisany w tej przeglądarce.")
+	assert_bool(_hud.save_status_label.visible).is_true()
+	# Stacked under the end title and its cause, on the end screen.
+	assert_object(_hud.save_status_label.get_parent()).is_same(_hud.ended_label.get_parent())
+	assert_bool(_hud.ended_screen.is_ancestor_of(_hud.save_status_label)).is_true()
