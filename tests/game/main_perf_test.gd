@@ -1,7 +1,8 @@
 extends GdUnitTestSuite
-## The main scene measures FPS under `perf=1` (issue #26 acceptance criteria, spec
-## Phase 5 step 2). Headless runs have no real frame rate, so frames are fed through
-## `track_performance` with synthetic FPS values.
+## The main scene measures FPS under `perf=1` and suggests the low preset once when
+## FPS stays low (issue #26 acceptance criteria, spec Phase 5 step 2 and Edge Cases).
+## Headless runs have no real frame rate, so frames are fed through `track_performance`
+## with synthetic FPS values.
 
 const DT: float = 1.0 / 60.0
 const MAIN_SCENE: String = "res://game/main.tscn"
@@ -59,3 +60,44 @@ func test_without_perf_nothing_is_measured() -> void:
 	_frames(main, 40.0, main.perf_config.probe_duration_s + 1.0)
 	main.session._end(SessionManager.EndReason.TIME_UP)
 	assert_str(main.perf_report).is_empty()
+
+
+func _toast(main: Node3D) -> PanelContainer:
+	return (main.get_node("Hud") as Hud).toast
+
+
+## Lets the HUD's notice run its course.
+func _wait_out_toast(main: Node3D) -> void:
+	var hud: Hud = main.get_node("Hud") as Hud
+	for i: int in roundi((main.perf_config.toast_duration_s + 1.0) / DT):
+		hud._process(DT)
+
+
+func test_sustained_low_fps_suggests_the_low_preset_once_per_session() -> void:
+	var main: Node3D = _main("?quality=high&seed=1")
+	var low: float = main.perf_config.low_fps_threshold - 10.0
+	_finish_countdown(main)
+	_frames(main, low, main.perf_config.low_fps_sustain_s + 0.5)
+	assert_bool(_toast(main).visible).is_true()
+	assert_str((main.get_node("Hud") as Hud).toast_label.text).is_equal(tr(&"TOAST_LOW_FPS"))
+	# Non-blocking: it takes no input and the drive goes on.
+	assert_int(_toast(main).mouse_filter).is_equal(Control.MOUSE_FILTER_IGNORE)
+	assert_int(main.session.state).is_equal(SessionManager.State.DRIVING)
+	_wait_out_toast(main)
+	assert_bool(_toast(main).visible).is_false()
+	# Never more than once, however long FPS stays low.
+	_frames(main, low, 30.0)
+	assert_bool(_toast(main).visible).is_false()
+
+
+func test_low_fps_during_the_countdown_does_not_count() -> void:
+	var main: Node3D = _main("?quality=high&seed=1")
+	_frames(main, 5.0, main.perf_config.low_fps_sustain_s + 1.0)
+	assert_bool(_toast(main).visible).is_false()
+
+
+func test_a_session_already_on_the_low_preset_gets_no_suggestion() -> void:
+	var main: Node3D = _main("?quality=low&seed=1")
+	_finish_countdown(main)
+	_frames(main, 5.0, 30.0)
+	assert_bool(_toast(main).visible).is_false()

@@ -5,7 +5,8 @@ extends Node3D
 ## and the HUD, and shows the mirrors (Phase 5). What the session starts with —
 ## including graphics quality and whether mirrors are shown — comes from the dev
 ## launcher (URL params on web, user args on desktop) until the Phase 10 menus exist.
-## With `perf=1` an FPS probe samples the drive and prints its result (Phase 5 step 2).
+## With `perf=1` an FPS probe samples the drive and prints its result (Phase 5 step 2);
+## sustained low FPS suggests the low preset once per session (spec Edge Cases).
 
 @export var launcher_config: DevLauncherConfig
 @export var sim_config: SimConfig
@@ -24,6 +25,7 @@ var perf_report: String = ""
 var _input: PlayerInput = PlayerInput.new()
 ## Null unless the launch asked for the probe.
 var _fps_probe: FpsProbe
+var _low_fps_watch: LowFpsWatch
 
 @onready var session: SessionManager = $SessionManager
 @onready var _road_view: RoadView = $RoadView
@@ -49,6 +51,7 @@ func _ready() -> void:
 	session.session_ended.connect(_on_session_ended)
 	if launch_options.perf:
 		_fps_probe = FpsProbe.new(perf_config)
+	_low_fps_watch = LowFpsWatch.new(perf_config, quality.id != perf_config.suggested_quality)
 	sim = session.sim
 	player = session.player
 	_road_view.setup(road_profile, view_config)
@@ -76,11 +79,13 @@ func _process(delta: float) -> void:
 	_update_views()
 
 
-## Feeds one rendered frame's FPS to the probe; only driving is measured, so the
-## countdown's warm-up and the frozen end screen do not count.
+## Feeds one rendered frame's FPS to the probe and the low-FPS watch; only driving is
+## measured, so the countdown's warm-up and the frozen end screen do not count.
 func track_performance(fps: float, delta: float) -> void:
 	if session.state != SessionManager.State.DRIVING:
 		return
+	if _low_fps_watch.add_sample(fps, delta):
+		_hud.show_toast(tr(&"TOAST_LOW_FPS"), perf_config.toast_duration_s)
 	if _fps_probe != null and perf_report.is_empty():
 		_fps_probe.add_sample(fps, delta)
 		if _fps_probe.is_complete():
