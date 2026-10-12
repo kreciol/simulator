@@ -66,10 +66,11 @@ static func resolve(params: Dictionary, config: DevLauncherConfig, random_seed: 
 	options.level = config.default_level
 	if params.has(KEY_LEVEL):
 		var level: String = params[KEY_LEVEL]
-		if level.is_valid_int() and level.to_int() >= 1 and level.to_int() <= config.level_count:
+		if level.is_valid_int() and config.find_level(level.to_int()) != null:
 			options.level = level.to_int()
 		else:
 			_warn_invalid(KEY_LEVEL, level)
+	options.difficulty = config.find_level(options.level)
 
 	options.seed_value = random_seed
 	options.seed_given = false

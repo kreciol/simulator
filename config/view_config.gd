@@ -38,6 +38,14 @@ extends Resource
 ## Turn signal lamp blink frequency on the dashboard.
 @export var signal_blink_hz: float
 
+## Traffic views (requirements §7.1, spec Phase 4 step 4). Body colours AI vehicles
+## are painted in; each vehicle's colour is picked from its id.
+@export var vehicle_colors: PackedColorArray
+## Share of cars drawn as vans/SUVs; they share the car's footprint in the sim.
+@export_range(0.0, 1.0) var van_share: float
+## Brake lights light while a vehicle decelerates harder than this.
+@export var brake_light_decel_mps2: float
+
 
 func dash_period_m() -> float:
 	return dash_length_m + dash_gap_m
