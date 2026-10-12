@@ -15,6 +15,18 @@ extends Resource
 @export var countdown_s: float
 ## Driving time of one session (requirements §9.3).
 @export var session_length_s: float
+## Learn-mode respawn (requirements §9.2, spec Architecture: Session): how long the
+## fade lasts (the player is put back at its midpoint; the timer keeps running)...
+@export var respawn_fade_s: float
+## ...the speed the player is put back at...
+@export var respawn_speed_kmh: float
+## ...the free road needed on the right lane beyond the body, ahead and behind...
+@export var respawn_clear_ahead_m: float
+@export var respawn_clear_behind_m: float
+## ...and how far either way, in steps of what, a free gap is looked for before the
+## vehicles at the incident are despawned instead.
+@export var respawn_search_range_m: float
+@export var respawn_search_step_m: float
 ## Duration of the discrete animated lane change (Q12).
 @export var lane_change_duration_s: float
 ## Default body size of a vehicle; `s` is the body's centre (spec Coordinates).
