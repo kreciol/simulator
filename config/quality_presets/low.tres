@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="QualityPreset" format=3]
+
+[ext_resource type="Script" path="res://config/quality_preset.gd" id="1_quality"]
+
+[resource]
+script = ExtResource("1_quality")
+id = &"low"
+mirror_resolution_scale = 0.25
+mirror_update_interval_frames = 2
+shadows_enabled = false
+road_segment_count = 11

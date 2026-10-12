@@ -8,6 +8,8 @@ extends Resource
 ## segment is the same mesh and dashes line up across segment joints.
 @export var segment_length_m: float
 ## Segments in the pool; together with `segments_behind` it sets the draw distance.
+## A session takes it from its quality preset (`for_quality`); this value serves views
+## built without one.
 @export var segment_count: int
 ## Whole segments kept behind the player's segment (for the rear view and mirrors).
 @export var segments_behind: int
@@ -45,6 +47,13 @@ extends Resource
 @export_range(0.0, 1.0) var van_share: float
 ## Brake lights light while a vehicle decelerates harder than this.
 @export var brake_light_decel_mps2: float
+
+
+## A copy with `quality`'s draw distance; the shared resource stays untouched.
+func for_quality(quality: QualityPreset) -> ViewConfig:
+	var copy: ViewConfig = duplicate() as ViewConfig
+	copy.segment_count = quality.road_segment_count
+	return copy
 
 
 func dash_period_m() -> float:
