@@ -18,8 +18,10 @@ var seed_value: int
 var seed_given: bool
 var quality: QualityPreset
 var mirrors: bool
+## Whether the FPS probe samples the session and prints its result (spec Phase 5 step 2).
+var perf: bool
 
 
 func describe() -> String:
-	return "mode=%s profile=%s level=%d seed=%d quality=%s mirrors=%d" % [
-			mode, profile.id, level, seed_value, quality.id, int(mirrors)]
+	return "mode=%s profile=%s level=%d seed=%d quality=%s mirrors=%d perf=%d" % [
+			mode, profile.id, level, seed_value, quality.id, int(mirrors), int(perf)]

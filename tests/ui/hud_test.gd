@@ -255,3 +255,33 @@ func test_end_screen_hides_the_driving_widgets() -> void:
 	assert_bool(_hud.speed_label.is_visible_in_tree()).is_false()
 	assert_bool(_hud.time_label.is_visible_in_tree()).is_false()
 	assert_bool(_hud.signal_left.is_visible_in_tree()).is_false()
+
+
+func _history(read_only: bool, corrupt: bool) -> HistoryStore:
+	var history: HistoryStore = HistoryStore.new("user://unused/history.json", 1)
+	history.read_only = read_only
+	history.notice = HistoryStore.Notice.CORRUPT_RECOVERED if corrupt else HistoryStore.Notice.NONE
+	return history
+
+
+func test_save_status_explains_the_outcome(saved: bool, read_only: bool, corrupt: bool,
+		keys: Array, test_parameters: Array = [
+			[true, false, false, [&"SAVE_DONE"]],
+			[false, false, false, [&"SAVE_UNAVAILABLE"]],
+			[false, true, false, [&"SAVE_READ_ONLY"]],
+			[true, false, true, [&"HISTORY_CORRUPT_RECOVERED", &"SAVE_DONE"]],
+			[false, false, true, [&"HISTORY_CORRUPT_RECOVERED", &"SAVE_UNAVAILABLE"]],
+		]) -> void:
+	assert_array(Hud.save_status_keys(saved, _history(read_only, corrupt))).contains_exactly(keys)
+
+
+func test_save_status_is_shown_in_polish_on_the_end_screen() -> void:
+	assert_str(_hud.save_status_label.text).is_empty()
+	assert_bool(_hud.save_status_label.visible).is_false()
+	_hud.show_save_status(true, _history(false, true))
+	assert_str(_hud.save_status_label.text).is_equal(
+			"Zapisana historia była uszkodzona. Zachowaliśmy jej kopię i zaczęliśmy nową.\nWynik zapisany w tej przeglądarce.")
+	assert_bool(_hud.save_status_label.visible).is_true()
+	# Stacked under the end title and its cause, on the end screen.
+	assert_object(_hud.save_status_label.get_parent()).is_same(_hud.ended_label.get_parent())
+	assert_bool(_hud.ended_screen.is_ancestor_of(_hud.save_status_label)).is_true()
