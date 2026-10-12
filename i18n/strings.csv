@@ -61,3 +61,25 @@ COMPARE_PREVIOUS_SAME,Poprzednio: {points} pkt — tym razem tyle samo.
 COMPARE_NEW_BEST,Nowy rekord w tej kombinacji — dotychczasowy wynosił {points} pkt.
 COMPARE_FIRST_BEST,To pierwszy ukończony przejazd w tej kombinacji i od razu rekord.
 COMPARE_BEST,Rekord w tej kombinacji: {points} pkt.
+HISTORY_TITLE,Historia wyników
+HISTORY_LOCAL_NOTICE,Wyniki są zapisane tylko w tej przeglądarce na tym urządzeniu. Wyczyszczenie danych przeglądarki je usunie.
+HISTORY_EMPTY,Brak zapisanych przejazdów. Po ukończeniu pierwszej sesji wynik pojawi się tutaj.
+HISTORY_UNAVAILABLE,"Pamięć przeglądarki jest niedostępna (np. w trybie prywatnym), więc wyniki nie są zapisywane. Można dalej ćwiczyć, tylko bez historii."
+HISTORY_READ_ONLY,"Historia pochodzi z nowszej wersji gry: można ją przeglądać, ale nowe wyniki nie są do niej dopisywane."
+HISTORY_RECENT,Ostatnie przejazdy
+HISTORY_BESTS,Rekordy
+HISTORY_NO_BESTS,Rekord ustanawia dopiero ukończony przejazd.
+HISTORY_TREND,Trend wyniku
+HISTORY_TREND_CAPTION,"Ostatnie wyniki ({count}): najniższy {min} pkt, najwyższy {max} pkt, ostatni {last} pkt."
+HISTORY_ROW,{date} · {combination} — {points} pkt · {status}
+HISTORY_BEST_ROW,{combination}: {points} pkt ({date})
+HISTORY_COMBINATION,{mode} · {profile} · poziom {level}
+HISTORY_STATUS_COMPLETED,ukończony
+HISTORY_STATUS_COLLISION,przerwany — kolizja
+HISTORY_STATUS_OFFROAD,przerwany — zjazd z drogi
+HISTORY_EXAM_PASSED,egzamin zaliczony
+HISTORY_EXAM_FAILED,egzamin niezaliczony
+MODE_LEARN,Nauka
+MODE_EXAM,Egzamin
+ROAD_MOTORWAY,Autostrada
+ROAD_EXPRESSWAY,Droga ekspresowa
