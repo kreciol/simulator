@@ -164,3 +164,32 @@ func test_scene_starts_from_the_dev_launcher_defaults_without_params() -> void:
 	assert_object(_main.road_profile).is_same(launcher.find_profile(launcher.default_profile))
 	assert_object(_main.sim.road).is_same(_main.road_profile)
 	assert_int(_main.sim.rng_seed).is_equal(options.seed_value)
+
+
+func _traffic_view() -> TrafficView:
+	return _main.get_node("TrafficView") as TrafficView
+
+
+func test_scene_shows_traffic_at_the_launch_level() -> void:
+	var sim: TrafficSim = _main.sim
+	assert_object(sim.spawner).is_not_null()
+	assert_int(sim.spawner.level.id).is_equal(_main.launch_options.level)
+	assert_int(sim.vehicles.size()).is_greater(1)
+	_drive(60)
+	assert_int(_traffic_view().live_count()).is_equal(sim.vehicles.size() - 1)
+
+
+func test_hitting_a_car_ends_the_session_with_the_end_screen() -> void:
+	var hud: Hud = _main.get_node("Hud") as Hud
+	assert_bool(hud.ended_screen.visible).is_false()
+	# A stopped car right ahead of the player.
+	var wreck: VehicleState = _main.sim.add_vehicle(_player().s + _player().length_m + 1.0, 0, 0.0)
+	assert_object(_traffic_view().view_of(wreck.id)).is_not_null()
+	var steps: int = 0
+	while _main.session.state == SessionManager.State.DRIVING and steps < 120:
+		_drive(1)
+		steps += 1
+	assert_int(_main.session.state).is_equal(SessionManager.State.ENDED)
+	assert_int(_main.session.end_reason).is_equal(SessionManager.EndReason.COLLISION)
+	assert_bool(hud.ended_screen.visible).is_true()
+	assert_str(hud.ended_label.text).is_equal("Koniec sesji")

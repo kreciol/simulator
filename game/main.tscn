@@ -1,4 +1,4 @@
-[gd_scene load_steps=12 format=3]
+[gd_scene load_steps=13 format=3]
 
 [ext_resource type="Script" path="res://game/main.gd" id="1_main"]
 [ext_resource type="Resource" path="res://config/dev_launcher.tres" id="2_launcher"]
@@ -8,6 +8,7 @@
 [ext_resource type="Script" path="res://game/player/player_view.gd" id="6_player_view"]
 [ext_resource type="Script" path="res://game/session/session_manager.gd" id="7_session"]
 [ext_resource type="Script" path="res://ui/hud.gd" id="8_hud"]
+[ext_resource type="Script" path="res://game/traffic/traffic_view.gd" id="9_traffic_view"]
 
 [sub_resource type="ProceduralSkyMaterial" id="SkyMaterial_1"]
 sky_top_color = Color(0.32, 0.52, 0.82, 1)
@@ -50,6 +51,9 @@ light_energy = 1.1
 
 [node name="RoadView" type="Node3D" parent="."]
 script = ExtResource("5_road_view")
+
+[node name="TrafficView" type="Node3D" parent="."]
+script = ExtResource("9_traffic_view")
 
 [node name="PlayerView" type="Node3D" parent="."]
 script = ExtResource("6_player_view")
