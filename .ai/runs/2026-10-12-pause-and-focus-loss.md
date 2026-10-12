@@ -44,17 +44,19 @@ The spec draws `DRIVING ⇄ PAUSED`, but the issue and the spec's Edge Cases als
 
 ## Progress
 
+PR: #56
+
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: Session pause
 
-- [ ] 1.1 SessionManager pause, resume and focus-loss auto-pause
-- [ ] 1.2 Capped physics steps per frame
+- [x] 1.1 SessionManager pause, resume and focus-loss auto-pause — 8667795
+- [x] 1.2 Capped physics steps per frame — 6b9c2ee
 
 ### Phase 2: Pause in the game
 
-- [ ] 2.1 Esc and P toggle the pause in the main scene; HUD pause screen
+- [x] 2.1 Esc and P toggle the pause in the main scene; HUD pause screen — 631c526
 
 ### Phase 3: Docs
 
-- [ ] 3.1 AGENTS.md status and routing
+- [x] 3.1 AGENTS.md status and routing — d270ad5
