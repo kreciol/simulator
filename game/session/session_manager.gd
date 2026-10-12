@@ -3,10 +3,13 @@ extends Node
 ## Session flow (requirements §9.3, spec Architecture: Session): a 3-2-1 intro, then
 ## `SimConfig.session_length_s` of driving, then the end. Owns the sim and is the only
 ## node that drives it; views and the HUD only read its state. In the exam the player
-## colliding or leaving the road ends the session at once as aborted, with the cause
-## (requirements §9.2). The countdown and the drive can be paused (spec Edge Cases):
-## everything stands still until resumed, and losing window focus pauses on its own.
-## With a `scoring_config` it also scores the drive and, at the end, builds the
+## colliding or leaving the road ends the session at once as aborted, with the cause;
+## in learn mode it starts a respawn instead (requirements §9.2): K4 is charged, the
+## sim freezes and input is dropped for `SimConfig.respawn_fade_s`, the player is put
+## back on the right lane at the fade's midpoint (`Respawn`), and the timer keeps
+## running throughout. The countdown, the drive and a respawn can be paused (spec Edge
+## Cases): everything stands still until resumed, and losing window focus pauses on its
+## own. With a `scoring_config` it also scores the drive and, at the end, builds the
 ## session's `SessionRecord` for `SaveManager` and — with a `feedback_config` — its
 ## `Summary`.
 
@@ -14,13 +17,17 @@ signal session_started
 signal session_ended
 signal session_paused
 signal session_resumed
+## The player was put back on the right lane after `respawn_cause` (learn mode).
+signal player_respawned
 
-enum State { INTRO, DRIVING, ENDED }
+enum State { INTRO, DRIVING, RESPAWNING, ENDED }
 ## Why the session ended; NONE until it has.
 enum EndReason { NONE, TIME_UP, COLLISION, OFF_ROAD }
 
 ## Absorbs float drift when fixed steps should sum to exactly a configured duration.
 const TIME_EPSILON: float = 1e-6
+## Share of the respawn fade after which the player is put back: when it is darkest.
+const RESPAWN_MIDPOINT: float = 0.5
 
 ## Scores the session when set; without it there is no scoring, record or summary.
 @export var scoring_config: ScoringConfig
@@ -37,8 +44,16 @@ var state: State = State.INTRO
 var end_reason: EndReason = EndReason.NONE
 ## Time spent in the intro countdown, seconds.
 var intro_elapsed_s: float = 0.0
-## Session time driven so far; the timer starts when the intro ends.
+## Session time driven so far; the timer starts when the intro ends and keeps
+## running through respawns.
 var elapsed_s: float = 0.0
+## What the respawn in progress, or the last one, follows (`COLLISION` / `OFF_ROAD`);
+## NONE before the first.
+var respawn_cause: EndReason = EndReason.NONE
+## Time spent in the respawn in progress, seconds.
+var respawn_elapsed_s: float = 0.0
+## Respawns so far this session.
+var respawn_count: int = 0
 ## Observes the sim after every step; null without a `scoring_config`.
 var scoring: ScoringSystem
 ## When driving started, ISO-8601 UTC.
@@ -88,10 +103,14 @@ func setup(road_profile: RoadProfile, sim_config: SimConfig, seed_value: int = 0
 	paused = false
 	intro_elapsed_s = 0.0
 	elapsed_s = 0.0
+	respawn_cause = EndReason.NONE
+	respawn_elapsed_s = 0.0
+	respawn_count = 0
 
 
 ## Advances the session by one fixed step. The sim only runs while driving: during
-## the intro, while paused and after the end it is frozen and `commands` are dropped.
+## the intro, a respawn, while paused and after the end it is frozen and `commands`
+## are dropped.
 func step(dt: float, commands: PlayerCommands = null) -> void:
 	if paused:
 		return
@@ -107,11 +126,24 @@ func step(dt: float, commands: PlayerCommands = null) -> void:
 			if scoring != null:
 				scoring.observe(dt)
 			elapsed_s += dt
-			# TODO(E08-S02): in learn mode, K4 and a respawn instead of ending the session.
-			if _player_end_reason != EndReason.NONE:
-				_end(_player_end_reason)
-			elif elapsed_s >= sim.config.session_length_s - TIME_EPSILON:
+			var incident: EndReason = _player_end_reason
+			_player_end_reason = EndReason.NONE
+			if incident != EndReason.NONE and is_exam():
+				_end(incident)
+			elif _time_up():
 				_end(EndReason.TIME_UP)
+			elif incident != EndReason.NONE:
+				_start_respawn(incident)
+		State.RESPAWNING:
+			elapsed_s += dt
+			var before_midpoint: bool = respawn_progress() < RESPAWN_MIDPOINT - TIME_EPSILON
+			respawn_elapsed_s += dt
+			if before_midpoint and respawn_progress() >= RESPAWN_MIDPOINT - TIME_EPSILON:
+				_respawn()
+			if _time_up():
+				_end(EndReason.TIME_UP)
+			elif respawn_elapsed_s >= sim.config.respawn_fade_s - TIME_EPSILON:
+				state = State.DRIVING
 
 
 ## Pauses the countdown or the drive; does nothing once the session has ended.
@@ -156,6 +188,24 @@ func _notification(what: int) -> void:
 		pause()
 
 
+## 0 when the respawn starts, 1 when the player drives on; 0 outside a respawn.
+func respawn_progress() -> float:
+	if state != State.RESPAWNING:
+		return 0.0
+	return clampf(respawn_elapsed_s / sim.config.respawn_fade_s, 0.0, 1.0)
+
+
+## How dark the respawn fade is: out to black by the midpoint, where the player is
+## put back, then in again. 0 outside a respawn.
+func fade_amount() -> float:
+	if state != State.RESPAWNING:
+		return 0.0
+	var progress: float = respawn_progress()
+	if progress < RESPAWN_MIDPOINT:
+		return progress / RESPAWN_MIDPOINT
+	return (1.0 - progress) / (1.0 - RESPAWN_MIDPOINT)
+
+
 func is_exam() -> bool:
 	return mode == LaunchOptions.MODE_EXAM
 
@@ -170,6 +220,28 @@ func status() -> StringName:
 		EndReason.OFF_ROAD:
 			return SessionRecord.STATUS_ABORTED_OFFROAD
 	return &""
+
+
+func _time_up() -> bool:
+	return elapsed_s >= sim.config.session_length_s - TIME_EPSILON
+
+
+func _start_respawn(cause: EndReason) -> void:
+	respawn_cause = cause
+	respawn_elapsed_s = 0.0
+	if sim.config.respawn_fade_s <= 0.0:
+		# No fade configured: straight back on the road.
+		_respawn()
+		return
+	state = State.RESPAWNING
+
+
+func _respawn() -> void:
+	Respawn.respawn_player(sim)
+	if scoring != null:
+		scoring.restart_after_respawn()
+	respawn_count += 1
+	player_respawned.emit()
 
 
 func _end(reason: EndReason) -> void:

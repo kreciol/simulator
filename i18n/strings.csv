@@ -44,6 +44,9 @@ TIP_OFFROAD,"Zmieniaj pas tylko wtedy, gdy obok naprawdę jest kolejny pas jezdn
 TIP_GENERAL,Spróbuj tej samej jazdy w trybie egzaminu albo na wyższym poziomie ruchu.
 TIP_GENERAL_EXAM,"Utrwal te nawyki, powtarzając jazdę na tym samym albo wyższym poziomie ruchu."
 TIP_EXAM_POINTS,Punkty zdobywa się za jazdę prawym pasem z bezpiecznym odstępem i za poprawnie zasygnalizowane wyprzedzanie.
+RESPAWN_COLLISION,Kolizja z innym pojazdem
+RESPAWN_OFFROAD,Zjechanie z drogi
+RESPAWN_BACK_ON_ROAD,Wracasz na prawy pas. Czas sesji biegnie dalej.
 SAVE_DONE,Wynik zapisany w tej przeglądarce.
 SAVE_UNAVAILABLE,"Tym razem wyniku nie zapisaliśmy: pamięć przeglądarki jest niedostępna (np. w trybie prywatnym). Możesz dalej ćwiczyć, tylko historia się nie zapisze."
 SAVE_READ_ONLY,"Twoja historia pochodzi z nowszej wersji gry, więc nie dopisujemy do niej wyników, żeby jej nie uszkodzić."

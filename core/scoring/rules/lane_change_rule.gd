@@ -44,6 +44,14 @@ func take_events() -> Array[ScoreEvent]:
 	return events
 
 
+## Forgets the change in progress and any overtake begun, after the player was put
+## back on the right lane (learn-mode respawn): a later change right is not a return.
+## The cooldown keeps running.
+func reset() -> void:
+	_qualified_reason = &""
+	_overtake_started = false
+
+
 ## Runs inside `TrafficSim.step` as the change starts: `player.lane` is still the origin.
 func _on_lane_change_started(vehicle_id: int, _from_lane: int, to_lane: int) -> void:
 	var player: VehicleState = _sim.player

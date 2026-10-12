@@ -61,6 +61,14 @@ func finish() -> Array[ScoreEvent]:
 	return completed
 
 
+## Call after the player was put back on the road (learn-mode respawn): closes every
+## open segment where the incident left it and forgets the overtake in progress, so
+## nothing carries over to the new position. Returns the completed events.
+func restart_after_respawn() -> Array[ScoreEvent]:
+	lane_change_rule.reset()
+	return finish()
+
+
 ## The session total: every point so far, never below `score_floor` (Q6).
 func total_score() -> float:
 	return maxf(config.score_floor, event_log.total())
