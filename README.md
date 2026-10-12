@@ -21,13 +21,13 @@ godot --path .
 
 ### Dev launcher
 
-Until the menus exist, the session's mode, road profile, difficulty level and seed come from URL query params on the web build, or user args after `--` on desktop:
+Until the menus exist, the session's mode, road profile, difficulty level and seed — and the graphics quality and mirrors — come from URL query params on the web build, or user args after `--` on desktop:
 
 ```text
 # Web (GitHub Pages or a local export)
-https://<pages-url>/?mode=exam&profile=expressway&level=3&seed=42
+https://<pages-url>/?mode=exam&profile=expressway&level=3&seed=42&quality=low&mirrors=0
 # Desktop
-godot --path . -- --mode=exam --profile=expressway --level=3 --seed=42
+godot --path . -- --mode=exam --profile=expressway --level=3 --seed=42 --quality=low --mirrors=0
 ```
 
 | Param | Values | Default |
@@ -36,6 +36,8 @@ godot --path . -- --mode=exam --profile=expressway --level=3 --seed=42
 | `profile` | `motorway`, `expressway` | `motorway` |
 | `level` | `1`–`4` | `1` |
 | `seed` | integer ≥ 0 | random |
+| `quality` | `low`, `high` — mirror resolution and refresh, shadows, draw distance (`config/quality_presets/`) | `high` |
+| `mirrors` | `0` (off), `1` (on) | `1` |
 
 A missing or invalid value falls back to its default (with a warning in the console); defaults live in `config/dev_launcher.tres`. The resolved options, including the seed, are printed at start (`Dev launcher: mode=… seed=…`), so a session can be replayed with the same seed.
 
