@@ -113,8 +113,13 @@ func test_a_full_lane_has_its_blockers_at_the_incident_despawned() -> void:
 	assert_float(_player.speed_mps).is_equal(0.0)
 	# Only the vehicles in the window went; the rest of the lane stays.
 	assert_int(_sim.vehicles.size()).is_equal(packed.size() - removed.size() + 1)
-	for vehicle: VehicleState in _sim.vehicles:
-		assert_bool(removed.has(vehicle.id)).is_false()
+	var half_length_m: float = _player.length_m / 2.0
+	var window_front: float = placed_s + half_length_m + _config.respawn_clear_ahead_m
+	var window_rear: float = placed_s - half_length_m - _config.respawn_clear_behind_m
+	for vehicle: VehicleState in packed:
+		var in_window: bool = vehicle.rear_s() <= window_front and vehicle.front_s() >= window_rear
+		assert_bool(removed.has(vehicle.id)).override_failure_message(
+				"vehicle at %.0f m: in window %s" % [vehicle.s, in_window]).is_equal(in_window)
 
 
 func test_a_vehicle_changing_into_the_right_lane_blocks_it() -> void:

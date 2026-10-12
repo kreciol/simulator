@@ -281,6 +281,24 @@ func test_time_running_out_during_a_respawn_ends_the_session() -> void:
 	assert_int(ended[0]).is_equal(1)
 
 
+func test_pausing_during_a_respawn_freezes_it_and_the_timer() -> void:
+	_start_learn_with_scoring()
+	_leave_the_road()
+	assert_int(_session.state).is_equal(SessionManager.State.RESPAWNING)
+	var respawn_elapsed: float = _session.respawn_elapsed_s
+	var elapsed: float = _session.elapsed_s
+	_session.pause()
+	_step(_steps_for(_config.respawn_fade_s * 2.0))
+	assert_float(_session.respawn_elapsed_s).is_equal(respawn_elapsed)
+	assert_float(_session.elapsed_s).is_equal(elapsed)
+	assert_int(_session.respawn_count).is_equal(0)
+	assert_int(_session.state).is_equal(SessionManager.State.RESPAWNING)
+	_session.resume()
+	_step(_steps_for(_config.respawn_fade_s))
+	assert_int(_session.state).is_equal(SessionManager.State.DRIVING)
+	assert_int(_session.respawn_count).is_equal(1)
+
+
 func test_without_a_fade_the_player_is_back_on_the_road_at_once() -> void:
 	var config: SimConfig = _config.duplicate() as SimConfig
 	config.respawn_fade_s = 0.0

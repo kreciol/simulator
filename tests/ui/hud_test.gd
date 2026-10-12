@@ -210,6 +210,19 @@ func test_learn_collision_names_it_while_respawning() -> void:
 	assert_bool(_hud.respawn_notice.visible).is_true()
 
 
+func test_pausing_a_respawn_shows_the_pause_screen_over_the_fade() -> void:
+	_finish_countdown()
+	_leave_the_road()
+	_session.pause()
+	_hud.update(_session)
+	assert_bool(_hud.paused_screen.visible).is_true()
+	assert_bool(_hud.fade_screen.visible).is_true()
+	assert_bool(_hud.respawn_notice.visible).is_false()
+	_session.resume()
+	_hud.update(_session)
+	assert_bool(_hud.respawn_notice.visible).is_true()
+
+
 func test_no_respawn_notice_while_driving() -> void:
 	_finish_countdown()
 	_step(1.0)
