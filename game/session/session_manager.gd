@@ -2,14 +2,15 @@ class_name SessionManager
 extends Node
 ## Session flow (requirements §9.3, spec Architecture: Session): a 3-2-1 intro, then
 ## `SimConfig.session_length_s` of driving, then the end. Owns the sim and is the only
-## node that drives it; views and the HUD only read its state. A `ScoringSystem`
-## observes every step (K4 for the player's collisions and leaving the road). In the
-## exam the player colliding or leaving the road ends the session at once as aborted,
-## with the cause; in learn mode it starts a respawn instead (requirements §9.2): the
+## node that drives it; views and the HUD only read its state. In the exam the player
+## colliding or leaving the road ends the session at once as aborted, with the cause;
+## in learn mode it starts a respawn instead (requirements §9.2): K4 is charged, the
 ## sim freezes and input is dropped for `SimConfig.respawn_fade_s`, the player is put
 ## back on the right lane at the fade's midpoint (`Respawn`), and the timer keeps
 ## running throughout. The countdown, the drive and a respawn can be paused (spec Edge
-## Cases): everything stands still until resumed, and losing window focus pauses on its own.
+## Cases): everything stands still until resumed, and losing window focus pauses on its
+## own. With a `scoring_config` it also scores the drive and, at the end, builds the
+## session's `SessionRecord` for `SaveManager`.
 
 signal session_started
 signal session_ended
@@ -27,10 +28,11 @@ const TIME_EPSILON: float = 1e-6
 ## Share of the respawn fade after which the player is put back: when it is darkest.
 const RESPAWN_MIDPOINT: float = 0.5
 
+## Scores the session when set; without it there is no scoring and no record.
+@export var scoring_config: ScoringConfig
+
 var sim: TrafficSim
 var player: VehicleState
-## Scores the session; null when it was set up without a `ScoringConfig`.
-var scoring: ScoringSystem
 ## What the session was started with; null when set up directly through `setup`.
 var options: LaunchOptions
 ## `LaunchOptions.MODE_LEARN` or `MODE_EXAM`.
@@ -49,6 +51,12 @@ var respawn_cause: EndReason = EndReason.NONE
 var respawn_elapsed_s: float = 0.0
 ## Respawns so far this session.
 var respawn_count: int = 0
+## Observes the sim after every step; null without a `scoring_config`.
+var scoring: ScoringSystem
+## When driving started, ISO-8601 UTC.
+var started_at: String = ""
+## The finished session's record; null until the end, or without scoring.
+var record: SessionRecord
 ## While set, `step` does nothing: the sim, its lane-change animation and signals, the
 ## countdown and the session timer stand still and commands are dropped. A flag rather
 ## than a state because both the intro and the drive can be paused; `state` says
@@ -63,15 +71,15 @@ var _player_end_reason: EndReason = EndReason.NONE
 ## Sets the session up on the launch options' profile and seed with traffic at the
 ## options' difficulty level, keeping the options (mode, level) for the rules that
 ## depend on them.
-func start(launch_options: LaunchOptions, sim_config: SimConfig, scoring_config: ScoringConfig = null) -> void:
-	setup(launch_options.profile, sim_config, launch_options.seed_value, launch_options.mode, scoring_config)
+func start(launch_options: LaunchOptions, sim_config: SimConfig) -> void:
+	setup(launch_options.profile, sim_config, launch_options.seed_value, launch_options.mode)
 	options = launch_options
 	if launch_options.difficulty != null:
 		Spawner.new(launch_options.difficulty).attach(sim)
 
 
 func setup(road_profile: RoadProfile, sim_config: SimConfig, seed_value: int = 0,
-		session_mode: StringName = LaunchOptions.MODE_LEARN, scoring_config: ScoringConfig = null) -> void:
+		session_mode: StringName = LaunchOptions.MODE_LEARN) -> void:
 	options = null
 	mode = session_mode
 	sim = TrafficSim.new(road_profile, sim_config, seed_value)
@@ -81,6 +89,8 @@ func setup(road_profile: RoadProfile, sim_config: SimConfig, seed_value: int = 0
 	sim.collision.connect(_on_collision)
 	sim.offroad.connect(_on_offroad)
 	scoring = ScoringSystem.new(sim, scoring_config) if scoring_config != null else null
+	started_at = ""
+	record = null
 	state = State.INTRO
 	end_reason = EndReason.NONE
 	_player_end_reason = EndReason.NONE
@@ -103,6 +113,7 @@ func step(dt: float, commands: PlayerCommands = null) -> void:
 			intro_elapsed_s += dt
 			if intro_elapsed_s >= sim.config.countdown_s - TIME_EPSILON:
 				state = State.DRIVING
+				started_at = Time.get_datetime_string_from_system(true) + "Z"
 				session_started.emit()
 		State.DRIVING:
 			sim.step(dt, commands)
@@ -163,6 +174,14 @@ func time_left_s() -> float:
 	return maxf(0.0, sim.config.session_length_s - elapsed_s)
 
 
+func _notification(what: int) -> void:
+	# A hidden tab or a window in the background must not run the clock (§9.3). The
+	# player resumes on purpose rather than on focus returning. Platforms report focus
+	# loss as either notification (the web build through the window), so both pause.
+	if what == NOTIFICATION_APPLICATION_FOCUS_OUT or what == NOTIFICATION_WM_WINDOW_FOCUS_OUT:
+		pause()
+
+
 ## 0 when the respawn starts, 1 when the player drives on; 0 outside a respawn.
 func respawn_progress() -> float:
 	if state != State.RESPAWNING:
@@ -179,14 +198,6 @@ func fade_amount() -> float:
 	if progress < RESPAWN_MIDPOINT:
 		return progress / RESPAWN_MIDPOINT
 	return (1.0 - progress) / (1.0 - RESPAWN_MIDPOINT)
-
-
-func _notification(what: int) -> void:
-	# A hidden tab or a window in the background must not run the clock (§9.3). The
-	# player resumes on purpose rather than on focus returning. Platforms report focus
-	# loss as either notification (the web build through the window), so both pause.
-	if what == NOTIFICATION_APPLICATION_FOCUS_OUT or what == NOTIFICATION_WM_WINDOW_FOCUS_OUT:
-		pause()
 
 
 func is_exam() -> bool:
@@ -232,7 +243,36 @@ func _end(reason: EndReason) -> void:
 	end_reason = reason
 	if scoring != null:
 		scoring.finish()
+		record = _build_record()
 	session_ended.emit()
+
+
+func _build_record() -> SessionRecord:
+	var builder: SessionRecordBuilder = SessionRecordBuilder.new(scoring_config)
+	builder.id = _new_id()
+	builder.started_at = started_at
+	builder.app_version = str(ProjectSettings.get_setting("application/config/version", ""))
+	builder.road_profile = sim.road.id
+	builder.seed_value = sim.rng_seed
+	builder.duration_s = elapsed_s
+	builder.status = status()
+	builder.mode = mode
+	if options != null:
+		builder.difficulty = options.level
+		if options.difficulty != null:
+			builder.exam_pass_score = options.difficulty.exam_pass_score
+	return builder.build(scoring.event_log)
+
+
+## A random UUID (version 4), as §13 asks for the record's `id`. Not drawn from the
+## sim's RNG, so it never disturbs a seeded replay.
+static func _new_id() -> String:
+	var bytes: PackedByteArray = Crypto.new().generate_random_bytes(16)
+	bytes[6] = (bytes[6] & 0x0f) | 0x40
+	bytes[8] = (bytes[8] & 0x3f) | 0x80
+	var hex: String = bytes.hex_encode()
+	return "%s-%s-%s-%s-%s" % [hex.substr(0, 8), hex.substr(8, 4), hex.substr(12, 4),
+			hex.substr(16, 4), hex.substr(20, 12)]
 
 
 func _on_collision(vehicle_id: int, other_id: int) -> void:

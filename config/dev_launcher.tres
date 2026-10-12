@@ -24,3 +24,4 @@ default_level = 1
 quality_presets = Array[ExtResource("10_quality")]([ExtResource("11_low"), ExtResource("12_high")])
 default_quality = &"high"
 default_mirrors = true
+default_perf = false

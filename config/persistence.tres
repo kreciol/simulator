@@ -1,0 +1,8 @@
+[gd_resource type="Resource" script_class="PersistenceConfig" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://config/persistence_config.gd" id="1_persistence"]
+
+[resource]
+script = ExtResource("1_persistence")
+history_limit = 200
+history_path = "user://history.json"

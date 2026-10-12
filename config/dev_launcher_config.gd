@@ -19,6 +19,8 @@ extends Resource
 @export var default_quality: StringName
 ## Whether the mirrors are shown when the `mirrors` param is missing or invalid.
 @export var default_mirrors: bool
+## Whether the FPS probe runs when the `perf` param is missing or invalid.
+@export var default_perf: bool
 
 
 ## The profile with this id, or null when there is none.

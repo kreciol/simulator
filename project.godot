@@ -13,7 +13,12 @@ config_version=5
 config/name="Symulator autostrady"
 config/description="Learn motorway and expressway driving under Polish traffic law."
 run/main_scene="res://game/main.tscn"
+config/version="0.1.0"
 config/features=PackedStringArray("4.7", "GL Compatibility")
+
+[autoload]
+
+SaveManager="*res://persistence/save_manager.gd"
 
 [display]
 

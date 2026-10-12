@@ -4,9 +4,10 @@ extends RefCounted
 ## session's mode, road profile, level and seed come from URL query params on web
 ## (`?mode=exam&profile=expressway&level=3&seed=42`) or from user args on desktop
 ## (`godot -- --profile=expressway --seed=42`), and so do the graphics quality and
-## the mirrors (`&quality=low&mirrors=0`, issue #25). A missing or invalid value falls
-## back to its default from `DevLauncherConfig` (`high` quality, mirrors on); a missing
-## seed is drawn at random.
+## the mirrors (`&quality=low&mirrors=0`, issue #25), and the FPS probe (`&perf=1`,
+## issue #26). A missing or invalid value falls back to its default from
+## `DevLauncherConfig` (`high` quality, mirrors on, probe off); a missing seed is drawn
+## at random.
 
 const KEY_MODE: String = "mode"
 const KEY_PROFILE: String = "profile"
@@ -14,6 +15,7 @@ const KEY_LEVEL: String = "level"
 const KEY_SEED: String = "seed"
 const KEY_QUALITY: String = "quality"
 const KEY_MIRRORS: String = "mirrors"
+const KEY_PERF: String = "perf"
 
 
 ## Launch options from this platform's params: the page URL on web, user args elsewhere.
@@ -101,6 +103,14 @@ static func resolve(params: Dictionary, config: DevLauncherConfig, random_seed: 
 			options.mirrors = mirrors == "1"
 		else:
 			_warn_invalid(KEY_MIRRORS, mirrors)
+
+	options.perf = config.default_perf
+	if params.has(KEY_PERF):
+		var perf: String = params[KEY_PERF]
+		if perf == "0" or perf == "1":
+			options.perf = perf == "1"
+		else:
+			_warn_invalid(KEY_PERF, perf)
 
 	return options
 
