@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="ScoringConfig" format=3]
+
+[ext_resource type="Script" path="res://config/scoring_config.gd" id="1_scoring"]
+
+[resource]
+script = ExtResource("1_scoring")
+k1_base_per_s = 10.0
+k1_exponent = 2.0
+k2_grace_s = 4.0
+k2_penalty_per_s = 2.0
+k2_return_horizon_s = 9.0
+k2_min_look_ahead_m = 60.0
+k2_look_behind_m = 20.0
+k3_penalty = 10.0
+k3_late_factor = 0.5
+overtake_look_ahead_m = 30.0
