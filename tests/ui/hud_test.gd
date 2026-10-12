@@ -245,3 +245,13 @@ func test_scored_exam_collision_shows_failed_with_the_cause() -> void:
 	assert_str(_hud.ended_label.text).is_equal("Egzamin niezaliczony")
 	assert_str(_hud.ended_cause_label.text).is_equal("Przyczyna: kolizja z innym pojazdem")
 	assert_bool(_hud.summary_panel.is_visible_in_tree()).is_true()
+
+
+func test_end_screen_hides_the_driving_widgets() -> void:
+	assert_bool(_hud.speed_label.is_visible_in_tree()).is_true()
+	_finish_countdown()
+	_step(_session.sim.config.session_length_s)
+	assert_bool(_hud.ended_screen.visible).is_true()
+	assert_bool(_hud.speed_label.is_visible_in_tree()).is_false()
+	assert_bool(_hud.time_label.is_visible_in_tree()).is_false()
+	assert_bool(_hud.signal_left.is_visible_in_tree()).is_false()

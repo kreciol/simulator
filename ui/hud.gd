@@ -31,6 +31,8 @@ const ARROW_OFF: Color = Color(1.0, 1.0, 1.0, 0.2)
 const ARROW_ON: Color = Color(0.2, 1.0, 0.3)
 ## Dims the frozen scene behind the pause and end-of-session notices.
 const NOTICE_BACKDROP: Color = Color(0.0, 0.0, 0.0, 0.55)
+## Darker behind the summary, which has more text to read than a notice.
+const SUMMARY_BACKDROP: Color = Color(0.0, 0.0, 0.0, 0.8)
 ## Absorbs float drift so a whole second left never reads as the next one up.
 const TIME_EPSILON: float = 1e-6
 
@@ -54,6 +56,9 @@ var summary_panel: SummaryPanel
 
 ## The summary the panel shows, so it is filled once rather than every frame.
 var _shown_summary: Summary
+## Speed, limit, time and signals: hidden once the session has ended, so they never
+## overlap the summary.
+var _driving_widgets: Array[Control] = []
 
 
 func setup(view_config: ViewConfig) -> void:
@@ -99,6 +104,7 @@ func setup(view_config: ViewConfig) -> void:
 	signals.add_child(signal_left)
 	signal_right = _arrow("SignalRight", VehicleState.Dir.RIGHT, ARROW_SIZE.x + ARROW_GAP)
 	signals.add_child(signal_right)
+	_driving_widgets = [dashboard, time_label, signals]
 
 	countdown_label = _centered_label("Countdown", COUNTDOWN_FONT_SIZE)
 	root.add_child(countdown_label)
@@ -116,6 +122,7 @@ func setup(view_config: ViewConfig) -> void:
 	paused_hint_label.text = tr(&"SESSION_PAUSED_HINT")
 	paused_box.add_child(paused_hint_label)
 	ended_screen = _backdrop("EndedScreen")
+	ended_screen.color = SUMMARY_BACKDROP
 	root.add_child(ended_screen)
 	var ended_notice: VBoxContainer = VBoxContainer.new()
 	ended_notice.name = "EndedNotice"
@@ -151,6 +158,8 @@ func update(session: SessionManager) -> void:
 	if countdown_label.visible:
 		countdown_label.text = str(maxi(1, ceili(session.countdown_left_s() - TIME_EPSILON)))
 	ended_screen.visible = session.state == SessionManager.State.ENDED
+	for widget: Control in _driving_widgets:
+		widget.visible = not ended_screen.visible
 	ended_label.visible = ended_screen.visible
 	var summary: Summary = session.summary if ended_screen.visible else null
 	summary_panel.visible = summary != null
