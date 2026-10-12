@@ -52,8 +52,8 @@ Every finished session is saved to `user://history.json` (IndexedDB on web) and 
 
 ### Phase 1: History file
 
-- [ ] 1.1 PersistenceConfig, SessionRecord.from_dict and HistoryStore
-- [ ] 1.2 SaveManager autoload
+- [x] 1.1 PersistenceConfig, SessionRecord.from_dict and HistoryStore — ffa6cd6
+- [x] 1.2 SaveManager autoload — 3e6d887
 
 ### Phase 2: Saving finished sessions
 
