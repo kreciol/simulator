@@ -291,11 +291,11 @@ func update(session: SessionManager) -> void:
 	blind_spot_right.visible = driving and LaneQuery.blind_spot_occupied(
 			sim.lanes, player, VehicleState.Dir.RIGHT, view.blind_spot_ahead_m, view.blind_spot_behind_m)
 	# The exam has no hint engine; hints wait out the countdown, a respawn and a pause.
-	hint_list.visible = driving and session.hints != null
+	hint_list.visible = driving and session.hint_engine != null
 	if hint_list.visible:
-		if hint_list.rows.is_empty():
-			hint_list.setup(session.hints.config.hint_max_on_screen)
-		hint_list.show_hints(session.hints.hints)
+		if hint_list.rows.size() != session.hint_engine.config.hint_max_on_screen:
+			hint_list.setup(session.hint_engine.config.hint_max_on_screen)
+		hint_list.show_hints(session.hint_engine.hints)
 
 	paused_screen.visible = session.paused
 	countdown_label.visible = session.state == SessionManager.State.INTRO and not session.paused

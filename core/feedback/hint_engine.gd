@@ -8,15 +8,22 @@ extends RefCounted
 ## - Preventive hints, before or while a penalty runs: K2 grace started ("the right
 ##   lane is free, go back right"), the gap closing in on the legal minimum, the gap
 ##   below it with the numbers, and the speed above the limit while S1 is on.
-## - Event messages, after the fact: when a player lane change completes, its K3 event
-##   decides between confirming the signal and naming the missing, late or wrong one.
+## - Event messages, after the fact: when a player lane change completes on the road,
+##   its K3 event decides between confirming the signal and naming the missing, late
+##   or wrong one.
 ## Rate limits (`FeedbackConfig`): a type is not shown again within `hint_cooldown_s`
 ## of its last showing, nor while it is still on screen; at most
-## `hint_max_on_screen` hints are shown, a new one replacing the oldest; each stays
-## `hint_duration_s`. All times are sim time, so a pause or a respawn freezes them.
+## `hint_max_on_screen` hints are shown, and a new one replaces the oldest only once
+## that has been up for `hint_min_display_s` — otherwise it waits, its cooldown
+## unspent; each stays `hint_duration_s`. Within a step the lane-change message comes
+## first (it waits for room rather than being dropped), then K2, the gap and speeding.
+## All times are sim time, so a pause or a respawn freezes them.
 
 ## Emitted when a hint goes on screen.
 signal hint_shown(hint: Hint)
+
+## What `_show` did with a hint.
+enum Shown { SHOWN, RATE_LIMITED, NO_ROOM }
 
 const KEEP_RIGHT: StringName = &"HINT_KEEP_RIGHT"
 const GAP_TOO_SMALL: StringName = &"HINT_GAP_TOO_SMALL"
@@ -47,6 +54,8 @@ var _last_shown_s: Dictionary[StringName, float] = {}
 var _signal_event: ScoreEvent
 ## Set when the player's lane change completed during the last sim step.
 var _lane_change_completed: bool = false
+## The message of the last completed lane change while it waits for room on screen.
+var _pending_message: Hint
 
 
 func _init(observed_sim: TrafficSim, observed_scoring: ScoringSystem, feedback_config: FeedbackConfig) -> void:
@@ -66,12 +75,19 @@ func observe(events: Array[ScoreEvent]) -> void:
 	for event: ScoreEvent in events:
 		if event.category == SignalRule.CATEGORY:
 			_signal_event = event
+			# A new lane change makes the previous one's waiting message stale.
+			_pending_message = null
+	var player: VehicleState = sim.player
+	var on_road: bool = player != null and not player.off_road
 	if _lane_change_completed:
 		_lane_change_completed = false
-		_show_signal_message()
-	var player: VehicleState = sim.player
-	if player == null or player.off_road:
+		# A change that left the road is followed by a respawn, not a signal message.
+		_pending_message = _signal_message() if on_road else null
+		_signal_event = null
+	if not on_road:
 		return
+	if _pending_message != null and _show(_pending_message) != Shown.NO_ROOM:
+		_pending_message = null
 	_show_preventive(player)
 
 
@@ -81,35 +97,46 @@ func clear() -> void:
 	hints.clear()
 	_signal_event = null
 	_lane_change_completed = false
+	_pending_message = null
+
+
+## Seconds as Polish text: a decimal comma, and no ",0" on whole numbers.
+static func seconds_text(seconds: float) -> String:
+	var tenths: int = roundi(seconds * 10.0)
+	if tenths % 10 == 0:
+		return str(floori(tenths / 10.0))
+	return "%d,%d" % [floori(tenths / 10.0), tenths % 10]
 
 
 func _show_preventive(player: VehicleState) -> void:
 	if scoring.keep_right_rule.applies(player):
 		# From the first moment of the K2 grace, so it comes before any penalty.
-		_show(TYPE_KEEP_RIGHT, FeedbackLine.create(KEEP_RIGHT))
+		_show(_hint(TYPE_KEEP_RIGHT, FeedbackLine.create(KEEP_RIGHT)))
 	var speed_kmh: float = ScoringSystem.speed_kmh(player)
 	var min_gap_m: float = LaneQuery.min_gap(speed_kmh)
 	var gap_m: float = LaneQuery.gap_to_leader(player, sim.lanes)
 	if scoring.gap_rule.gap_ratio(player) < 1.0:
-		_show(TYPE_GAP_TOO_SMALL, FeedbackLine.create(GAP_TOO_SMALL, {
+		var shown_min_gap: int = roundi(min_gap_m)
+		_show(_hint(TYPE_GAP_TOO_SMALL, FeedbackLine.create(GAP_TOO_SMALL, {
 			"speed": roundi(speed_kmh),
-			"min_gap": roundi(min_gap_m),
-			# Rounded down, so a gap just short of the minimum never reads as equal to it.
-			"gap": floori(gap_m),
-		}))
+			"min_gap": shown_min_gap,
+			# Below the minimum as shown, so a gap just short of it never reads as equal.
+			"gap": mini(floori(gap_m), shown_min_gap - 1),
+		})))
 	elif _gap_closing(player, gap_m, min_gap_m):
-		_show(TYPE_GAP_CLOSING, FeedbackLine.create(GAP_CLOSING, {
+		_show(_hint(TYPE_GAP_CLOSING, FeedbackLine.create(GAP_CLOSING, {
 			"speed": roundi(speed_kmh),
 			"min_gap": roundi(min_gap_m),
 			"gap": roundi(gap_m),
-		}))
+		})))
 	var limit_kmh: float = sim.road.speed_limit_kmh
-	if scoring.config.speed_rule_enabled and speed_kmh > limit_kmh:
-		# Above the limit already, before S1's tolerance runs out.
-		_show(TYPE_SPEEDING, FeedbackLine.create(SPEEDING, {
+	# Above the limit as shown, so the speed never reads as equal to it; before S1's
+	# tolerance runs out.
+	if scoring.config.speed_rule_enabled and roundi(speed_kmh) > roundi(limit_kmh):
+		_show(_hint(TYPE_SPEEDING, FeedbackLine.create(SPEEDING, {
 			"limit": roundi(limit_kmh),
 			"speed": roundi(speed_kmh),
-		}))
+		})))
 
 
 ## The gap is at or above the legal minimum but within `hint_gap_warning_factor` of
@@ -123,54 +150,53 @@ func _gap_closing(player: VehicleState, gap_m: float, min_gap_m: float) -> bool:
 	return not LaneQuery.is_overtaking(player, sim.lanes, scoring.config.overtake_look_ahead_m)
 
 
-## Confirms a correct signal or names what was wrong with it, for the lane change that
-## just completed.
-func _show_signal_message() -> void:
+## The message confirming a correct signal or naming what was wrong with it, for the
+## lane change that just completed; null without its K3 event.
+func _signal_message() -> Hint:
 	var event: ScoreEvent = _signal_event
-	_signal_event = null
 	if event == null:
-		return
+		return null
 	if event.type == SignalRule.TYPE_OK:
-		_show(event.type, FeedbackLine.create(SIGNAL_OK), true)
-		return
+		return _hint(event.type, FeedbackLine.create(SIGNAL_OK), true)
 	var by_dir: Dictionary = SIGNAL_MESSAGES.get(event.type, {})
 	var dir: VehicleState.Dir = VehicleState.Dir.LEFT \
 			if event.context.get("lane_to", 0) > event.context.get("lane_from", 0) else VehicleState.Dir.RIGHT
 	if not by_dir.has(dir):
-		return
-	_show(event.type, FeedbackLine.create(by_dir[dir], {"seconds": seconds_text(sim.config.signal_min_on_s)}))
+		return null
+	return _hint(event.type, FeedbackLine.create(by_dir[dir], {"seconds": seconds_text(sim.config.signal_min_on_s)}))
 
 
-## Seconds as Polish text: a decimal comma, and no ",0" on whole numbers.
-static func seconds_text(seconds: float) -> String:
-	var tenths: int = roundi(seconds * 10.0)
-	if tenths % 10 == 0:
-		return str(floori(tenths / 10.0))
-	return "%d,%d" % [floori(tenths / 10.0), tenths % 10]
-
-
-## Shows a hint of `type` unless rate limits hold it back; returns whether it showed.
-func _show(type: StringName, line: FeedbackLine, positive: bool = false) -> bool:
-	var now_s: float = sim.time_s
-	if now_s - _last_shown_s.get(type, -INF) < config.hint_cooldown_s:
-		return false
-	for shown: Hint in hints:
-		if shown.type == type:
-			return false
-	if config.hint_max_on_screen <= 0:
-		return false
-	while hints.size() >= config.hint_max_on_screen:
-		hints.pop_front()
+static func _hint(type: StringName, line: FeedbackLine, positive: bool = false) -> Hint:
 	var hint: Hint = Hint.new()
 	hint.type = type
 	hint.line = line
 	hint.positive = positive
+	return hint
+
+
+## Puts `hint` on screen unless its type is rate-limited or there is no room: the
+## screen is full and its oldest hint has not been up `hint_min_display_s` yet, which
+## also keeps a hint from being replaced in the step that showed it.
+func _show(hint: Hint) -> Shown:
+	var now_s: float = sim.time_s
+	if now_s - _last_shown_s.get(hint.type, -INF) < config.hint_cooldown_s:
+		return Shown.RATE_LIMITED
+	for shown: Hint in hints:
+		if shown.type == hint.type:
+			return Shown.RATE_LIMITED
+	if config.hint_max_on_screen <= 0:
+		return Shown.NO_ROOM
+	if hints.size() >= config.hint_max_on_screen:
+		if now_s - hints[0].shown_at_s < config.hint_min_display_s:
+			return Shown.NO_ROOM
+		while hints.size() >= config.hint_max_on_screen:
+			hints.pop_front()
 	hint.shown_at_s = now_s
 	hint.expires_at_s = now_s + config.hint_duration_s
 	hints.append(hint)
-	_last_shown_s[type] = now_s
+	_last_shown_s[hint.type] = now_s
 	hint_shown.emit(hint)
-	return true
+	return Shown.SHOWN
 
 
 ## Runs inside `TrafficSim.step`; the message waits for `observe`, which also has the

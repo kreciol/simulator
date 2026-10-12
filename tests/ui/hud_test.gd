@@ -476,3 +476,24 @@ func test_blind_spot_warning_hides_while_paused() -> void:
 	_session.resume()
 	_hud.update(_session)
 	assert_bool(_hud.blind_spot_left.visible).is_true()
+
+
+func test_a_short_hint_row_is_only_as_wide_as_its_text() -> void:
+	_new_coached()
+	var widths: Array[float] = []
+	for i: int in _hud.hint_list.rows.size():
+		if _hud.hint_list.rows[i].visible:
+			widths.append(_hud.hint_list.labels[i].custom_minimum_size.x)
+	assert_array(widths).is_not_empty()
+	for width: float in widths:
+		assert_float(width).is_greater(0.0)
+		assert_float(width).is_less_equal(HintList.TEXT_WIDTH)
+
+
+func test_hint_rows_follow_the_configured_maximum() -> void:
+	_new_coached()
+	var feedback: FeedbackConfig = (_session.feedback_config.duplicate()) as FeedbackConfig
+	feedback.hint_max_on_screen = 3
+	_session.hint_engine.config = feedback
+	_hud.update(_session)
+	assert_int(_hud.hint_list.rows.size()).is_equal(3)

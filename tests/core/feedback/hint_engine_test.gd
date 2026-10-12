@@ -198,10 +198,62 @@ func test_no_more_than_the_maximum_on_screen() -> void:
 	_setup(1, 150.0)
 	_world.add_car_ahead(1, 30.0, 150.0)
 	_drive(DT)
-	assert_int(_shown.size()).is_equal(3)
+	# Keep-right first, before any penalty; the third waits rather than pushing one out.
+	assert_array(_keys_on_screen()).is_equal([HintEngine.KEEP_RIGHT, HintEngine.GAP_TOO_SMALL])
+	assert_int(_shown.size()).is_equal(2)
+	_drive(_feedback.hint_min_display_s - 2.0 * DT)
+	assert_array(_keys_on_screen()).not_contains([HintEngine.SPEEDING])
+	# Once the oldest has been read, the waiting one takes its place, cooldown unspent.
+	_drive(4.0 * DT)
 	assert_int(_engine.hints.size()).is_equal(2)
-	# The oldest gave way to the newest.
 	assert_array(_keys_on_screen()).is_equal([HintEngine.GAP_TOO_SMALL, HintEngine.SPEEDING])
+
+
+func test_a_lane_change_message_waits_for_room_instead_of_being_lost() -> void:
+	var feedback: FeedbackConfig = _feedback_copy()
+	feedback.hint_max_on_screen = 1
+	feedback.hint_min_display_s = 2.5
+	_setup(0, 150.0, feedback)
+	_start_lane_change(LEFT)
+	# The speeding hint fills the screen; the change completes after 1.75 s.
+	_drive(2.0)
+	assert_array(_keys_on_screen()).is_equal([HintEngine.SPEEDING])
+	_drive(0.6)
+	# The message comes before the K2 hint that now applies too.
+	assert_array(_keys_on_screen()).is_equal([&"HINT_SIGNAL_NONE_LEFT"])
+
+
+func test_a_lane_change_off_the_road_gets_no_signal_message() -> void:
+	_setup(0, 120.0)
+	_signal(RIGHT, 1.5)
+	_start_lane_change(RIGHT)
+	_drive(2.5)
+	assert_bool(_world.player.off_road).is_true()
+	assert_array(_shown_of_type(SignalRule.TYPE_OK)).is_empty()
+	# Back on the road (as a respawn would put it), the next correct change is confirmed.
+	_world.sim.place_vehicle(_world.player, _world.player.s, 0, _world.player.speed_mps)
+	_world.scoring.restart_after_respawn()
+	_engine.clear()
+	_signal(LEFT, 1.5)
+	_start_lane_change(LEFT)
+	_drive(2.5)
+	assert_int(_shown_of_type(SignalRule.TYPE_OK).size()).is_equal(1)
+
+
+func test_speed_just_over_the_limit_never_reads_as_the_limit() -> void:
+	_setup(0, 140.3)
+	_drive(1.0)
+	assert_array(_shown_of_type(HintEngine.TYPE_SPEEDING)).is_empty()
+
+
+func test_a_gap_just_short_of_the_minimum_reads_below_it() -> void:
+	# 120.8 km/h needs 60.4 m, shown as 60; a 60.2 m gap must not read as 60.
+	_setup(0, 120.8)
+	_world.add_car_ahead(0, 60.2, 120.8)
+	_drive(DT)
+	var hints: Array[Hint] = _shown_of_type(HintEngine.TYPE_GAP_TOO_SMALL)
+	assert_int(hints.size()).is_equal(1)
+	assert_dict(hints[0].line.args).is_equal({"speed": 121, "min_gap": 60, "gap": 59})
 
 
 func test_the_maximum_on_screen_comes_from_the_config() -> void:

@@ -11,8 +11,11 @@ extends Resource
 ## Hints (§11.2): a hint of one type is not shown again sooner than this after the
 ## last one, in seconds of driving.
 @export var hint_cooldown_s: float
-## At most this many hints on screen at once; a new one replaces the oldest.
+## At most this many hints on screen at once; a new one replaces the oldest...
 @export var hint_max_on_screen: int
+## ...only once that has been up this long, so none vanishes before it can be read.
+## Above 0, so a hint is never replaced in the step that showed it.
+@export var hint_min_display_s: float
 ## How long a hint stays on screen, in seconds of driving.
 @export var hint_duration_s: float
 ## The gap counts as closing in on the legal minimum — a preventive hint before K1 —

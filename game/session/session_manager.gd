@@ -70,7 +70,7 @@ var paused: bool = false
 var summary: Summary
 ## Learn-mode hints, fed after every scored step and cleared on a respawn; null in the
 ## exam, or without both configs.
-var hints: HintEngine
+var hint_engine: HintEngine
 
 ## The player's collision or off-road seen during the current sim step; the session
 ## ends once the step is over.
@@ -98,9 +98,9 @@ func setup(road_profile: RoadProfile, sim_config: SimConfig, seed_value: int = 0
 	sim.collision.connect(_on_collision)
 	sim.offroad.connect(_on_offroad)
 	scoring = ScoringSystem.new(sim, scoring_config) if scoring_config != null else null
-	hints = null
+	hint_engine = null
 	if scoring != null and feedback_config != null and not is_exam():
-		hints = HintEngine.new(sim, scoring, feedback_config)
+		hint_engine = HintEngine.new(sim, scoring, feedback_config)
 	started_at = ""
 	record = null
 	summary = null
@@ -132,8 +132,8 @@ func step(dt: float, commands: PlayerCommands = null) -> void:
 			sim.step(dt, commands)
 			if scoring != null:
 				var events: Array[ScoreEvent] = scoring.observe(dt)
-				if hints != null:
-					hints.observe(events)
+				if hint_engine != null:
+					hint_engine.observe(events)
 			elapsed_s += dt
 			var incident: EndReason = _player_end_reason
 			_player_end_reason = EndReason.NONE
@@ -249,8 +249,8 @@ func _respawn() -> void:
 	Respawn.respawn_player(sim)
 	if scoring != null:
 		scoring.restart_after_respawn()
-	if hints != null:
-		hints.clear()
+	if hint_engine != null:
+		hint_engine.clear()
 	respawn_count += 1
 	player_respawned.emit()
 

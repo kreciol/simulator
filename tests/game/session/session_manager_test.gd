@@ -732,7 +732,7 @@ func _change_left_without_signal() -> void:
 
 func _hint_keys() -> Array[StringName]:
 	var keys: Array[StringName] = []
-	for hint: Hint in _session.hints.hints:
+	for hint: Hint in _session.hint_engine.hints:
 		keys.append(hint.line.key)
 	return keys
 
@@ -740,7 +740,7 @@ func _hint_keys() -> Array[StringName]:
 func test_learn_mode_names_a_missing_signal_after_the_lane_change() -> void:
 	_scored()
 	_start_driving()
-	assert_object(_session.hints).is_not_null()
+	assert_object(_session.hint_engine).is_not_null()
 	_change_left_without_signal()
 	assert_array(_hint_keys()).contains([&"HINT_SIGNAL_NONE_LEFT"])
 
@@ -750,12 +750,12 @@ func test_exam_has_no_hints_for_the_same_events() -> void:
 	_start_driving()
 	_change_left_without_signal()
 	assert_array(_session.scoring.event_log.events_of_type(SignalRule.TYPE_NONE)).has_size(1)
-	assert_object(_session.hints).is_null()
+	assert_object(_session.hint_engine).is_null()
 
 
 func test_no_hints_without_a_feedback_config() -> void:
 	_start_learn_with_scoring()
-	assert_object(_session.hints).is_null()
+	assert_object(_session.hint_engine).is_null()
 
 
 func test_a_respawn_clears_the_hints() -> void:
@@ -764,7 +764,7 @@ func test_a_respawn_clears_the_hints() -> void:
 	_step(30)
 	_crash_into_a_stopped_car()
 	assert_int(_session.state).is_equal(SessionManager.State.RESPAWNING)
-	assert_array(_session.hints.hints).is_not_empty()
+	assert_array(_session.hint_engine.hints).is_not_empty()
 	_step(_steps_for(_config.respawn_fade_s))
 	assert_int(_session.state).is_equal(SessionManager.State.DRIVING)
-	assert_array(_session.hints.hints).is_empty()
+	assert_array(_session.hint_engine.hints).is_empty()
