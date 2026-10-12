@@ -185,6 +185,96 @@ func test_learn_session_ended_off_road_is_not_an_exam_failure() -> void:
 	assert_str(_hud.ended_cause_label.text).is_equal("Przyczyna: zjechanie z drogi")
 
 
+## A learn session scored with the shipped config, past its countdown.
+func _new_scored(session_mode: StringName = LaunchOptions.MODE_LEARN) -> void:
+	_session = auto_free(SessionManager.new()) as SessionManager
+	_session.scoring_config = load("res://config/scoring.tres") as ScoringConfig
+	_session.setup(load("res://config/road_profiles/motorway.tres") as RoadProfile,
+			load("res://config/sim_config.tres") as SimConfig, 0, session_mode)
+	_finish_countdown()
+
+
+## Puts a vehicle `behind_m` behind the player on the lane `lane_offset` from its own,
+## at its speed.
+func _add_beside(lane_offset: int, behind_m: float) -> void:
+	var player: VehicleState = _session.player
+	_session.sim.add_vehicle(player.s - behind_m, player.lane + lane_offset, player.speed_mps)
+	_hud.update(_session)
+
+
+func test_learn_shows_the_live_score() -> void:
+	_new_scored()
+	_hud.update(_session)
+	assert_bool(_hud.score_panel.is_visible_in_tree()).is_true()
+	assert_str(_hud.score_label.text).is_equal("0")
+	_step(10.0)
+	assert_int(int(_hud.score_label.text)).is_greater(0)
+	assert_str(_hud.score_label.text).is_equal(str(roundi(_session.scoring.total_score())))
+
+
+func test_exam_hides_the_live_score() -> void:
+	_new_scored(LaunchOptions.MODE_EXAM)
+	_step(10.0)
+	assert_float(_session.scoring.total_score()).is_greater(0.0)
+	assert_bool(_hud.score_panel.visible).is_false()
+
+
+func test_unscored_session_shows_no_score() -> void:
+	assert_object(_session.scoring).is_null()
+	assert_bool(_hud.score_panel.visible).is_false()
+
+
+func test_blind_spot_warning_shows_on_the_left_side_only() -> void:
+	_new_scored()
+	_add_beside(1, 5.0)
+	assert_bool(_hud.blind_spot_left.is_visible_in_tree()).is_true()
+	assert_bool(_hud.blind_spot_right.visible).is_false()
+
+
+func test_blind_spot_warning_shows_on_the_right_side_only() -> void:
+	_new_scored()
+	_step(DT, PlayerCommands.create(VehicleState.Longitudinal.NONE, VehicleState.Dir.LEFT, VehicleState.Dir.NONE))
+	_step(_session.sim.config.lane_change_duration_s)
+	assert_int(_session.player.lane).is_equal(1)
+	assert_bool(_session.player.lane_change_active).is_false()
+	_add_beside(-1, 5.0)
+	assert_bool(_hud.blind_spot_right.is_visible_in_tree()).is_true()
+	assert_bool(_hud.blind_spot_left.visible).is_false()
+
+
+func test_vehicle_outside_the_zone_shows_no_warning() -> void:
+	_new_scored()
+	_add_beside(1, _view.blind_spot_behind_m + 10.0)
+	assert_bool(_hud.blind_spot_left.visible).is_false()
+	assert_bool(_hud.blind_spot_right.visible).is_false()
+
+
+func test_exam_shows_no_blind_spot_warning() -> void:
+	_new_scored(LaunchOptions.MODE_EXAM)
+	_add_beside(1, 5.0)
+	assert_bool(LaneQuery.blind_spot_occupied(_session.sim.lanes, _session.player, VehicleState.Dir.LEFT,
+			_view.blind_spot_ahead_m, _view.blind_spot_behind_m)).is_true()
+	assert_bool(_hud.blind_spot_left.visible).is_false()
+	assert_bool(_hud.blind_spot_right.visible).is_false()
+
+
+func test_blind_spot_warning_waits_for_the_drive() -> void:
+	_session.sim.add_vehicle(_session.player.s - 5.0, 1, _session.player.speed_mps)
+	_hud.update(_session)
+	assert_int(_session.state).is_equal(SessionManager.State.INTRO)
+	assert_bool(_hud.blind_spot_left.visible).is_false()
+
+
+func test_blind_spot_warning_is_an_icon_and_text_under_its_mirror() -> void:
+	for warning: VBoxContainer in [_hud.blind_spot_left, _hud.blind_spot_right]:
+		assert_object(warning.get_node("Icon/Triangle")).is_not_null()
+		assert_str((warning.get_node("Icon/Mark") as Label).text).is_equal("!")
+		assert_str((warning.get_node("Text") as Label).text).is_equal("Martwe pole")
+		assert_float(warning.anchor_top).is_equal(_view.left_mirror_rect.end.y)
+	assert_float(_hud.blind_spot_left.anchor_left).is_equal(_view.left_mirror_rect.position.x)
+	assert_float(_hud.blind_spot_right.anchor_right).is_equal_approx(1.0 - _view.left_mirror_rect.position.x, 1e-6)
+
+
 func test_pause_screen_shows_only_while_paused() -> void:
 	assert_bool(_hud.paused_screen.visible).is_false()
 	_session.pause()
@@ -235,3 +325,15 @@ func test_save_status_is_shown_in_polish_on_the_end_screen() -> void:
 	# Stacked under the end title and its cause, on the end screen.
 	assert_object(_hud.save_status_label.get_parent()).is_same(_hud.ended_label.get_parent())
 	assert_bool(_hud.ended_screen.is_ancestor_of(_hud.save_status_label)).is_true()
+
+
+func test_blind_spot_warning_hides_while_paused() -> void:
+	_new_scored()
+	_add_beside(1, 5.0)
+	assert_bool(_hud.blind_spot_left.visible).is_true()
+	_session.pause()
+	_hud.update(_session)
+	assert_bool(_hud.blind_spot_left.visible).is_false()
+	_session.resume()
+	_hud.update(_session)
+	assert_bool(_hud.blind_spot_left.visible).is_true()

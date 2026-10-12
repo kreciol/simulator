@@ -68,6 +68,12 @@ extends Resource
 ## the player fades out instead of showing.
 @export_range(0.0, 1.0) var mirror_fog_begin_share: float
 
+## Learn-mode blind-spot icons (spec Phase 7 step 3, Q10): a vehicle on the lane beside
+## the player within this zone, measured from the player's centre, lights the icon by
+## that side's mirror (`LaneQuery.blind_spot_occupied`).
+@export var blind_spot_ahead_m: float
+@export var blind_spot_behind_m: float
+
 
 ## A copy with `quality`'s draw distance; the shared resource stays untouched.
 func for_quality(quality: QualityPreset) -> ViewConfig:
@@ -94,6 +100,14 @@ func draw_distance_m() -> float:
 ## Distance behind the player always covered by road.
 func covered_behind_m() -> float:
 	return float(segments_behind) * segment_length_m
+
+
+## Where the right side mirror sits on screen: the left one reflected across the
+## screen's vertical centreline.
+func right_mirror_rect() -> Rect2:
+	var rect: Rect2 = left_mirror_rect
+	rect.position.x = 1.0 - left_mirror_rect.end.x
+	return rect
 
 
 ## How far the mirrors see: exactly the road always kept behind, so they never show

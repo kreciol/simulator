@@ -34,3 +34,5 @@ side_mirror_fov_deg = 22.0
 side_mirror_outward_deg = 8.0
 mirror_pitch_down_deg = 2.0
 mirror_fog_begin_share = 0.6
+blind_spot_ahead_m = 1.0
+blind_spot_behind_m = 8.0
