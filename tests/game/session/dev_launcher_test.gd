@@ -1,7 +1,7 @@
 extends GdUnitTestSuite
 ## Dev launcher: mode, profile, level and seed from URL params or user args, with
 ## defaults for missing or invalid values (issue #9 acceptance criteria, spec Phase 3
-## step 4).
+## step 4); quality and mirrors the same way (issue #25).
 
 const RANDOM_SEED: int = 777
 
@@ -23,6 +23,8 @@ func _assert_defaults(options: LaunchOptions) -> void:
 	assert_int(options.difficulty.id).is_equal(_config.default_level)
 	assert_int(options.seed_value).is_equal(RANDOM_SEED)
 	assert_bool(options.seed_given).is_false()
+	assert_str(options.quality.id).is_equal(_config.default_quality)
+	assert_bool(options.mirrors).is_equal(_config.default_mirrors)
 
 
 func test_config_offers_both_profiles_and_four_levels() -> void:
@@ -33,10 +35,22 @@ func test_config_offers_both_profiles_and_four_levels() -> void:
 	assert_bool(_config.default_mode in LaunchOptions.MODES).is_true()
 	assert_object(_config.find_profile(_config.default_profile)).is_not_null()
 	assert_int(_config.default_level).is_between(1, _config.levels.size())
+	assert_object(_config.find_quality(&"low")).is_not_null()
+	assert_object(_config.find_quality(&"high")).is_not_null()
+	assert_object(_config.find_quality(&"ultra")).is_null()
+
+
+func test_documented_defaults_are_high_quality_with_mirrors() -> void:
+	# README "Dev launcher": no quality param → high, no mirrors param → mirrors on.
+	var options: LaunchOptions = _from_query("")
+	assert_str(options.quality.id).is_equal(&"high")
+	assert_bool(options.mirrors).is_true()
 
 
 func test_all_params_are_used() -> void:
-	var options: LaunchOptions = _from_query("?mode=exam&profile=expressway&level=3&seed=42")
+	var options: LaunchOptions = _from_query("?mode=exam&profile=expressway&level=3&seed=42&quality=low&mirrors=0")
+	assert_str(options.quality.id).is_equal(&"low")
+	assert_bool(options.mirrors).is_false()
 	assert_str(options.mode).is_equal(LaunchOptions.MODE_EXAM)
 	assert_str(options.profile.id).is_equal(&"expressway")
 	assert_float(options.profile.speed_limit_kmh).is_equal(120.0)
@@ -66,6 +80,11 @@ func test_invalid_values_fall_back_to_defaults(query: String, test_parameters: A
 		["?seed=abc"],
 		["?seed=-5"],
 		["?seed="],
+		["?quality=ultra"],
+		["?quality="],
+		["?mirrors=2"],
+		["?mirrors=yes"],
+		["?mirrors="],
 		["?mode=race&profile=autobahn&level=9&seed=x"],
 		["?level&seed&=3&&=&profile"],
 		]) -> void:
@@ -99,6 +118,17 @@ func test_keys_and_values_are_case_insensitive_and_url_decoded() -> void:
 func test_unknown_keys_are_ignored_and_a_repeated_key_keeps_its_last_value() -> void:
 	var options: LaunchOptions = _from_query("?perf=1&level=2&level=4")
 	assert_int(options.level).is_equal(4)
+
+
+func test_quality_and_mirrors_each_switch_alone() -> void:
+	var low: LaunchOptions = _from_query("?QUALITY=Low")
+	assert_str(low.quality.id).is_equal(&"low")
+	assert_bool(low.mirrors).is_equal(_config.default_mirrors)
+	var no_mirrors: LaunchOptions = _from_query("?mirrors=0")
+	assert_bool(no_mirrors.mirrors).is_false()
+	assert_str(no_mirrors.quality.id).is_equal(_config.default_quality)
+	assert_bool(_from_query("?mirrors=1").mirrors).is_true()
+	assert_str(_from_query("?quality=high").quality.id).is_equal(&"high")
 
 
 func test_user_args_parse_the_same_as_the_query() -> void:

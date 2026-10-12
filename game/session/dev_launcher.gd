@@ -3,13 +3,17 @@ extends RefCounted
 ## Dev launcher (spec Phasing, Phase 3 step 4): until the Phase 10 menus exist, a
 ## session's mode, road profile, level and seed come from URL query params on web
 ## (`?mode=exam&profile=expressway&level=3&seed=42`) or from user args on desktop
-## (`godot -- --profile=expressway --seed=42`). A missing or invalid value falls back
-## to its default from `DevLauncherConfig`; a missing seed is drawn at random.
+## (`godot -- --profile=expressway --seed=42`), and so do the graphics quality and
+## the mirrors (`&quality=low&mirrors=0`, issue #25). A missing or invalid value falls
+## back to its default from `DevLauncherConfig` (`high` quality, mirrors on); a missing
+## seed is drawn at random.
 
 const KEY_MODE: String = "mode"
 const KEY_PROFILE: String = "profile"
 const KEY_LEVEL: String = "level"
 const KEY_SEED: String = "seed"
+const KEY_QUALITY: String = "quality"
+const KEY_MIRRORS: String = "mirrors"
 
 
 ## Launch options from this platform's params: the page URL on web, user args elsewhere.
@@ -81,6 +85,22 @@ static func resolve(params: Dictionary, config: DevLauncherConfig, random_seed: 
 			options.seed_given = true
 		else:
 			_warn_invalid(KEY_SEED, seed_text)
+
+	options.quality = config.find_quality(config.default_quality)
+	if params.has(KEY_QUALITY):
+		var quality: QualityPreset = config.find_quality(StringName(String(params[KEY_QUALITY]).to_lower()))
+		if quality != null:
+			options.quality = quality
+		else:
+			_warn_invalid(KEY_QUALITY, params[KEY_QUALITY])
+
+	options.mirrors = config.default_mirrors
+	if params.has(KEY_MIRRORS):
+		var mirrors: String = params[KEY_MIRRORS]
+		if mirrors == "0" or mirrors == "1":
+			options.mirrors = mirrors == "1"
+		else:
+			_warn_invalid(KEY_MIRRORS, mirrors)
 
 	return options
 
