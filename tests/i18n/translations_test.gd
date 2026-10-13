@@ -41,6 +41,8 @@ func _summary_keys() -> Array[StringName]:
 		SummaryGenerator.STATUS_EXAM_PASSED, SummaryGenerator.STATUS_EXAM_FAILED,
 		SummaryGenerator.ALL_GOOD, SummaryGenerator.EXAM_BELOW_PASS, SummaryGenerator.TIP_GENERAL,
 		SummaryGenerator.TIP_GENERAL_EXAM, SummaryGenerator.TIP_EXAM_POINTS,
+		SummaryGenerator.RESPAWN_COLLISION, SummaryGenerator.RESPAWN_OFFROAD,
+		SummaryGenerator.RESPAWN_BOTH, SummaryGenerator.TIP_COLLISION, SummaryGenerator.TIP_OFFROAD,
 		&"SUMMARY_TOTAL", &"SUMMARY_CATEGORY_ROW", &"SUMMARY_TIP_TITLE",
 	]
 	for table: Dictionary in [SummaryGenerator.CAUSES, SummaryGenerator.ABORT_SENTENCES,
@@ -62,7 +64,8 @@ func test_every_summary_text_is_translated_to_polish() -> void:
 
 func test_summary_sentences_are_one_sentence_each() -> void:
 	# The description counts sentences by line (2–4, requirements §11.3).
-	var keys: Array[StringName] = [SummaryGenerator.ALL_GOOD, SummaryGenerator.EXAM_BELOW_PASS]
+	var keys: Array[StringName] = [SummaryGenerator.ALL_GOOD, SummaryGenerator.EXAM_BELOW_PASS,
+			SummaryGenerator.RESPAWN_COLLISION, SummaryGenerator.RESPAWN_OFFROAD, SummaryGenerator.RESPAWN_BOTH]
 	for table: Dictionary in [SummaryGenerator.ABORT_SENTENCES, SummaryGenerator.STRENGTHS,
 			SummaryGenerator.RELATIVE_STRENGTHS, SummaryGenerator.IMPROVEMENTS]:
 		for key: StringName in table.values():
