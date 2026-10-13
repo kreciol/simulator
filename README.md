@@ -39,6 +39,7 @@ godot --path . -- --mode=exam --profile=expressway --level=3 --seed=42 --quality
 | `quality` | `low`, `high` — mirror resolution and refresh, shadows, draw distance (`config/quality_presets/`) | `high` |
 | `mirrors` | `0` (off), `1` (on) | `1` |
 | `perf` | `0` (off), `1` — print average and 5th-percentile FPS after 60 s of driving (see [Performance measurement](#performance-measurement)) | `0` |
+| `screen` | `drive`, `history` — open the result history (recent sessions, bests, score trend) instead of a session | `drive` |
 
 A missing or invalid value falls back to its default (with a warning in the console); defaults live in `config/dev_launcher.tres`. The resolved options, including the seed, are printed at start (`Dev launcher: mode=… seed=…`), so a session can be replayed with the same seed.
 

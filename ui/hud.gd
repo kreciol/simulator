@@ -4,7 +4,8 @@ extends CanvasLayer
 ## the session time left, plus the 3-2-1 countdown, the learn-mode respawn fade with
 ## what happened, the pause screen, the end-of-session summary — status, cause of an
 ## aborted session, score, categories, description and tip (requirements §11.3) — with
-## whether the result was saved, and a timed, non-blocking notice (the low-FPS
+## how it compares with the previous and best result of its combination and whether
+## the result was saved, and a timed, non-blocking notice (the low-FPS
 ## suggestion). In learn mode only (Q10, Q11) it also shows the live score and, under
 ## each side mirror, a blind-spot warning (icon and text, never colour alone) while
 ## driving with a vehicle in that side's blind spot (`LaneQuery.blind_spot_occupied`) —
@@ -97,6 +98,9 @@ var score_panel: VBoxContainer
 var score_label: Label
 var blind_spot_left: VBoxContainer
 var blind_spot_right: VBoxContainer
+## How the result compares with the previous and best one (`ResultComparison`);
+## hidden until it is known.
+var comparison_label: Label
 ## Whether the finished session was saved, or why not; hidden until it is known.
 var save_status_label: Label
 var toast: PanelContainer
@@ -223,11 +227,9 @@ func setup(view_config: ViewConfig) -> void:
 	summary_panel = SummaryPanel.new()
 	summary_panel.visible = false
 	ended_notice.add_child(summary_panel)
-	save_status_label = _label("SaveStatus", SAVE_STATUS_FONT_SIZE)
-	save_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	# A wrapping label needs a width; the notice centres it under the summary.
-	save_status_label.custom_minimum_size = Vector2(SAVE_STATUS_WIDTH, 0.0)
-	save_status_label.visible = false
+	comparison_label = _wrapped_label("Comparison")
+	ended_notice.add_child(comparison_label)
+	save_status_label = _wrapped_label("SaveStatus")
 	ended_notice.add_child(save_status_label)
 
 	toast = _toast()
@@ -308,6 +310,16 @@ func update(session: SessionManager) -> void:
 		ended_cause_label.text = tr(cause) if cause != &"" else ""
 
 
+## Shows how the finished session compares with the earlier results of its
+## combination, under the summary: the sentences side by side.
+func show_comparison(lines: Array[FeedbackLine]) -> void:
+	var sentences: PackedStringArray = []
+	for line: FeedbackLine in lines:
+		sentences.append(tr(line.key).format(line.args))
+	comparison_label.text = " ".join(sentences)
+	comparison_label.visible = not sentences.is_empty()
+
+
 ## Shows the outcome of saving the finished session under the end notice.
 func show_save_status(saved: bool, history: HistoryStore) -> void:
 	var lines: PackedStringArray = []
@@ -361,6 +373,16 @@ func _center(notice: Control) -> void:
 	notice.set_anchors_and_offsets_preset(Control.PRESET_CENTER, Control.PRESET_MODE_MINSIZE)
 	notice.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	notice.grow_vertical = Control.GROW_DIRECTION_BOTH
+
+
+## A line under the summary, hidden until it has text; it wraps at the summary's width.
+func _wrapped_label(node_name: String) -> Label:
+	var label: Label = _label(node_name, SAVE_STATUS_FONT_SIZE)
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	# A wrapping label needs a width; the notice centres it under the summary.
+	label.custom_minimum_size = Vector2(SAVE_STATUS_WIDTH, 0.0)
+	label.visible = false
+	return label
 
 
 func _centered_label(node_name: String, font_size: int) -> Label:

@@ -249,3 +249,59 @@ func test_a_corrupt_file_on_unavailable_storage_is_moved_aside_but_nothing_is_wr
 	assert_int(store.notice).is_equal(HistoryStore.Notice.CORRUPT_RECOVERED)
 	assert_bool(store.can_save()).is_false()
 	assert_bool(FileAccess.file_exists(PATH)).is_false()
+
+
+# --- History screen queries (issue #41, spec Phase 9 step 2) ---
+
+
+func _ids(entries: Array[Dictionary]) -> Array[String]:
+	var ids: Array[String] = []
+	for entry: Dictionary in entries:
+		ids.append(str(entry["id"]))
+	return ids
+
+
+func test_the_history_screen_counts_live_in_the_config() -> void:
+	var config: PersistenceConfig = load("res://config/persistence.tres") as PersistenceConfig
+	assert_int(config.history_recent_count).is_equal(10)
+	assert_int(config.history_trend_count).is_equal(20)
+
+
+func test_recent_lists_the_latest_sessions_newest_first() -> void:
+	for i: int in 4:
+		_store.save_record(_record("s%d" % i, float(i)))
+	assert_array(_ids(_store.recent(3))).contains_exactly(["s3", "s2", "s1"])
+	assert_array(_ids(_store.recent(10))).contains_exactly(["s3", "s2", "s1", "s0"])
+
+
+func test_queries_on_an_empty_history_return_nothing() -> void:
+	assert_array(_store.recent(10)).is_empty()
+	assert_array(_store.bests()).is_empty()
+	assert_array(_store.trend_scores(20)).is_empty()
+	assert_dict(_store.previous_for(SessionRecord.MODE_LEARN, &"motorway", 2)).is_empty()
+
+
+func test_bests_lists_one_completed_session_per_combination_in_a_stable_order() -> void:
+	_store.save_record(_record("learn3", 5.0, SessionRecord.STATUS_COMPLETED, SessionRecord.MODE_LEARN, 3))
+	_store.save_record(_record("exam2", 10.0, SessionRecord.STATUS_COMPLETED, SessionRecord.MODE_EXAM))
+	_store.save_record(_record("learn2", 50.0))
+	_store.save_record(_record("learn2_worse", 20.0))
+	_store.save_record(_record("crash1", 90.0, SessionRecord.STATUS_ABORTED_COLLISION, SessionRecord.MODE_LEARN, 1))
+	assert_array(_ids(_store.bests())).contains_exactly(["exam2", "learn2", "learn3"])
+
+
+func test_previous_for_is_the_latest_session_of_that_combination_whatever_its_status() -> void:
+	_store.save_record(_record("learn2_a", 30.0))
+	_store.save_record(_record("learn2_crash", 12.0, SessionRecord.STATUS_ABORTED_OFFROAD))
+	_store.save_record(_record("exam2", 70.0, SessionRecord.STATUS_COMPLETED, SessionRecord.MODE_EXAM))
+	_store.save_record(_record("learn3", 70.0, SessionRecord.STATUS_COMPLETED, SessionRecord.MODE_LEARN, 3))
+	var previous: Dictionary = _store.previous_for(SessionRecord.MODE_LEARN, &"motorway", 2)
+	assert_str(str(previous["id"])).is_equal("learn2_crash")
+	assert_dict(_store.previous_for(SessionRecord.MODE_EXAM, &"motorway", 3)).is_empty()
+
+
+func test_trend_scores_are_the_latest_totals_oldest_first() -> void:
+	for score: float in [10.0, 25.5, 40.0, 35.0]:
+		_store.save_record(_record("s%d" % score, score))
+	assert_array(_store.trend_scores(3)).contains_exactly([25.5, 40.0, 35.0])
+	assert_array(_new_store().trend_scores(20)).contains_exactly([10.0, 25.5, 40.0, 35.0])

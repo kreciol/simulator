@@ -8,6 +8,9 @@ extends Node3D
 ## args on desktop) until the Phase 10 menus exist.
 ## With `perf=1` an FPS probe samples the drive and prints its result (Phase 5 step 2);
 ## sustained low FPS suggests the low preset once per session (spec Edge Cases).
+## `screen=history` opens the history screen instead of a session (Phase 9 step 2).
+
+const HISTORY_SCENE: String = "res://ui/history_screen.tscn"
 
 @export var launcher_config: DevLauncherConfig
 @export var sim_config: SimConfig
@@ -22,6 +25,8 @@ var sim: TrafficSim
 var player: VehicleState
 ## The FPS probe's printed line, empty until it has reported (or without `perf=1`).
 var perf_report: String = ""
+## Switches to another scene by path; tests replace it to watch instead.
+var change_scene: Callable = func(path: String) -> void: get_tree().change_scene_to_file(path)
 
 var _input: PlayerInput = PlayerInput.new()
 ## Null unless the launch asked for the probe.
@@ -43,6 +48,13 @@ func _ready() -> void:
 		launch_options = DevLauncher.from_environment(launcher_config)
 	# Printed so a tester can replay the session with the same seed.
 	print("Dev launcher: ", launch_options.describe())
+	if launch_options.screen == LaunchOptions.SCREEN_HISTORY:
+		# No session starts: nothing to step, draw or steer until the scene is swapped.
+		set_process(false)
+		set_physics_process(false)
+		set_process_unhandled_input(false)
+		change_scene.call_deferred(HISTORY_SCENE)
+		return
 	road_profile = launch_options.profile
 	quality = launch_options.quality
 	# The preset sets the draw distance; the shared config resource stays untouched.
@@ -113,15 +125,27 @@ func _notification(what: int) -> void:
 		_input.reset()
 
 
-## Saves the finished session to the local history and tells the player how it went.
-## Play never depends on it: with saving disabled the session just is not kept.
+## Compares the finished session with the earlier results of its combination, saves it
+## to the local history and tells the player how both went. Play never depends on it:
+## with saving disabled the session just is not kept.
 func _on_session_ended() -> void:
 	# A session that ends before the probe's window fills still reports what it measured.
 	if _fps_probe != null and perf_report.is_empty():
 		_report_probe()
 	if session.record == null:
 		return
-	var saved: bool = SaveManager.save_record(session.record)
+	var record: SessionRecord = session.record
+	var history: HistoryStore = SaveManager.store
+	# Read before saving, so the comparison is with the results before this one. With
+	# saving disabled there is no history to compare with, and this result will not
+	# join it either: the save status explains why instead.
+	var comparison: Array[FeedbackLine] = []
+	if history.can_save():
+		comparison = ResultComparison.compare(record,
+				history.previous_for(record.mode, record.road_profile, record.difficulty),
+				history.best_for(record.mode, record.road_profile, record.difficulty))
+	_hud.show_comparison(comparison)
+	var saved: bool = SaveManager.save_record(record)
 	_hud.show_save_status(saved, SaveManager.store)
 
 
@@ -129,5 +153,7 @@ func _update_views() -> void:
 	_road_view.update(player.s)
 	_traffic_view.update()
 	_player_view.update(player, sim.lateral_position(player), sim.time_s)
+	# The end screen dims the frozen scene; the mirrors go with it.
+	_mirrors_view.set_shown(session.state != SessionManager.State.ENDED)
 	_mirrors_view.update(_player_view.position)
 	_hud.update(session)

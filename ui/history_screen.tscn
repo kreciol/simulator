@@ -1,0 +1,15 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://ui/history_screen.gd" id="1_history"]
+[ext_resource type="Resource" path="res://config/dev_launcher.tres" id="2_launcher"]
+
+[node name="HistoryScreen" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_history")
+show_saved_on_ready = true
+launcher_config = ExtResource("2_launcher")
