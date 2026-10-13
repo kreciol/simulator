@@ -40,6 +40,7 @@ var _low_fps_watch: LowFpsWatch
 
 @onready var session: SessionManager = $SessionManager
 @onready var _road_view: RoadView = $RoadView
+@onready var _hectometre_posts: HectometrePostsView = $HectometrePosts
 @onready var _traffic_view: TrafficView = $TrafficView
 @onready var _player_view: PlayerView = $PlayerView
 @onready var _mirrors_view: MirrorsView = $MirrorsView
@@ -73,6 +74,7 @@ func _ready() -> void:
 	sim = session.sim
 	player = session.player
 	_road_view.setup(road_profile, view_config)
+	_hectometre_posts.setup(road_profile, view_config)
 	_traffic_view.setup(sim, view_config)
 	_player_view.setup(view_config)
 	_mirrors_view.setup(view_config, quality, launch_options.mirrors, _world_environment.environment)
@@ -159,7 +161,10 @@ func _on_session_ended() -> void:
 
 func _update_views() -> void:
 	_road_view.update(player.s)
+	_hectometre_posts.update(player.s)
 	_traffic_view.update()
 	_player_view.update(player, sim.lateral_position(player), sim.time_s)
+	# The end screen dims the frozen scene; the mirrors go with it.
+	_mirrors_view.set_shown(session.state != SessionManager.State.ENDED)
 	_mirrors_view.update(_player_view.position)
 	_hud.update(session)
