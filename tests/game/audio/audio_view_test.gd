@@ -16,11 +16,19 @@ var _audio: AudioView
 func before_test() -> void:
 	_sim_config = load("res://config/sim_config.tres") as SimConfig
 	_audio_config = load("res://config/audio_config.tres") as AudioConfig
+	_start(LaunchOptions.MODE_LEARN)
+
+
+func _start(mode: StringName) -> void:
 	_session = auto_free(SessionManager.new()) as SessionManager
-	_session.setup(load("res://config/road_profiles/motorway.tres") as RoadProfile, _sim_config)
+	_session.setup(load("res://config/road_profiles/motorway.tres") as RoadProfile, _sim_config, 0, mode)
 	_audio = AudioView.new()
 	add_child(auto_free(_audio))
-	_audio.setup(_session, load("res://config/view_config.tres") as ViewConfig, _audio_config, TOP_KMH)
+	_audio.setup(_session, _view(), _audio_config, TOP_KMH)
+
+
+func _view() -> ViewConfig:
+	return load("res://config/view_config.tres") as ViewConfig
 
 
 func after_test() -> void:
@@ -126,3 +134,119 @@ func test_audio_does_not_change_the_simulation() -> void:
 		plain.step(DT, commands)
 	_step(600, commands)
 	assert_dict(_session.sim.snapshot()).is_equal(plain.sim.snapshot())
+
+
+func _signal(dir: VehicleState.Dir) -> PlayerCommands:
+	var commands: PlayerCommands = PlayerCommands.new()
+	commands.signal_toggle = dir
+	return commands
+
+
+## Drives `steps` steps, counting the blinking arrow's switches on and off as the HUD
+## sees them; returns [ons, offs].
+func _count_blinks(steps: int) -> Array[int]:
+	var counts: Array[int] = [0, 0]
+	var lit: bool = SignalBlink.is_lit(_session.player, _session.sim.time_s, _view().signal_blink_hz)
+	for i: int in steps:
+		_step(1)
+		var now: bool = SignalBlink.is_lit(_session.player, _session.sim.time_s, _view().signal_blink_hz)
+		if now and not lit:
+			counts[0] += 1
+		elif lit and not now:
+			counts[1] += 1
+		lit = now
+	return counts
+
+
+func test_indicator_ticks_in_step_with_the_blinking_arrow() -> void:
+	_drive()
+	_step(1, _signal(VehicleState.Dir.LEFT))
+	# Each blink starts lit: the first tick comes with the switch.
+	assert_int(_audio.tick_count).is_equal(1)
+	var blinks: Array[int] = _count_blinks(180)
+	assert_int(blinks[0]).is_greater(0)
+	assert_int(_audio.tick_count).is_equal(1 + blinks[0])
+	assert_int(_audio.tock_count).is_equal(blinks[1])
+	assert_str(_audio.tick_player.bus).is_equal(AudioView.EFFECTS_BUS)
+
+
+func test_indicator_stops_as_soon_as_the_signal_is_off() -> void:
+	_drive()
+	_step(1, _signal(VehicleState.Dir.RIGHT))
+	_step(30)
+	_step(1, _signal(VehicleState.Dir.RIGHT))
+	var ticks: int = _audio.tick_count
+	var tocks: int = _audio.tock_count
+	_step(180)
+	assert_int(_audio.tick_count).is_equal(ticks)
+	# At most the one closing click when the lamp goes dark with the switch.
+	assert_int(_audio.tock_count).is_less_equal(tocks + 1)
+	var after: int = _audio.tock_count
+	_step(180)
+	assert_int(_audio.tock_count).is_equal(after)
+
+
+func test_indicator_is_silent_while_paused() -> void:
+	_drive()
+	_step(1, _signal(VehicleState.Dir.LEFT))
+	_session.pause()
+	var ticks: int = _audio.tick_count + _audio.tock_count
+	_step(180)
+	assert_int(_audio.tick_count + _audio.tock_count).is_equal(ticks)
+
+
+## Drops a stopped car just ahead of the player and drives until the player hits it.
+func _crash() -> void:
+	var player: VehicleState = _session.player
+	_session.sim.add_vehicle(player.s + player.length_m + 1.0, 0, 0.0)
+	var steps: int = 0
+	while _session.state == SessionManager.State.DRIVING and steps < 120:
+		_step(1)
+		steps += 1
+
+
+func _leave_the_road() -> void:
+	var right: PlayerCommands = PlayerCommands.new()
+	right.lane_change = VehicleState.Dir.RIGHT
+	_step(1, right)
+	_step(roundi(_sim_config.lane_change_duration_s / DT))
+
+
+func test_one_impact_per_crash_before_the_learn_fade() -> void:
+	_drive()
+	_crash()
+	assert_int(_session.state).is_equal(SessionManager.State.RESPAWNING)
+	assert_int(_audio.collision_count).is_equal(1)
+	assert_float(_session.fade_amount()).is_less(0.1)
+	_step(roundi(_sim_config.respawn_fade_s / DT) + 1)
+	assert_int(_audio.collision_count).is_equal(1)
+
+
+func test_one_impact_per_crash_in_the_exam() -> void:
+	_start(LaunchOptions.MODE_EXAM)
+	_drive()
+	_crash()
+	assert_int(_session.state).is_equal(SessionManager.State.ENDED)
+	assert_int(_audio.collision_count).is_equal(1)
+	assert_int(_audio.offroad_count).is_equal(0)
+
+
+func test_one_rumble_per_exit_from_the_road(mode: StringName, test_parameters: Array = [
+		[LaunchOptions.MODE_LEARN],
+		[LaunchOptions.MODE_EXAM],
+		]) -> void:
+	_start(mode)
+	_drive()
+	_leave_the_road()
+	assert_bool(_session.state != SessionManager.State.DRIVING).is_true()
+	assert_int(_audio.offroad_count).is_equal(1)
+	assert_int(_audio.collision_count).is_equal(0)
+
+
+func test_an_ai_collision_makes_no_sound() -> void:
+	_drive()
+	var sim: TrafficSim = _session.sim
+	sim.add_vehicle(_session.player.s + 300.0, 1, 0.0)
+	sim.add_vehicle(_session.player.s + 301.0, 1, 0.0)
+	_step(1)
+	assert_int(_audio.collision_count).is_equal(0)
