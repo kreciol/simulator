@@ -56,6 +56,7 @@ SAVE_READ_ONLY,"Twoja historia pochodzi z nowszej wersji gry, więc nie dopisuje
 HISTORY_CORRUPT_RECOVERED,"Zapisana historia była uszkodzona. Zachowaliśmy jej kopię i zaczęliśmy nową."
 TOAST_LOW_FPS,"Gra działa wolno na tym komputerze. Spróbuj niskiej jakości grafiki."
 HUD_SCORE,Punkty
+HUD_SOUND_MUTED,Dźwięk wyłączony (M)
 HUD_BLIND_SPOT,Martwe pole
 COMPARE_FIRST,"To pierwszy zapisany przejazd w tym trybie, na tej drodze i tym poziomie ruchu."
 COMPARE_PREVIOUS_UP,Poprzednio: {points} pkt — tym razem o {change} pkt więcej.

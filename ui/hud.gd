@@ -10,9 +10,10 @@ extends CanvasLayer
 ## each side mirror, a blind-spot warning (icon and text, never colour alone) while
 ## driving with a vehicle in that side's blind spot (`LaneQuery.blind_spot_occupied`) —
 ## shown under where the mirror sits even with mirrors off. The score stays up through
-## the countdown, a respawn and under the end screen. Under the summary the end screen
-## offers the next step (spec UI/UX flow, issue #43): again, the history or the menu,
-## each a signal the scene acts on. Only reads session state.
+## the countdown, a respawn and under the end screen. While the sound is muted a
+## crossed-out speaker with text says so, in both modes. Under the summary the end
+## screen offers the next step (spec UI/UX flow, issue #43): again, the history or
+## the menu, each a signal the scene acts on. Only reads session state.
 ## Placeholder styling until the UI theme lands (Phase 10).
 
 ## The player asked for the same session once more, from the end screen.
@@ -65,6 +66,10 @@ const TOAST_FONT_SIZE: int = 26
 const TOAST_TOP: float = 2.0 * MARGIN + 1.5 * TIME_FONT_SIZE
 const TOAST_BACKDROP: Color = Color(0.0, 0.0, 0.0, 0.6)
 const TOAST_PADDING: int = 12
+const MUTED_FONT_SIZE: int = 22
+const MUTED_ICON_SIZE: Vector2 = Vector2(30.0, 26.0)
+const MUTED_CROSS_COLOR: Color = Color(1.0, 0.3, 0.25)
+const MUTED_CROSS_WIDTH: float = 3.0
 ## Round limit sign: white disc with a red ring, as on Polish B-33 signs.
 const LIMIT_SIGN_SIZE: float = 76.0
 const LIMIT_RING_WIDTH: int = 9
@@ -123,6 +128,8 @@ var history_button: Button
 var menu_button: Button
 var toast: PanelContainer
 var toast_label: Label
+## Shown while the sound is muted: icon and text.
+var muted_indicator: HBoxContainer
 
 ## The summary the panel shows, so it is filled once rather than every frame.
 var _shown_summary: Summary
@@ -263,6 +270,12 @@ func setup(view_config: ViewConfig) -> void:
 	menu_button = _end_button("Menu", &"END_MENU", menu_requested)
 	end_actions.add_child(menu_button)
 
+	muted_indicator = _muted_indicator()
+	root.add_child(muted_indicator)
+	muted_indicator.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT, Control.PRESET_MODE_MINSIZE, int(MARGIN))
+	muted_indicator.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	muted_indicator.grow_vertical = Control.GROW_DIRECTION_BEGIN
+
 	toast = _toast()
 	root.add_child(toast)
 	toast.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP, Control.PRESET_MODE_MINSIZE, int(TOAST_TOP))
@@ -284,6 +297,11 @@ func show_toast(text: String, duration_s: float) -> void:
 	toast_label.text = text
 	toast.visible = true
 	_toast_left_s = duration_s
+
+
+## Whether the sound is muted (`AudioView.user_muted`).
+func set_muted(muted: bool) -> void:
+	muted_indicator.visible = muted
 
 
 func update(session: SessionManager) -> void:
@@ -541,6 +559,44 @@ func _blind_spot(node_name: String, mirror_rect: Rect2) -> VBoxContainer:
 	text.text = tr(&"HUD_BLIND_SPOT")
 	warning.add_child(text)
 	return warning
+
+
+## A speaker crossed out, beside the muted text; hidden until the sound is muted.
+func _muted_indicator() -> HBoxContainer:
+	var indicator: HBoxContainer = HBoxContainer.new()
+	indicator.name = "Muted"
+	indicator.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	indicator.visible = false
+	var icon: Control = Control.new()
+	icon.name = "Icon"
+	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	icon.custom_minimum_size = MUTED_ICON_SIZE
+	icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	indicator.add_child(icon)
+	var w: float = MUTED_ICON_SIZE.x
+	var h: float = MUTED_ICON_SIZE.y
+	var speaker: Polygon2D = Polygon2D.new()
+	speaker.name = "Speaker"
+	speaker.polygon = PackedVector2Array([Vector2(0.0, h * 0.35), Vector2(w * 0.25, h * 0.35),
+			Vector2(w * 0.55, 0.0), Vector2(w * 0.55, h), Vector2(w * 0.25, h * 0.65), Vector2(0.0, h * 0.65)])
+	speaker.color = Color.WHITE
+	icon.add_child(speaker)
+	var cross: Line2D = Line2D.new()
+	cross.name = "Cross"
+	cross.points = PackedVector2Array([Vector2(w * 0.68, h * 0.3), Vector2(w, h * 0.7)])
+	cross.width = MUTED_CROSS_WIDTH
+	cross.default_color = MUTED_CROSS_COLOR
+	icon.add_child(cross)
+	var cross_back: Line2D = Line2D.new()
+	cross_back.name = "CrossBack"
+	cross_back.points = PackedVector2Array([Vector2(w, h * 0.3), Vector2(w * 0.68, h * 0.7)])
+	cross_back.width = MUTED_CROSS_WIDTH
+	cross_back.default_color = MUTED_CROSS_COLOR
+	icon.add_child(cross_back)
+	var text: Label = _label("Text", MUTED_FONT_SIZE)
+	text.text = tr(&"HUD_SOUND_MUTED")
+	indicator.add_child(text)
+	return indicator
 
 
 ## Triangle pointing towards `dir`, `x` from the left of the arrow row.

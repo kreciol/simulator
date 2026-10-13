@@ -6,6 +6,7 @@
 @docs/agents/feedback.md
 @docs/agents/rendering.md
 @docs/agents/mirrors.md
+@docs/agents/audio.md
 @docs/agents/hud.md
 @docs/agents/performance.md
 @docs/agents/session-flow.md
