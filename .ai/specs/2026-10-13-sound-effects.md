@@ -6,6 +6,8 @@ Source doc: issue [#72](https://github.com/kreciol/simulator/issues/72). Builds 
 
 Every player drives in silence today: speed is only a number on the dashboard, a forgotten indicator is only a blinking arrow, and a car passing close by is only seen. We propose simple, unobtrusive sound effects — an engine note that follows the speed, the indicator's tick-tock, a whoosh for close passes, and one-shots for a crash and for leaving the road — plus a mute key. The sounds are synthesised at start-up (no asset files, no licences), read the simulation only, and change nothing in `core/`, so scoring and replays stay deterministic.
 
+> **Revised after manual QA (#75):** the engine is an **electric motor's whine over a road-noise loop**, not a combustion-engine note, and the whoosh is louder. See *Changes after QA* at the end; the Data Model shows the shipped values.
+
 ## 📝 Decisions in play
 
 - **Supersedes MVP decision Q15** ("On-screen text + simple icons; no audio") for **simple sound effects only**, as requested by the product owner (the owner of Q15) in #72. Voice messages and spoken feedback stay out (§2.2). The implementation updates the Q15 row of the MVP spec's *Decisions* table.
@@ -74,14 +76,16 @@ New `AudioConfig` resource (`config/audio_config.gd` + `config/audio_config.tres
 |---|---|---|
 | `master_volume_db` | −6 | `Master` bus volume until E11-S02, applied in `setup` (the bus layout keeps 0 dB, so this is the only source) |
 | `muted_by_default` | false | sound on (after the first key press) |
-| `engine_pitch_min` / `engine_pitch_max` | 0.6 / 1.8 | pitch at 0 km/h / at `top_speed_kmh` |
-| `engine_volume_min_db` / `engine_volume_max_db` | −18 / −8 | engine loudness range |
-| `engine_base_hz` | 55 | synthesised engine fundamental |
+| `engine_pitch_min` / `engine_pitch_max` | ~~0.6 / 1.8~~ **0.5 / 2.0** | motor whine pitch at 0 km/h / at `top_speed_kmh` |
+| `engine_volume_min_db` / `engine_volume_max_db` | ~~−18 / −8~~ **−30 / −20** | motor whine loudness range |
+| `engine_base_hz` | ~~55~~ **190** | synthesised motor whine fundamental |
+| `road_pitch_min` / `road_pitch_max` | **0.7 / 1.3** (new) | road-noise pitch at 0 km/h / at `top_speed_kmh` |
+| `road_volume_min_db` / `road_volume_max_db` | **−40 / −14** (new) | road-noise loudness range |
 | `indicator_volume_db` | −10 | tick/tock |
 | `pass_sound_range_m` | 4.5 | max lateral centre distance that counts as a close pass |
-| `pass_min_relative_speed_kmh` | 10 | slower crossings make no whoosh |
+| `pass_min_relative_speed_kmh` | ~~10~~ **5** | slower crossings make no whoosh |
 | `pass_full_speed_kmh` | 60 | relative speed at which the whoosh is at full loudness |
-| `pass_volume_max_db` / `pass_volume_min_db` | −6 / −24 | loudness range of a whoosh |
+| `pass_volume_max_db` / `pass_volume_min_db` | ~~−6 / −24~~ **−5 / −19** | loudness range of a whoosh |
 | `pass_scan_window_m` | 30 | longitudinal half-window around the player scanned for crossings |
 | `pass_voices` | 3 | pooled whoosh players |
 | `collision_volume_db` / `offroad_volume_db` | −3 / −6 | one-shots |
@@ -146,3 +150,15 @@ No persisted data changes; mute is not saved.
 | Q4 | One spec or one per sound (independently deployable)? | One spec, three phases | The sounds share one view, buses, config and mute; each phase ships on its own. |
 | Q5 | Should mute persist between sessions? | No — session-only until settings (E11-S02, #44) | Smallest scope; no save-format change. |
 | Q6 | Where does the engine's top speed come from? | Profile `speed_limit_kmh` + `ScoringConfig.speed_tolerance_kmh`; flat pitch above it | The issue's acceptance criterion names "limit + tolerance"; reusing the S1 threshold avoids a duplicate [PARAM]. Alternative: `sim.max_speed_mps()` (180 km/h), so the pitch keeps rising to the sim's cap. |
+
+## 📝 Changes after QA
+
+Manual QA of the web build (#75, product owner, 2026-10-13) found three problems, fixed in `891e775` before the merge:
+
+| Finding | Cause | Change |
+|---|---|---|
+| Every sound stuttered and crackled, "as if several sounds overlapped". | `AudioView.update` wrote `stream_paused` to every player on every frame. In the web export's sample playback, each write pauses or resumes the browser's playback. | The pause is written only when it changes (`pause_writes` counts it in tests). Rule added to `docs/agents/audio.md`. |
+| The buzzy engine note (six harmonics at 55 Hz) was unpleasant. | Product decision. | The product owner chose an **electric car** sound: `AudioSynth.engine` is a soft whine (fundamental plus two faint partials, no throb) at 190 Hz. A new `AudioSynth.road` is a seamless 2 s loop of low-passed noise (tail folded over the start) on the `Engine` bus. Both follow the speed through `road_pitch` / `road_volume_db`, like the engine mapping above. |
+| The whoosh was inaudible under the engine. | Too quiet (−24…−6 dB) and silent below 10 km/h relative speed. | −19…−5 dB from 5 km/h. The product owner set the level to about 70% of a first, louder try. |
+
+The collision and off-road one-shots are unchanged: the product owner accepted them as they are. The level-4 `perf=1` check with sound passed on the reference machine (avg 60.0, p5 60.0, the same as `main`).
