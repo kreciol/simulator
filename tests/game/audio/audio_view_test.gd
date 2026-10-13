@@ -246,9 +246,12 @@ func test_one_rumble_per_exit_from_the_road(mode: StringName, test_parameters: A
 func test_an_ai_collision_makes_no_sound() -> void:
 	_drive()
 	var sim: TrafficSim = _session.sim
+	var collisions: Array[int] = [0]
+	sim.collision.connect(func(_a: int, _b: int) -> void: collisions[0] += 1)
 	sim.add_vehicle(_session.player.s + 300.0, 1, 0.0)
 	sim.add_vehicle(_session.player.s + 301.0, 1, 0.0)
 	_step(1)
+	assert_int(collisions[0]).is_equal(1)
 	assert_int(_audio.collision_count).is_equal(0)
 
 
@@ -267,9 +270,33 @@ func test_each_pass_plays_one_whoosh_and_steals_the_oldest_voice() -> void:
 		assert_float(voice.volume_db).is_between(_audio_config.pass_volume_min_db, _audio_config.pass_volume_max_db)
 
 
-func test_no_pass_sounds_in_the_countdown() -> void:
+func test_a_paused_session_hears_no_pass() -> void:
+	_drive()
 	var player: VehicleState = _session.player
-	_session.sim.add_vehicle(player.s + 1.0, 1, 0.0)
-	_session.sim.add_vehicle(player.s - 1.0, 1, 0.0)
-	_step(60)
+	_session.sim.add_vehicle(player.s - 12.0, 1, player.speed_mps + 50.0 / TrafficSim.KMH_PER_MPS)
+	_session.pause()
+	_step(120)
 	assert_int(_audio.pass_count).is_equal(0)
+	_session.resume()
+	_step(120)
+	assert_int(_audio.pass_count).is_equal(1)
+
+
+func test_no_click_when_a_respawn_switches_the_indicator_off() -> void:
+	_drive()
+	_step(1, _signal(VehicleState.Dir.LEFT))
+	assert_bool(SignalBlink.is_lit(_session.player, _session.sim.time_s, _view().signal_blink_hz)).is_true()
+	var tocks: int = _audio.tock_count
+	_crash()
+	_step(roundi(_sim_config.respawn_fade_s / DT) + 1)
+	assert_int(_session.respawn_count).is_equal(1)
+	assert_int(_session.player.signal_dir).is_equal(VehicleState.Dir.NONE)
+	assert_int(_audio.tock_count).is_equal(tocks)
+
+
+func test_leaving_restores_the_master_bus() -> void:
+	_audio.toggle_mute()
+	_audio.free()
+	var master: int = AudioServer.get_bus_index(AudioView.MASTER_BUS)
+	assert_bool(AudioServer.is_bus_mute(master)).is_false()
+	assert_float(AudioServer.get_bus_volume_db(master)).is_equal(0.0)

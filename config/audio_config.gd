@@ -28,6 +28,8 @@ extends Resource
 @export var pass_sound_range_m: float
 ## A slower crossing makes no whoosh.
 @export var pass_min_relative_speed_kmh: float
+## Share of full loudness a pass keeps at the edge of `pass_sound_range_m`.
+@export var pass_edge_loudness: float
 ## Relative speed at which a whoosh is at full loudness.
 @export var pass_full_speed_kmh: float
 ## Loudness of the faintest and of the loudest whoosh.

@@ -65,10 +65,10 @@ func setup(session_manager: SessionManager, view_config: ViewConfig, audio_confi
 	collision_player = _player("Collision", AudioSynth.impact(rate), EFFECTS_BUS, config.collision_volume_db)
 	offroad_player = _player("Offroad", AudioSynth.rumble(rate), EFFECTS_BUS, config.offroad_volume_db)
 	var whoosh: AudioStreamWAV = AudioSynth.whoosh(rate)
-	for i: int in config.pass_voices:
+	for i: int in maxi(1, config.pass_voices):
 		pass_players.append(_player("Pass%d" % i, whoosh, EFFECTS_BUS))
 	_pass_detector = PassDetector.new(config)
-	session.player_respawned.connect(_pass_detector.reset)
+	session.player_respawned.connect(_on_player_respawned)
 	session.sim.collision.connect(_on_collision)
 	session.sim.offroad.connect(_on_offroad)
 	_apply_mute()
@@ -163,6 +163,13 @@ func _play_pass(loudness: float) -> void:
 	pass_count += 1
 
 
+## The player is back on the road with the indicator off: neither the move nor the
+## switched-off lamp is a pass or a click.
+func _on_player_respawned() -> void:
+	_pass_detector.reset()
+	_was_lit = false
+
+
 func _on_collision(vehicle_id: int, other_id: int) -> void:
 	if vehicle_id == session.player.id or other_id == session.player.id:
 		collision_player.play()
@@ -173,6 +180,13 @@ func _on_offroad(vehicle_id: int) -> void:
 	if vehicle_id == session.player.id:
 		offroad_player.play()
 		offroad_count += 1
+
+
+func _exit_tree() -> void:
+	# The buses outlive the session: leave them as the project defines them.
+	var master: int = AudioServer.get_bus_index(MASTER_BUS)
+	AudioServer.set_bus_mute(master, false)
+	AudioServer.set_bus_volume_db(master, 0.0)
 
 
 func _apply_mute() -> void:

@@ -28,6 +28,7 @@ func test_a_pass_needs_a_neighbouring_lane_and_a_voice() -> void:
 	assert_float(audio.pass_sound_range_m).is_less(2.0 * road.lane_width_m)
 	assert_float(audio.pass_scan_window_m).is_greater(0.0)
 	assert_int(audio.pass_voices).is_greater(0)
+	assert_float(audio.pass_edge_loudness).is_between(0.0, 1.0)
 
 
 func test_synthesis_settings_are_usable() -> void:

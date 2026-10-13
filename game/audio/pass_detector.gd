@@ -6,9 +6,6 @@ extends RefCounted
 ## the sim's lane index; remembers, per vehicle, which side of the player it was on at
 ## the last `update`.
 
-## Share of full loudness a pass keeps at the edge of `pass_sound_range_m`.
-const EDGE_PROXIMITY: float = 0.5
-
 var _config: AudioConfig
 ## Vehicle id → whether its centre was ahead of the player's at the last update.
 var _ahead: Dictionary[int, bool] = {}
@@ -52,11 +49,11 @@ func update(sim: TrafficSim) -> PackedFloat32Array:
 
 ## Loudness of a pass `lateral_m` apart at `relative_kmh`: 0 (no sound) beyond
 ## `pass_sound_range_m` or below `pass_min_relative_speed_kmh`; otherwise growing with
-## closeness (to `EDGE_PROXIMITY` at the range's edge) and with the relative speed (full
+## closeness (to `pass_edge_loudness` at the range's edge) and with the relative speed (full
 ## from `pass_full_speed_kmh`).
 static func pass_loudness(audio: AudioConfig, lateral_m: float, relative_kmh: float) -> float:
 	if lateral_m > audio.pass_sound_range_m or relative_kmh < audio.pass_min_relative_speed_kmh:
 		return 0.0
-	var proximity: float = lerpf(1.0, EDGE_PROXIMITY, lateral_m / audio.pass_sound_range_m)
+	var proximity: float = lerpf(1.0, audio.pass_edge_loudness, lateral_m / audio.pass_sound_range_m)
 	var speed: float = clampf(relative_kmh / audio.pass_full_speed_kmh, 0.0, 1.0)
 	return proximity * speed
