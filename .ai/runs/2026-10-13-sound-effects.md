@@ -40,8 +40,8 @@ Phases and steps follow the spec's Implementation Plan one to one.
 
 ### Phase 2: Indicator and incidents
 
-- [ ] 2.1 Indicator tick-tock
-- [ ] 2.2 Collision and off-road one-shots
+- [x] 2.1 Indicator tick-tock — 361ab2f
+- [x] 2.2 Collision and off-road one-shots — 361ab2f
 
 ### Phase 3: Passing vehicles
 
