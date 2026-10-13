@@ -217,3 +217,23 @@ func test_the_scene_shows_the_saved_history() -> void:
 	var scene: HistoryScreen = auto_free((load("res://ui/history_screen.tscn") as PackedScene).instantiate()) as HistoryScreen
 	assert_bool(scene.show_saved_on_ready).is_true()
 	assert_object(scene.launcher_config).is_not_null()
+
+
+func test_back_returns_to_the_start_screen() -> void:
+	# Issue #43: the history is reached from the menu and leads back to it.
+	var opened: Array[String] = []
+	_screen.open_scene = func(path: String) -> void: opened.append(path)
+	assert_str(_screen.back_button.text).is_equal("Wróć do menu")
+	assert_bool(_screen.back_button.is_visible_in_tree()).is_true()
+	_screen.back_button.pressed.emit()
+	assert_array(opened).contains_exactly([AppFlow.START_SCENE])
+
+
+func test_esc_returns_to_the_start_screen() -> void:
+	var opened: Array[String] = []
+	_screen.open_scene = func(path: String) -> void: opened.append(path)
+	var esc: InputEventKey = InputEventKey.new()
+	esc.keycode = KEY_ESCAPE
+	esc.pressed = true
+	_screen._unhandled_input(esc)
+	assert_array(opened).contains_exactly([AppFlow.START_SCENE])
