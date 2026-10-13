@@ -21,6 +21,7 @@ Applied automatically by `om-code-review` (and therefore `om-auto-review-pr`) on
 - **Persistence**: changes to the saved session format bump `schema_version` and include a migration for older records.
 - **Open questions**: an `[OTWARTE]` default implemented in code carries `# TODO(open):` with the requirements section number.
 - **Scenes and resources** stay in text format (`.tscn`, `.tres`); no binary `.scn`/`.res` for authored content.
+- **Agent docs stay merge-friendly** (`AGENTS.md`, `docs/agents/`, see *Maintaining these docs* in `AGENTS.md`): a PR that adds phase status or progress, lists classes instead of directories, or appends to an existing rule bullet instead of adding a new one is a minor finding. A changed rule or contract with no matching update in its `docs/agents/<area>.md` is a major finding.
 
 ## Severity
 

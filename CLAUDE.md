@@ -1,1 +1,16 @@
 @AGENTS.md
+@docs/agents/project-setup.md
+@docs/agents/simulation.md
+@docs/agents/traffic-ai.md
+@docs/agents/scoring.md
+@docs/agents/feedback.md
+@docs/agents/rendering.md
+@docs/agents/mirrors.md
+@docs/agents/hud.md
+@docs/agents/performance.md
+@docs/agents/session-flow.md
+@docs/agents/input.md
+@docs/agents/persistence.md
+@docs/agents/config.md
+@docs/agents/tests.md
+@docs/agents/product.md
