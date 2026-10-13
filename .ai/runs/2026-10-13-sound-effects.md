@@ -33,10 +33,10 @@ Phases and steps follow the spec's Implementation Plan one to one.
 
 ### Phase 1: Audio foundation and engine
 
-- [ ] 1.1 Buses and AudioConfig
-- [ ] 1.2 AudioSynth streams
-- [ ] 1.3 AudioView engine and silence rules
-- [ ] 1.4 Mute action, first-gesture unlock and HUD indicator
+- [x] 1.1 Buses and AudioConfig — 8f2e7af
+- [x] 1.2 AudioSynth streams — 8fc6a6e
+- [x] 1.3 AudioView engine and silence rules — 09fed8a
+- [x] 1.4 Mute action, first-gesture unlock and HUD indicator — bccf8f3
 
 ### Phase 2: Indicator and incidents
 
