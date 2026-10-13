@@ -18,7 +18,7 @@ Before changing an area, read its file in [`docs/agents/`](docs/agents/): it lis
 - **Simulation core: vehicles, lanes, lane queries** (`core/sim/`) → [`docs/agents/simulation.md`](docs/agents/simulation.md)
 - **Traffic AI and spawning** (`core/ai/`, `core/sim/spawner.gd`) → [`docs/agents/traffic-ai.md`](docs/agents/traffic-ai.md)
 - **Scoring, event log and session record** (`core/scoring/`) → [`docs/agents/scoring.md`](docs/agents/scoring.md)
-- **Feedback texts and session summary** (`core/feedback/`, `ui/summary_panel.gd`) → [`docs/agents/feedback.md`](docs/agents/feedback.md)
+- **Feedback texts, live hints and session summary** (`core/feedback/`, `ui/summary_panel.gd`, `ui/hint_list.gd`) → [`docs/agents/feedback.md`](docs/agents/feedback.md)
 - **Rendering: road, player camera, traffic** (`game/world/`, `game/player/`, `game/traffic/`) → [`docs/agents/rendering.md`](docs/agents/rendering.md)
 - **Mirrors** (`game/mirrors/`) → [`docs/agents/mirrors.md`](docs/agents/mirrors.md)
 - **Sound effects** (`game/audio/`) → [`docs/agents/audio.md`](docs/agents/audio.md)

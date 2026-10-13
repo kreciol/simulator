@@ -58,6 +58,17 @@ TOAST_LOW_FPS,"Gra działa wolno na tym komputerze. Spróbuj niskiej jakości gr
 HUD_SCORE,Punkty
 HUD_SOUND_MUTED,Dźwięk wyłączony (M)
 HUD_BLIND_SPOT,Martwe pole
+HINT_KEEP_RIGHT,"Prawy pas jest wolny, wróć na prawo."
+HINT_GAP_TOO_SMALL,"Za blisko. Przy {speed} km/h minimum to {min_gap} m, masz {gap} m."
+HINT_GAP_CLOSING,"Odstęp maleje. Przy {speed} km/h minimum to {min_gap} m, masz {gap} m."
+HINT_SPEEDING,"Limit to {limit} km/h, a jedziesz {speed} km/h — zwolnij, większa prędkość wymaga też większego odstępu."
+HINT_SIGNAL_OK,"Dobrze, kierunkowskaz włączony na czas."
+HINT_SIGNAL_NONE_LEFT,Zmiana pasa w lewo bez kierunkowskazu — włącz lewy kierunkowskaz przed manewrem.
+HINT_SIGNAL_NONE_RIGHT,Zmiana pasa w prawo bez kierunkowskazu — włącz prawy kierunkowskaz przed manewrem.
+HINT_SIGNAL_LATE_LEFT,"Lewy kierunkowskaz włączony za późno — włącz go co najmniej {seconds} s przed zmianą pasa."
+HINT_SIGNAL_LATE_RIGHT,"Prawy kierunkowskaz włączony za późno — włącz go co najmniej {seconds} s przed zmianą pasa."
+HINT_SIGNAL_WRONG_LEFT,"Zmiana pasa w lewo z prawym kierunkowskazem — kierunkowskaz pokazuje innym, dokąd jedziesz."
+HINT_SIGNAL_WRONG_RIGHT,"Zmiana pasa w prawo z lewym kierunkowskazem — kierunkowskaz pokazuje innym, dokąd jedziesz."
 COMPARE_FIRST,"To pierwszy zapisany przejazd w tym trybie, na tej drodze i tym poziomie ruchu."
 COMPARE_PREVIOUS_UP,Poprzednio: {points} pkt — tym razem o {change} pkt więcej.
 COMPARE_PREVIOUS_DOWN,Poprzednio: {points} pkt — tym razem o {change} pkt mniej.

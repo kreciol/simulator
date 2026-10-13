@@ -5,3 +5,8 @@
 [resource]
 script = ExtResource("1_feedback")
 improve_penalty_threshold = 4.0
+hint_cooldown_s = 8.0
+hint_max_on_screen = 2
+hint_min_display_s = 1.5
+hint_duration_s = 4.0
+hint_gap_warning_factor = 1.2

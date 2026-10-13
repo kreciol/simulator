@@ -264,6 +264,47 @@ func test_exam_hides_the_live_score() -> void:
 	assert_bool(_hud.score_panel.visible).is_false()
 
 
+## A session scored and coached with the shipped configs, past its countdown, after a
+## lane change left without a signal.
+func _new_coached(session_mode: StringName = LaunchOptions.MODE_LEARN) -> void:
+	_session = auto_free(SessionManager.new()) as SessionManager
+	_session.scoring_config = load("res://config/scoring.tres") as ScoringConfig
+	_session.feedback_config = load("res://config/feedback.tres") as FeedbackConfig
+	_session.setup(load("res://config/road_profiles/motorway.tres") as RoadProfile,
+			load("res://config/sim_config.tres") as SimConfig, 0, session_mode)
+	_finish_countdown()
+	var left: PlayerCommands = PlayerCommands.new()
+	left.lane_change = VehicleState.Dir.LEFT
+	_step(DT, left)
+	_step(_session.sim.config.lane_change_duration_s + 0.5)
+
+
+func test_learn_shows_hints_with_an_icon_and_text() -> void:
+	_new_coached()
+	assert_bool(_hud.hint_list.is_visible_in_tree()).is_true()
+	assert_int(_hud.hint_list.rows.size()).is_equal(
+			(load("res://config/feedback.tres") as FeedbackConfig).hint_max_on_screen)
+	var texts: Array[String] = []
+	for i: int in _hud.hint_list.rows.size():
+		if _hud.hint_list.rows[i].visible:
+			texts.append(_hud.hint_list.labels[i].text)
+			assert_int(_hud.hint_list.icons[i].rating).is_equal(Summary.Rating.IMPROVE)
+	assert_array(texts).contains(
+			["Zmiana pasa w lewo bez kierunkowskazu — włącz lewy kierunkowskaz przed manewrem."])
+
+
+func test_hints_hide_while_paused() -> void:
+	_new_coached()
+	_session.pause()
+	_hud.update(_session)
+	assert_bool(_hud.hint_list.visible).is_false()
+
+
+func test_exam_shows_no_hints() -> void:
+	_new_coached(LaunchOptions.MODE_EXAM)
+	assert_bool(_hud.hint_list.visible).is_false()
+
+
 func test_unscored_session_shows_no_score() -> void:
 	assert_object(_session.scoring).is_null()
 	assert_bool(_hud.score_panel.visible).is_false()
@@ -450,6 +491,27 @@ func test_blind_spot_warning_hides_while_paused() -> void:
 	_session.resume()
 	_hud.update(_session)
 	assert_bool(_hud.blind_spot_left.visible).is_true()
+
+
+func test_a_short_hint_row_is_only_as_wide_as_its_text() -> void:
+	_new_coached()
+	var widths: Array[float] = []
+	for i: int in _hud.hint_list.rows.size():
+		if _hud.hint_list.rows[i].visible:
+			widths.append(_hud.hint_list.labels[i].custom_minimum_size.x)
+	assert_array(widths).is_not_empty()
+	for width: float in widths:
+		assert_float(width).is_greater(0.0)
+		assert_float(width).is_less_equal(HintList.TEXT_WIDTH)
+
+
+func test_hint_rows_follow_the_configured_maximum() -> void:
+	_new_coached()
+	var feedback: FeedbackConfig = (_session.feedback_config.duplicate()) as FeedbackConfig
+	feedback.hint_max_on_screen = 3
+	_session.hint_engine.config = feedback
+	_hud.update(_session)
+	assert_int(_hud.hint_list.rows.size()).is_equal(3)
 
 
 func test_end_screen_offers_again_history_and_menu_only_once_ended() -> void:

@@ -11,7 +11,8 @@ extends Node
 ## Cases): everything stands still until resumed, and losing window focus pauses on its
 ## own. With a `scoring_config` it also scores the drive and, at the end, builds the
 ## session's `SessionRecord` for `SaveManager` and — with a `feedback_config` — its
-## `Summary`.
+## `Summary`; with both configs, learn mode also coaches the drive through a
+## `HintEngine` (requirements §11.2), which the exam never has.
 
 signal session_started
 signal session_ended
@@ -67,6 +68,9 @@ var record: SessionRecord
 var paused: bool = false
 ## The ended session's summary; null until the end, or without both configs.
 var summary: Summary
+## Learn-mode hints, fed after every scored step and cleared on a respawn; null in the
+## exam, or without both configs.
+var hint_engine: HintEngine
 
 ## The player's collision or off-road seen during the current sim step; the session
 ## ends once the step is over.
@@ -94,6 +98,9 @@ func setup(road_profile: RoadProfile, sim_config: SimConfig, seed_value: int = 0
 	sim.collision.connect(_on_collision)
 	sim.offroad.connect(_on_offroad)
 	scoring = ScoringSystem.new(sim, scoring_config) if scoring_config != null else null
+	hint_engine = null
+	if scoring != null and feedback_config != null and not is_exam():
+		hint_engine = HintEngine.new(sim, scoring, feedback_config)
 	started_at = ""
 	record = null
 	summary = null
@@ -124,7 +131,9 @@ func step(dt: float, commands: PlayerCommands = null) -> void:
 		State.DRIVING:
 			sim.step(dt, commands)
 			if scoring != null:
-				scoring.observe(dt)
+				var events: Array[ScoreEvent] = scoring.observe(dt)
+				if hint_engine != null:
+					hint_engine.observe(events)
 			elapsed_s += dt
 			var incident: EndReason = _player_end_reason
 			_player_end_reason = EndReason.NONE
@@ -240,6 +249,8 @@ func _respawn() -> void:
 	Respawn.respawn_player(sim)
 	if scoring != null:
 		scoring.restart_after_respawn()
+	if hint_engine != null:
+		hint_engine.clear()
 	respawn_count += 1
 	player_respawned.emit()
 
