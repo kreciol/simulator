@@ -1,0 +1,7 @@
+[gd_resource type="Resource" script_class="MenuConfig" format=3]
+
+[ext_resource type="Script" path="res://config/menu_config.gd" id="1_menu"]
+
+[resource]
+script = ExtResource("1_menu")
+exam_suggested_after_learn_sessions = 3
