@@ -1,3 +1,4 @@
+class_name DriveScene
 extends Node3D
 ## Drivable scene (spec Phase 3): the player's vehicle in the simulation, driven by
 ## the keyboard, seen from the cockpit on the endless road among AI traffic (Phase 4). `SessionManager` runs the

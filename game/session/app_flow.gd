@@ -18,20 +18,24 @@ static func open_scene(tree: SceneTree, path: String) -> void:
 ## gets them before it enters the tree, so it does not read the dev launcher. Deferred,
 ## so a button of the scene being replaced can call it.
 static func start_session(tree: SceneTree, options: LaunchOptions) -> void:
-	_swap.call_deferred(tree, session_scene(options))
+	_start.call_deferred(tree, options)
 
 
 ## The drivable scene, not yet in the tree, set to start a session with `options`.
-static func session_scene(options: LaunchOptions) -> Node:
-	var main: Node = (load(MAIN_SCENE) as PackedScene).instantiate()
-	main.set(&"launch_options", options)
+static func session_scene(options: LaunchOptions) -> DriveScene:
+	var main: DriveScene = (load(MAIN_SCENE) as PackedScene).instantiate() as DriveScene
+	main.launch_options = options
 	return main
 
 
-static func _swap(tree: SceneTree, scene: Node) -> void:
-	var old: Node = tree.current_scene
+## Puts `scene` under `parent` in place of `old` (freed); returns `scene`.
+static func replace(parent: Node, old: Node, scene: Node) -> Node:
 	if old != null:
-		tree.root.remove_child(old)
+		parent.remove_child(old)
 		old.queue_free()
-	tree.root.add_child(scene)
-	tree.current_scene = scene
+	parent.add_child(scene)
+	return scene
+
+
+static func _start(tree: SceneTree, options: LaunchOptions) -> void:
+	tree.current_scene = replace(tree.root, tree.current_scene, session_scene(options))

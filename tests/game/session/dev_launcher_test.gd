@@ -212,3 +212,16 @@ func test_again_keeps_the_choice_with_a_new_seed() -> void:
 	assert_str(again.screen).is_equal(LaunchOptions.SCREEN_DRIVE)
 	# The first attempt is left as it was.
 	assert_int(first.seed_value).is_equal(42)
+
+
+func test_platform_params_are_taken_once_per_run() -> void:
+	# Coming back to the menu must not bounce into the same launch (issue #43).
+	var was_taken: bool = DevLauncher.params_taken
+	DevLauncher.params_taken = false
+	DevLauncher.take_platform_params()
+	assert_bool(DevLauncher.params_taken).is_true()
+	assert_dict(DevLauncher.take_platform_params()).is_empty()
+	DevLauncher.params_taken = false
+	DevLauncher.from_environment(_config)
+	assert_bool(DevLauncher.params_taken).is_true()
+	DevLauncher.params_taken = was_taken

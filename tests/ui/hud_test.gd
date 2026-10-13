@@ -474,3 +474,15 @@ func test_end_screen_buttons_ask_for_their_next_step() -> void:
 	_hud.history_button.pressed.emit()
 	_hud.menu_button.pressed.emit()
 	assert_array(asked).contains_exactly(["again", "history", "menu"])
+
+
+func test_focus_waits_until_no_arrow_is_held() -> void:
+	# A key still down from the drive would walk the focus on to another button.
+	_finish_countdown()
+	Input.action_press(&"lane_right")
+	_step(_session.sim.config.session_length_s)
+	assert_bool(_hud.end_actions.is_visible_in_tree()).is_true()
+	assert_bool(_hud.again_button.has_focus()).is_false()
+	Input.action_release(&"lane_right")
+	_hud.update(_session)
+	assert_bool(_hud.again_button.has_focus()).is_true()

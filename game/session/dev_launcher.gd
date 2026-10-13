@@ -22,10 +22,23 @@ const KEY_SCREEN: String = "screen"
 const KEYS: Array[String] = [KEY_MODE, KEY_PROFILE, KEY_LEVEL, KEY_SEED, KEY_QUALITY,
 		KEY_MIRRORS, KEY_PERF, KEY_SCREEN]
 
+## Whether this run's platform params were already taken: they launch once per run, so
+## coming back to the menu later does not bounce into the same launch (issue #43).
+static var params_taken: bool = false
 
-## Launch options from this platform's params: the page URL on web, user args elsewhere.
+
+## Launch options from this platform's params: the page URL on web, user args elsewhere;
+## the defaults once the params were taken.
 static func from_environment(config: DevLauncherConfig) -> LaunchOptions:
-	return resolve(read_platform_params(), config, randi())
+	return resolve(take_platform_params(), config, randi())
+
+
+## This platform's params the first time in a run, then none.
+static func take_platform_params() -> Dictionary:
+	if params_taken:
+		return {}
+	params_taken = true
+	return read_platform_params()
 
 
 ## Whether `params` name anything the launcher reads: then the start screen is skipped

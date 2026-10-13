@@ -79,6 +79,8 @@ const NOTICE_BACKDROP: Color = Color(0.0, 0.0, 0.0, 0.55)
 const SUMMARY_BACKDROP: Color = Color(0.0, 0.0, 0.0, 0.8)
 const END_BUTTON_FONT_SIZE: int = 20
 const END_BUTTON_SIZE: Vector2 = Vector2(220.0, 40.0)
+## Driving actions bound to the arrow keys, which also move the focus between buttons.
+const FOCUS_SHARED_ACTIONS: Array[StringName] = [&"accelerate", &"brake", &"lane_left", &"lane_right"]
 ## Absorbs float drift so a whole second left never reads as the next one up.
 const TIME_EPSILON: float = 1e-6
 
@@ -129,6 +131,8 @@ var _shown_summary: Summary
 var _driving_widgets: Array[Control] = []
 ## Time the notice stays on screen; it hides at 0.
 var _toast_left_s: float = 0.0
+## The end screen opened and "again" is still to take the focus.
+var _focus_again_pending: bool = false
 
 
 func setup(view_config: ViewConfig) -> void:
@@ -315,10 +319,14 @@ func update(session: SessionManager) -> void:
 	if respawning:
 		var respawn_cause: StringName = RESPAWN_CAUSES.get(session.respawn_cause, &"RESPAWN_COLLISION")
 		respawn_label.text = tr(respawn_cause)
-	var just_ended: bool = session.state == SessionManager.State.ENDED and not ended_screen.visible
+	if session.state == SessionManager.State.ENDED and not ended_screen.visible:
+		_focus_again_pending = true
 	ended_screen.visible = session.state == SessionManager.State.ENDED
-	if just_ended and again_button.is_inside_tree():
-		# Enter or Space picks "again" straight away; the arrows reach the others.
+	# Enter or Space picks "again"; the arrows reach the others. The arrows also drive,
+	# so focus waits until none is held: a key still down from the drive would walk it
+	# on to another button.
+	if _focus_again_pending and again_button.is_inside_tree() and not _arrow_held():
+		_focus_again_pending = false
 		again_button.grab_focus()
 	for widget: Control in _driving_widgets:
 		widget.visible = not ended_screen.visible
@@ -414,6 +422,14 @@ func _wrapped_label(node_name: String) -> Label:
 	label.custom_minimum_size = Vector2(SAVE_STATUS_WIDTH, 0.0)
 	label.visible = false
 	return label
+
+
+## Whether a driving action that shares a key with focus moves is held.
+func _arrow_held() -> bool:
+	for action: StringName in FOCUS_SHARED_ACTIONS:
+		if Input.is_action_pressed(action):
+			return true
+	return false
 
 
 ## A button of the end screen that emits `request` when pressed.

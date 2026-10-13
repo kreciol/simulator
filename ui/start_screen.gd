@@ -38,10 +38,6 @@ const MODE_HINT_KEYS: Dictionary[StringName, StringName] = {
 	LaunchOptions.MODE_EXAM: &"SETUP_MODE_EXAM_HINT",
 }
 
-## Whether this run's launch params were already looked at: only the first start screen
-## of a run follows them.
-static var launch_params_read: bool = false
-
 @export var launcher_config: DevLauncherConfig
 @export var menu_config: MenuConfig
 ## Follows the launch params and reads `SaveManager`'s history once in the tree (the
@@ -82,15 +78,21 @@ var recommended_level: int
 
 func _ready() -> void:
 	if use_platform_state:
-		if not launch_params_read:
-			launch_params_read = true
-			var params: Dictionary = DevLauncher.read_platform_params()
-			if DevLauncher.has_launch_params(params):
-				_launch(DevLauncher.resolve(params, launcher_config, randi()))
-				return
+		# Only the first screen of a run follows them (`DevLauncher.take_platform_params`).
+		var params: Dictionary = DevLauncher.take_platform_params()
+		if DevLauncher.has_launch_params(params):
+			_launch(DevLauncher.resolve(params, launcher_config, randi()))
+			return
 		completed_learn = SessionSetup.completed_learn_sessions(SaveManager.store.sessions)
 	_build()
 	show_menu()
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	# Esc on the setup goes back to the menu, as on the history screen.
+	if setup_page != null and setup_page.visible and event.is_action_pressed(&"ui_cancel"):
+		get_viewport().set_input_as_handled()
+		show_menu()
 
 
 ## What the dev-launcher params ask for: the history screen, or a session.
@@ -209,7 +211,7 @@ func _build_menu() -> void:
 	history_button = _button("History", tr(&"START_HISTORY"), MENU_BUTTON_SIZE)
 	history_button.pressed.connect(func() -> void: open_scene.call(AppFlow.HISTORY_SCENE))
 	buttons.add_child(history_button)
-	# TODO(open): enabled by the settings screen (E11-S02) and the tutorial (E11-S03).
+	# Enabled once the settings screen (E11-S02) and the tutorial (E11-S03) exist.
 	settings_button = _coming_soon("Settings", &"START_SETTINGS")
 	buttons.add_child(settings_button)
 	tutorial_button = _coming_soon("Tutorial", &"START_TUTORIAL")

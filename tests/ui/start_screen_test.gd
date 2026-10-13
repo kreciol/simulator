@@ -182,31 +182,31 @@ func test_the_scene_reads_the_platform_state() -> void:
 
 func test_without_launch_params_the_scene_shows_the_menu() -> void:
 	# The headless test run passes no user args.
-	var was_read: bool = StartScreen.launch_params_read
-	StartScreen.launch_params_read = false
+	var was_read: bool = DevLauncher.params_taken
+	DevLauncher.params_taken = false
 	var scene: StartScreen = (load(AppFlow.START_SCENE) as PackedScene).instantiate() as StartScreen
 	scene.open_scene = func(path: String) -> void: _opened.append(path)
 	scene.start_session = func(options: LaunchOptions) -> void: _started.append(options)
 	add_child(auto_free(scene))
-	assert_bool(StartScreen.launch_params_read).is_true()
+	assert_bool(DevLauncher.params_taken).is_true()
 	assert_bool(scene.menu_page.visible).is_true()
 	assert_int(scene.completed_learn).is_equal(
 			SessionSetup.completed_learn_sessions(SaveManager.store.sessions))
 	assert_array(_started).is_empty()
 	assert_array(_opened).is_empty()
-	StartScreen.launch_params_read = was_read
+	DevLauncher.params_taken = was_read
 
 
 func test_launch_params_are_followed_once_per_run() -> void:
 	# Coming back to the menu must not bounce into the URL's session again.
-	var was_read: bool = StartScreen.launch_params_read
-	StartScreen.launch_params_read = true
+	var was_read: bool = DevLauncher.params_taken
+	DevLauncher.params_taken = true
 	var scene: StartScreen = (load(AppFlow.START_SCENE) as PackedScene).instantiate() as StartScreen
 	scene.start_session = func(options: LaunchOptions) -> void: _started.append(options)
 	add_child(auto_free(scene))
 	assert_bool(scene.menu_page.visible).is_true()
 	assert_array(_started).is_empty()
-	StartScreen.launch_params_read = was_read
+	DevLauncher.params_taken = was_read
 
 
 func test_the_choice_is_written_out_not_shown_by_shade_alone() -> void:
@@ -217,3 +217,14 @@ func test_the_choice_is_written_out_not_shown_by_shade_alone() -> void:
 	screen.profile_buttons[&"expressway"].pressed.emit()
 	screen.level_buttons[4].pressed.emit()
 	assert_str(screen.choice_label.text).is_equal("Wybrano: Egzamin · Droga ekspresowa · poziom 4")
+
+
+func test_esc_on_the_setup_returns_to_the_menu() -> void:
+	var screen: StartScreen = _make()
+	screen.show_setup()
+	var esc: InputEventKey = InputEventKey.new()
+	esc.keycode = KEY_ESCAPE
+	esc.pressed = true
+	screen._unhandled_input(esc)
+	assert_bool(screen.menu_page.visible).is_true()
+	assert_array(_started).is_empty()
