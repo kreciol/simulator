@@ -50,6 +50,8 @@ A player starts the game from a start screen and picks mode, road profile and le
 
 ## Progress
 
+PR: #69
+
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: Rules and flow plumbing
@@ -64,4 +66,4 @@ A player starts the game from a start screen and picks mode, road profile and le
 
 ### Phase 3: Docs
 
-- [ ] 3.1 AGENTS.md status and routing, README
+- [x] 3.1 AGENTS.md status and routing, README — be8e49c
