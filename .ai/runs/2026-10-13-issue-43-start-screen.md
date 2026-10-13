@@ -54,8 +54,8 @@ A player starts the game from a start screen and picks mode, road profile and le
 
 ### Phase 1: Rules and flow plumbing
 
-- [ ] 1.1 MenuConfig and SessionSetup with the exam-suggestion rule
-- [ ] 1.2 Launch-params detection, again options and AppFlow
+- [x] 1.1 MenuConfig and SessionSetup with the exam-suggestion rule — dee3df2
+- [x] 1.2 Launch-params detection, again options and AppFlow — 2973d49
 
 ### Phase 2: Screens
 
