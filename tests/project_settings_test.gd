@@ -36,3 +36,14 @@ func test_input_actions_have_primary_and_alternative_keys(
 		if key_event != null:
 			keys.append(key_event.physical_keycode)
 	assert_array(keys).contains_exactly([primary, alternative])
+
+
+func test_mute_is_on_m() -> void:
+	# Issue #72: one key mutes and unmutes the sound.
+	assert_bool(InputMap.has_action(&"mute")).is_true()
+	var keys: Array[Key] = []
+	for event: InputEvent in InputMap.action_get_events(&"mute"):
+		var key_event: InputEventKey = event as InputEventKey
+		if key_event != null:
+			keys.append(key_event.physical_keycode)
+	assert_array(keys).contains_exactly([KEY_M])

@@ -184,4 +184,5 @@ func _update_views() -> void:
 	_mirrors_view.set_shown(session.state != SessionManager.State.ENDED)
 	_mirrors_view.update(_player_view.position)
 	_hud.update(session)
+	_hud.set_muted(_audio_view.user_muted)
 	_audio_view.update()
