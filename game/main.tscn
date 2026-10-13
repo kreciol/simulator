@@ -1,4 +1,4 @@
-[gd_scene load_steps=17 format=3]
+[gd_scene load_steps=18 format=3]
 
 [ext_resource type="Script" path="res://game/main.gd" id="1_main"]
 [ext_resource type="Resource" path="res://config/dev_launcher.tres" id="2_launcher"]
@@ -13,6 +13,7 @@
 [ext_resource type="Resource" path="res://config/scoring.tres" id="11_scoring"]
 [ext_resource type="Resource" path="res://config/perf_config.tres" id="12_perf"]
 [ext_resource type="Resource" path="res://config/feedback.tres" id="13_feedback"]
+[ext_resource type="Script" path="res://game/world/hectometre_posts_view.gd" id="14_hectometre_posts"]
 
 [sub_resource type="ProceduralSkyMaterial" id="SkyMaterial_1"]
 sky_top_color = Color(0.32, 0.52, 0.82, 1)
@@ -59,6 +60,9 @@ light_energy = 1.1
 
 [node name="RoadView" type="Node3D" parent="."]
 script = ExtResource("5_road_view")
+
+[node name="HectometrePosts" type="Node3D" parent="."]
+script = ExtResource("14_hectometre_posts")
 
 [node name="TrafficView" type="Node3D" parent="."]
 script = ExtResource("9_traffic_view")

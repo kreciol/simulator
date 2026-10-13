@@ -30,6 +30,20 @@ extends Resource
 ## Flat terrain extending beyond each roadside barrier.
 @export var terrain_width_m: float
 
+## Hectometre posts (issue #68): a post beside the right shoulder at every multiple of
+## the spacing in road coordinates, a reference for judging the following distance.
+@export var hectometre_post_spacing_m: float
+@export var hectometre_post_height_m: float
+## Side of the post's square cross-section.
+@export var hectometre_post_width_m: float
+## From the outer edge of the shoulder outwards to the post's centre; the post must fit
+## in the `barrier_offset_m` gap before the barrier.
+@export var hectometre_post_offset_m: float
+@export var hectometre_post_color: Color
+## Band just below the top of the post.
+@export var hectometre_post_band_color: Color
+@export var hectometre_post_band_height_m: float
+
 ## Driver's eye above the road and left of the car's centreline.
 @export var eye_height_m: float
 @export var eye_offset_left_m: float
@@ -100,6 +114,12 @@ func draw_distance_m() -> float:
 ## Distance behind the player always covered by road.
 func covered_behind_m() -> float:
 	return float(segments_behind) * segment_length_m
+
+
+## Hectometre posts in the pool: the most multiples of the spacing the road's
+## half-open window of `segment_count` segments can hold.
+func hectometre_post_count() -> int:
+	return ceili(float(segment_count) * segment_length_m / hectometre_post_spacing_m)
 
 
 ## Where the right side mirror sits on screen: the left one reflected across the

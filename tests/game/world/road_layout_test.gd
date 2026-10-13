@@ -58,6 +58,33 @@ func test_shoulder_and_outer_barrier_are_right_of_the_carriageway() -> void:
 	assert_float(barrier.top_y).is_equal(_view.barrier_height_m)
 
 
+## Issue #68: posts stand beside the right shoulder, offset from its edge, so the
+## position follows each profile's shoulder width.
+func test_hectometre_post_offset_follows_each_profile_shoulder() -> void:
+	for profile_path: String in ["res://config/road_profiles/motorway.tres", "res://config/road_profiles/expressway.tres"]:
+		var road: RoadProfile = load(profile_path) as RoadProfile
+		var layout: RoadLayout = RoadLayout.new(road, _view)
+		assert_float(layout.hectometre_post_u()) \
+				.is_equal_approx(-(road.shoulder_width_m + _view.hectometre_post_offset_m), EPS)
+	var motorway: RoadLayout = RoadLayout.new(load("res://config/road_profiles/motorway.tres") as RoadProfile, _view)
+	var expressway: RoadLayout = RoadLayout.new(load("res://config/road_profiles/expressway.tres") as RoadProfile, _view)
+	# The motorway's wider shoulder puts its posts further right (more negative u).
+	assert_float(motorway.hectometre_post_u()).is_less(expressway.hectometre_post_u())
+
+
+## Issue #68: the post's footprint fits between the shoulder edge and the barrier's
+## inner face for both profiles, so it stands neither on the shoulder nor in the barrier.
+func test_hectometre_post_fits_between_shoulder_and_barrier() -> void:
+	var half_post: float = _view.hectometre_post_width_m / 2.0
+	for profile_path: String in ["res://config/road_profiles/motorway.tres", "res://config/road_profiles/expressway.tres"]:
+		var road: RoadProfile = load(profile_path) as RoadProfile
+		var layout: RoadLayout = RoadLayout.new(road, _view)
+		var barrier_inner_face: float = layout.outer_barrier_u() + _view.barrier_width_m / 2.0
+		assert_float(layout.hectometre_post_u() + half_post).is_less(-road.shoulder_width_m)
+		assert_float(layout.hectometre_post_u() - half_post).is_greater(barrier_inner_face)
+		assert_float(_view.hectometre_post_height_m).is_greater(_view.hectometre_post_band_height_m)
+
+
 func test_opposite_carriageway_is_mirrored_beyond_a_median_barrier() -> void:
 	var mirror: float = _layout.median_center_u()
 	var width: float = _layout.carriageway_width()
