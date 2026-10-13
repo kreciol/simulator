@@ -59,8 +59,8 @@ A player starts the game from a start screen and picks mode, road profile and le
 
 ### Phase 2: Screens
 
-- [ ] 2.1 Start screen with menu and new-session setup as the main scene
-- [ ] 2.2 End-screen and history-screen navigation
+- [x] 2.1 Start screen with menu and new-session setup as the main scene — 0c4a191, 3b45af6
+- [x] 2.2 End-screen and history-screen navigation — 0c68a90
 
 ### Phase 3: Docs
 
