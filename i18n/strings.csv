@@ -110,3 +110,4 @@ END_AGAIN,Jeszcze raz
 END_HISTORY,Historia wyników
 END_MENU,Menu główne
 HISTORY_BACK,Wróć do menu
+SETUP_CHOICE,Wybrano: {choice}

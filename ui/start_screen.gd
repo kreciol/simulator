@@ -14,7 +14,7 @@ extends Control
 ## Placeholder styling until the UI theme lands (Phase 10).
 
 const MARGIN: int = 48
-const SEPARATION: int = 16
+const SEPARATION: int = 12
 const ROW_SEPARATION: int = 12
 const OUTLINE_SIZE: int = 6
 const TITLE_FONT_SIZE: int = 56
@@ -69,6 +69,8 @@ var mode_hint_label: Label
 var exam_suggestion_label: Label
 var profile_buttons: Dictionary[StringName, Button] = {}
 var level_buttons: Dictionary[int, Button] = {}
+## The current choice in words, so it never shows by shade alone.
+var choice_label: Label
 var start_button: Button
 var back_button: Button
 
@@ -129,16 +131,32 @@ func select_mode(mode: StringName) -> void:
 	selected_mode = mode
 	mode_buttons[mode].button_pressed = true
 	mode_hint_label.text = tr(MODE_HINT_KEYS[mode])
+	_show_choice()
 
 
 func select_profile(profile: StringName) -> void:
 	selected_profile = profile
 	profile_buttons[profile].button_pressed = true
+	_show_choice()
 
 
 func select_level(level: int) -> void:
 	selected_level = level
 	level_buttons[level].button_pressed = true
+	_show_choice()
+
+
+## "Wybrano: Nauka · Autostrada · poziom 1"; empty until all three are chosen.
+func _show_choice() -> void:
+	var profile: RoadProfile = launcher_config.find_profile(selected_profile)
+	if profile == null or launcher_config.find_level(selected_level) == null:
+		choice_label.text = ""
+		return
+	choice_label.text = tr(&"SETUP_CHOICE").format({"choice": tr(&"HISTORY_COMBINATION").format({
+		"mode": tr(MODE_KEYS[selected_mode]),
+		"profile": tr(profile.display_name_key),
+		"level": selected_level,
+	})})
 
 
 ## Starts the chosen session; the drive opens with the 3-2-1 countdown.
@@ -178,6 +196,7 @@ func _build_menu() -> void:
 	menu_page.add_child(title)
 	var subtitle: Label = _wrapped("Subtitle", TEXT_FONT_SIZE, &"START_SUBTITLE")
 	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	subtitle.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	menu_page.add_child(subtitle)
 	var buttons: VBoxContainer = VBoxContainer.new()
 	buttons.name = "Buttons"
@@ -197,6 +216,7 @@ func _build_menu() -> void:
 	buttons.add_child(tutorial_button)
 	legal_note_label = _wrapped("LegalNote", NOTE_FONT_SIZE, &"START_LEGAL_NOTE")
 	legal_note_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	legal_note_label.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	menu_page.add_child(legal_note_label)
 
 
@@ -242,6 +262,8 @@ func _build_setup() -> void:
 		levels.add_child(button)
 		level_buttons[level.id] = button
 
+	choice_label = _label("Choice", HEADING_FONT_SIZE, &"")
+	setup_page.add_child(choice_label)
 	var actions: HBoxContainer = _row("Actions")
 	setup_page.add_child(actions)
 	back_button = _button("Back", tr(&"SETUP_BACK"), OPTION_BUTTON_SIZE)
@@ -305,7 +327,7 @@ func _wrapped(node_name: String, font_size: int, key: StringName) -> Label:
 	var label: Label = _label(node_name, font_size, key)
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	label.custom_minimum_size = Vector2(TEXT_WIDTH, 0.0)
-	label.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	label.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	return label
 
 

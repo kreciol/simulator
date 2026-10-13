@@ -207,3 +207,13 @@ func test_launch_params_are_followed_once_per_run() -> void:
 	assert_bool(scene.menu_page.visible).is_true()
 	assert_array(_started).is_empty()
 	StartScreen.launch_params_read = was_read
+
+
+func test_the_choice_is_written_out_not_shown_by_shade_alone() -> void:
+	var screen: StartScreen = _make()
+	screen.show_setup()
+	assert_str(screen.choice_label.text).is_equal("Wybrano: Nauka · Autostrada · poziom 1")
+	screen.mode_buttons[LaunchOptions.MODE_EXAM].pressed.emit()
+	screen.profile_buttons[&"expressway"].pressed.emit()
+	screen.level_buttons[4].pressed.emit()
+	assert_str(screen.choice_label.text).is_equal("Wybrano: Egzamin · Droga ekspresowa · poziom 4")
