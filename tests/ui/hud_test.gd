@@ -421,8 +421,23 @@ func test_save_status_is_shown_in_polish_on_the_end_screen() -> void:
 	# Stacked under the end title and its cause, on the end screen.
 	assert_object(_hud.save_status_label.get_parent()).is_same(_hud.ended_label.get_parent())
 	assert_bool(_hud.ended_screen.is_ancestor_of(_hud.save_status_label)).is_true()
-	# Right under the summary.
-	assert_int(_hud.save_status_label.get_index()).is_equal(_hud.summary_panel.get_index() + 1)
+	# Under the summary and its comparison with earlier results.
+	assert_int(_hud.save_status_label.get_index()).is_equal(_hud.comparison_label.get_index() + 1)
+
+
+func test_comparison_is_shown_in_polish_right_under_the_summary() -> void:
+	assert_bool(_hud.comparison_label.visible).is_false()
+	_hud.show_comparison([
+		FeedbackLine.create(ResultComparison.PREVIOUS_UP, {"points": 40, "change": 12}),
+		FeedbackLine.create(ResultComparison.BEST, {"points": 70}),
+	])
+	assert_str(_hud.comparison_label.text).is_equal(
+			"Poprzednio: 40 pkt — tym razem o 12 pkt więcej. Rekord dla tego trybu, drogi i poziomu ruchu: 70 pkt.")
+	assert_bool(_hud.comparison_label.visible).is_true()
+	assert_bool(_hud.ended_screen.is_ancestor_of(_hud.comparison_label)).is_true()
+	assert_int(_hud.comparison_label.get_index()).is_equal(_hud.summary_panel.get_index() + 1)
+	_hud.show_comparison([])
+	assert_bool(_hud.comparison_label.visible).is_false()
 
 
 func test_blind_spot_warning_hides_while_paused() -> void:

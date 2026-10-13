@@ -6,3 +6,5 @@
 script = ExtResource("1_persistence")
 history_limit = 200
 history_path = "user://history.json"
+history_recent_count = 10
+history_trend_count = 20

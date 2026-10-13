@@ -7,6 +7,10 @@ extends RefCounted
 const MODE_LEARN: StringName = SessionRecord.MODE_LEARN
 const MODE_EXAM: StringName = SessionRecord.MODE_EXAM
 const MODES: Array[StringName] = [MODE_LEARN, MODE_EXAM]
+## What the launch opens: a session, or the history screen (issue #41).
+const SCREEN_DRIVE: StringName = &"drive"
+const SCREEN_HISTORY: StringName = &"history"
+const SCREENS: Array[StringName] = [SCREEN_DRIVE, SCREEN_HISTORY]
 
 var mode: StringName
 var profile: RoadProfile
@@ -20,6 +24,9 @@ var quality: QualityPreset
 var mirrors: bool
 ## Whether the FPS probe samples the session and prints its result (spec Phase 5 step 2).
 var perf: bool
+## `SCREEN_HISTORY` opens the history screen instead of a session, until the Phase 10
+## menus reach it.
+var screen: StringName = SCREEN_DRIVE
 
 
 func describe() -> String:
