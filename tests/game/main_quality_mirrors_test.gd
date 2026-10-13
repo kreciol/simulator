@@ -96,3 +96,40 @@ func test_mirrors_follow_the_player_through_a_lane_change() -> void:
 	main._process(DT)
 	assert_float(player_view.position.x).is_less(0.0)
 	assert_float(mirrors.rear.camera.position.x).is_equal_approx(player_view.position.x, 1e-5)
+
+
+## Ends the session as time running out would, without keeping it in any history.
+func _end_session(main: Node3D) -> void:
+	var real_store: HistoryStore = SaveManager.store
+	# Never loaded, so its storage is unavailable and nothing is written.
+	SaveManager.store = HistoryStore.new("user://test_main_quality_mirrors/history.json", 5)
+	main.session._end(SessionManager.EndReason.TIME_UP)
+	SaveManager.store = real_store
+
+
+func test_mirrors_hide_and_stop_rendering_once_the_session_ends() -> void:
+	var main: Node3D = _main("?seed=1&quality=low")
+	var mirrors: MirrorsView = _mirrors(main)
+	while main.session.state == SessionManager.State.INTRO:
+		main._physics_process(DT)
+	main._physics_process(DT)
+	main._process(DT)
+	assert_bool(mirrors.visible).is_true()
+
+	_end_session(main)
+	var rear_before: Vector3 = mirrors.rear.camera.position
+	for i: int in 3:
+		main._process(DT)
+	# The end screen dims the scene; the mirrors must not stay bright above it (#58).
+	assert_bool(mirrors.visible).is_false()
+	assert_vector(mirrors.rear.camera.position).is_equal(rear_before)
+	for viewport: Node in _sub_viewports(main):
+		assert_int((viewport as SubViewport).render_target_update_mode).is_equal(SubViewport.UPDATE_DISABLED)
+
+
+func test_with_mirrors_off_the_end_screen_shows_none() -> void:
+	var main: Node3D = _main("?mirrors=0")
+	_end_session(main)
+	main._process(DT)
+	assert_bool(_mirrors(main).visible).is_false()
+	assert_array(_sub_viewports(main)).is_empty()

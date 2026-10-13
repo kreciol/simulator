@@ -26,6 +26,7 @@ func _assert_defaults(options: LaunchOptions) -> void:
 	assert_str(options.quality.id).is_equal(_config.default_quality)
 	assert_bool(options.mirrors).is_equal(_config.default_mirrors)
 	assert_bool(options.perf).is_equal(_config.default_perf)
+	assert_str(options.screen).is_equal(LaunchOptions.SCREEN_DRIVE)
 
 
 func test_config_offers_both_profiles_and_four_levels() -> void:
@@ -54,6 +55,16 @@ func test_the_fps_probe_is_off_unless_asked_for() -> void:
 	assert_bool(_from_query("?perf=1").perf).is_true()
 	assert_bool(_from_query("?perf=0").perf).is_false()
 	assert_str(_from_query("?perf=1&level=4&seed=1").describe()).contains("perf=1")
+
+
+func test_screen_history_opens_the_history_screen() -> void:
+	# README "Dev launcher": no screen param → a session (issue #41).
+	assert_str(_from_query("").screen).is_equal(LaunchOptions.SCREEN_DRIVE)
+	assert_str(_from_query("?screen=history").screen).is_equal(LaunchOptions.SCREEN_HISTORY)
+	assert_str(_from_query("?SCREEN=History").screen).is_equal(LaunchOptions.SCREEN_HISTORY)
+	assert_str(_from_query("?screen=drive").screen).is_equal(LaunchOptions.SCREEN_DRIVE)
+	var from_args: Dictionary = DevLauncher.parse_user_args(PackedStringArray(["--screen=history"]))
+	assert_str(DevLauncher.resolve(from_args, _config, RANDOM_SEED).screen).is_equal(LaunchOptions.SCREEN_HISTORY)
 
 
 func test_all_params_are_used() -> void:
@@ -97,6 +108,8 @@ func test_invalid_values_fall_back_to_defaults(query: String, test_parameters: A
 		["?perf=2"],
 		["?perf=yes"],
 		["?perf="],
+		["?screen=menu"],
+		["?screen="],
 		["?mode=race&profile=autobahn&level=9&seed=x"],
 		["?level&seed&=3&&=&profile"],
 		]) -> void:
