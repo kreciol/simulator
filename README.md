@@ -19,9 +19,11 @@ Open the project in the Godot editor and press **F5**, or from a terminal:
 godot --path .
 ```
 
+The game opens on the start screen: **Nowa sesja** picks mode, road profile and level (learn mode selected, the recommended level marked, the exam marked as suggested after 3 completed learn sessions — `config/menu.tres`), then the 3-2-1 countdown starts the drive. The end screen offers the same session again (new seed), the history or the menu. Settings and the tutorial are listed but not available yet.
+
 ### Dev launcher
 
-Until the menus exist, the session's mode, road profile, difficulty level and seed — and the graphics quality, mirrors and FPS probe — come from URL query params on the web build, or user args after `--` on desktop:
+The dev launcher is a debug shortcut past the menus: any of the params below in the URL on the web build, or in the user args after `--` on desktop, starts the session (or the history) directly, once per page load. The session's mode, road profile, difficulty level and seed — and the graphics quality, mirrors and FPS probe — then come from them:
 
 ```text
 # Web (GitHub Pages or a local export)
