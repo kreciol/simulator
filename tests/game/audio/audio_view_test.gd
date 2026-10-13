@@ -14,6 +14,7 @@ var _audio: AudioView
 
 
 func before_test() -> void:
+	AudioView.reset_run()
 	_sim_config = load("res://config/sim_config.tres") as SimConfig
 	_audio_config = load("res://config/audio_config.tres") as AudioConfig
 	_start(LaunchOptions.MODE_LEARN)
@@ -32,6 +33,7 @@ func _view() -> ViewConfig:
 
 
 func after_test() -> void:
+	AudioView.reset_run()
 	AudioServer.set_bus_mute(AudioServer.get_bus_index(AudioView.MASTER_BUS), false)
 
 

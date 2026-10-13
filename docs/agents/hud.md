@@ -7,3 +7,4 @@
 - Hints show only while driving in learn mode: hidden in the exam, the countdown, a pause, a respawn and at the end.
 - Warnings use icon + text, never colour alone.
 - The blind-spot zone lives in `ViewConfig.blind_spot_*_m`.
+- The end screen's again / history / menu buttons only emit signals; `main.gd` acts on them.

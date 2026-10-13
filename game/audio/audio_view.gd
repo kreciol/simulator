@@ -11,7 +11,9 @@ extends Node
 ## the session. During a respawn the engine fades with the screen. A crash or an exit
 ## sounds at once — before the learn-mode fade, and on into the exam's end screen. Nothing sounds before the first key,
 ## click or touch (`unlock`, browser autoplay policy); `toggle_mute` silences
-## everything. Both act on the `Master` bus.
+## everything. Both act on the `Master` bus. Both also outlast the scene: a session
+## started from the menu or with "again" (issue #43) keeps the run's unlock and the
+## player's mute choice.
 
 const MASTER_BUS: StringName = &"Master"
 const ENGINE_BUS: StringName = &"Engine"
@@ -24,9 +26,16 @@ var session: SessionManager
 var view: ViewConfig
 ## Speed at which the engine reaches its top pitch and loudness, km/h.
 var top_speed_kmh: float
-## Set until the player's first key, click or touch.
+## Whether this run already had a key, click or touch (the start screen's included).
+static var run_unlocked: bool = false
+## Whether the player chose to mute or unmute in this run, and what.
+static var run_mute_chosen: bool = false
+static var run_muted: bool = false
+
+## Set until the player's first key, click or touch in this run.
 var locked: bool = true
-## The player's choice (`toggle_mute`); starts as `AudioConfig.muted_by_default`.
+## The player's choice (`toggle_mute`); starts as the run's choice, else
+## `AudioConfig.muted_by_default`.
 var user_muted: bool = false
 var engine_player: AudioStreamPlayer
 var road_player: AudioStreamPlayer
@@ -62,7 +71,8 @@ func setup(session_manager: SessionManager, view_config: ViewConfig, audio_confi
 	view = view_config
 	config = audio_config
 	top_speed_kmh = top_speed
-	user_muted = config.muted_by_default
+	user_muted = run_muted if run_mute_chosen else config.muted_by_default
+	locked = not run_unlocked
 	AudioServer.set_bus_volume_db(AudioServer.get_bus_index(MASTER_BUS), config.master_volume_db)
 	var rate: int = config.synth_mix_rate
 	engine_player = _player("Engine", AudioSynth.engine(rate, config.engine_base_hz), ENGINE_BUS)
@@ -99,6 +109,7 @@ func update() -> void:
 
 ## The player's first key, click or touch: sound may start (browser autoplay policy).
 func unlock() -> void:
+	run_unlocked = true
 	if not locked:
 		return
 	locked = false
@@ -107,7 +118,16 @@ func unlock() -> void:
 
 func toggle_mute() -> void:
 	user_muted = not user_muted
+	run_mute_chosen = true
+	run_muted = user_muted
 	_apply_mute()
+
+
+## Forgets the run's unlock and mute choice, as at page load (tests).
+static func reset_run() -> void:
+	run_unlocked = false
+	run_mute_chosen = false
+	run_muted = false
 
 
 ## Whether nothing can be heard: before the first gesture or muted by the player.

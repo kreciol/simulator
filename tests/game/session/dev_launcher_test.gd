@@ -177,3 +177,51 @@ func test_test_runner_args_are_not_launch_params() -> void:
 	var options: LaunchOptions = DevLauncher.from_environment(_config)
 	assert_str(options.profile.id).is_equal(_config.default_profile)
 	assert_bool(options.seed_given).is_false()
+
+
+func test_any_known_param_skips_the_start_screen(query: String, test_parameters: Array = [
+		["?mode=exam"], ["?profile=expressway"], ["?level=2"], ["?seed=1"], ["?quality=low"],
+		["?mirrors=0"], ["?perf=1"], ["?screen=history"], ["?MODE=learn&utm=x"],
+		# An invalid value is still a debug launch: it starts with the defaults.
+		["?level=9"]]) -> void:
+	assert_bool(DevLauncher.has_launch_params(DevLauncher.parse_query(query))).is_true()
+
+
+func test_no_or_only_unknown_params_open_the_start_screen(query: String, test_parameters: Array = [
+		[""], ["?"], ["?utm_source=mail"], ["?mode"]]) -> void:
+	assert_bool(DevLauncher.has_launch_params(DevLauncher.parse_query(query))).is_false()
+
+
+func test_user_args_skip_the_start_screen_the_same_way() -> void:
+	assert_bool(DevLauncher.has_launch_params(DevLauncher.parse_user_args(PackedStringArray(["--seed=3"])))).is_true()
+	assert_bool(DevLauncher.has_launch_params(DevLauncher.parse_user_args(PackedStringArray()))).is_false()
+
+
+func test_again_keeps_the_choice_with_a_new_seed() -> void:
+	var first: LaunchOptions = _from_query("?mode=exam&profile=expressway&level=3&seed=42&quality=low&mirrors=0&perf=1")
+	var again: LaunchOptions = first.again(7)
+	assert_str(again.mode).is_equal(LaunchOptions.MODE_EXAM)
+	assert_object(again.profile).is_same(first.profile)
+	assert_int(again.level).is_equal(3)
+	assert_object(again.difficulty).is_same(first.difficulty)
+	assert_object(again.quality).is_same(first.quality)
+	assert_bool(again.mirrors).is_false()
+	assert_bool(again.perf).is_true()
+	assert_int(again.seed_value).is_equal(7)
+	assert_bool(again.seed_given).is_false()
+	assert_str(again.screen).is_equal(LaunchOptions.SCREEN_DRIVE)
+	# The first attempt is left as it was.
+	assert_int(first.seed_value).is_equal(42)
+
+
+func test_platform_params_are_taken_once_per_run() -> void:
+	# Coming back to the menu must not bounce into the same launch (issue #43).
+	var was_taken: bool = DevLauncher.params_taken
+	DevLauncher.params_taken = false
+	DevLauncher.take_platform_params()
+	assert_bool(DevLauncher.params_taken).is_true()
+	assert_dict(DevLauncher.take_platform_params()).is_empty()
+	DevLauncher.params_taken = false
+	DevLauncher.from_environment(_config)
+	assert_bool(DevLauncher.params_taken).is_true()
+	DevLauncher.params_taken = was_taken

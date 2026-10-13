@@ -38,6 +38,11 @@ func test_input_actions_have_primary_and_alternative_keys(
 	assert_array(keys).contains_exactly([primary, alternative])
 
 
+func test_the_game_opens_on_the_start_screen() -> void:
+	# Spec UI/UX flow (issue #43); dev-launcher params skip it to a session.
+	assert_str(ProjectSettings.get_setting("application/run/main_scene")).is_equal(AppFlow.START_SCENE)
+
+
 func test_mute_is_on_m() -> void:
 	# Issue #72: one key mutes and unmutes the sound.
 	assert_bool(InputMap.has_action(&"mute")).is_true()

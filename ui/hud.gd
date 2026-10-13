@@ -12,9 +12,17 @@ extends CanvasLayer
 ## shown under where the mirror sits even with mirrors off — and, under the rear-view
 ## mirror, the hints of the session's `HintEngine` (requirements §11.2) while driving.
 ## The score stays up through the countdown, a respawn and under the end screen. While
-## the sound is muted a crossed-out speaker with text says so, in both modes. Only
-## reads session state.
+## the sound is muted a crossed-out speaker with text says so, in both modes. Under the
+## summary the end screen offers the next step (spec UI/UX flow, issue #43): again, the
+## history or the menu, each a signal the scene acts on. Only reads session state.
 ## Placeholder styling until the UI theme lands (Phase 10).
+
+## The player asked for the same session once more, from the end screen.
+signal again_requested
+## The player asked for the history screen, from the end screen.
+signal history_requested
+## The player asked for the start screen, from the end screen.
+signal menu_requested
 
 const MARGIN: float = 24.0
 const OUTLINE_SIZE: int = 8
@@ -77,6 +85,10 @@ const ARROW_ON: Color = Color(0.2, 1.0, 0.3)
 const NOTICE_BACKDROP: Color = Color(0.0, 0.0, 0.0, 0.55)
 ## Darker behind the summary, which has more text to read than a notice.
 const SUMMARY_BACKDROP: Color = Color(0.0, 0.0, 0.0, 0.8)
+const END_BUTTON_FONT_SIZE: int = 20
+const END_BUTTON_SIZE: Vector2 = Vector2(220.0, 40.0)
+## Driving actions bound to the arrow keys, which also move the focus between buttons.
+const FOCUS_SHARED_ACTIONS: Array[StringName] = [&"accelerate", &"brake", &"lane_left", &"lane_right"]
 ## Absorbs float drift so a whole second left never reads as the next one up.
 const TIME_EPSILON: float = 1e-6
 
@@ -114,6 +126,11 @@ var hint_list: HintList
 var comparison_label: Label
 ## Whether the finished session was saved, or why not; hidden until it is known.
 var save_status_label: Label
+## Again, history and menu under the summary; only on the end screen.
+var end_actions: HBoxContainer
+var again_button: Button
+var history_button: Button
+var menu_button: Button
 var toast: PanelContainer
 var toast_label: Label
 ## Shown while the sound is muted: icon and text.
@@ -126,6 +143,8 @@ var _shown_summary: Summary
 var _driving_widgets: Array[Control] = []
 ## Time the notice stays on screen; it hides at 0.
 var _toast_left_s: float = 0.0
+## The end screen opened and "again" is still to take the focus.
+var _focus_again_pending: bool = false
 
 
 func setup(view_config: ViewConfig) -> void:
@@ -254,6 +273,17 @@ func setup(view_config: ViewConfig) -> void:
 	ended_notice.add_child(comparison_label)
 	save_status_label = _wrapped_label("SaveStatus")
 	ended_notice.add_child(save_status_label)
+	end_actions = HBoxContainer.new()
+	end_actions.name = "EndActions"
+	end_actions.alignment = BoxContainer.ALIGNMENT_CENTER
+	end_actions.add_theme_constant_override("separation", int(MARGIN))
+	ended_notice.add_child(end_actions)
+	again_button = _end_button("Again", &"END_AGAIN", again_requested)
+	end_actions.add_child(again_button)
+	history_button = _end_button("History", &"END_HISTORY", history_requested)
+	end_actions.add_child(history_button)
+	menu_button = _end_button("Menu", &"END_MENU", menu_requested)
+	end_actions.add_child(menu_button)
 
 	muted_indicator = _muted_indicator()
 	root.add_child(muted_indicator)
@@ -328,7 +358,15 @@ func update(session: SessionManager) -> void:
 	if respawning:
 		var respawn_cause: StringName = RESPAWN_CAUSES.get(session.respawn_cause, &"RESPAWN_COLLISION")
 		respawn_label.text = tr(respawn_cause)
+	if session.state == SessionManager.State.ENDED and not ended_screen.visible:
+		_focus_again_pending = true
 	ended_screen.visible = session.state == SessionManager.State.ENDED
+	# Enter or Space picks "again"; the arrows reach the others. The arrows also drive,
+	# so focus waits until none is held: a key still down from the drive would walk it
+	# on to another button.
+	if _focus_again_pending and again_button.is_inside_tree() and not _arrow_held():
+		_focus_again_pending = false
+		again_button.grab_focus()
 	for widget: Control in _driving_widgets:
 		widget.visible = not ended_screen.visible
 	ended_label.visible = ended_screen.visible
@@ -423,6 +461,25 @@ func _wrapped_label(node_name: String) -> Label:
 	label.custom_minimum_size = Vector2(SAVE_STATUS_WIDTH, 0.0)
 	label.visible = false
 	return label
+
+
+## Whether a driving action that shares a key with focus moves is held.
+func _arrow_held() -> bool:
+	for action: StringName in FOCUS_SHARED_ACTIONS:
+		if Input.is_action_pressed(action):
+			return true
+	return false
+
+
+## A button of the end screen that emits `request` when pressed.
+func _end_button(node_name: String, key: StringName, request: Signal) -> Button:
+	var button: Button = Button.new()
+	button.name = node_name
+	button.text = tr(key)
+	button.custom_minimum_size = END_BUTTON_SIZE
+	button.add_theme_font_size_override("font_size", END_BUTTON_FONT_SIZE)
+	button.pressed.connect(request.emit)
+	return button
 
 
 func _centered_label(node_name: String, font_size: int) -> Label:
