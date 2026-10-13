@@ -28,10 +28,12 @@ Hectometre numbers on the posts, posts on the median side, distance signs or gap
 
 ## Progress
 
+PR: #71
+
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: Hectometre posts
 
-- [ ] 1.1 Config and layout
-- [ ] 1.2 HectometrePostsView
-- [ ] 1.3 Wire into the game
+- [x] 1.1 Config and layout — 75359a2
+- [x] 1.2 HectometrePostsView — b0d70a6
+- [x] 1.3 Wire into the game — 7f6f4bf
