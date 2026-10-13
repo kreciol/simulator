@@ -107,6 +107,16 @@ func test_driving_10_km_shows_every_post_with_the_same_pooled_nodes() -> void:
 	assert_array(_posts_view.posts()).contains_exactly(pooled)
 
 
+## A learn-mode respawn moves the player outside the sim step, back or ahead.
+func test_jumps_back_and_ahead_keep_every_post_with_the_same_pooled_nodes() -> void:
+	var pooled: Array[MeshInstance3D] = _posts_view.posts().duplicate()
+	for player_s: float in [5000.0, 4700.0, 9000.0, 8999.0, 120.0]:
+		_posts_view.update(player_s)
+		assert_str(_coverage_error(_posts_view, _view, player_s)).is_empty()
+	assert_int(_posts_view.get_child_count()).is_equal(_view.hectometre_post_count())
+	assert_array(_posts_view.posts()).contains_exactly(pooled)
+
+
 func test_no_post_outside_the_road_window() -> void:
 	for player_s: float in [0.0, 37.0, 480.0, 999.9, 5000.0]:
 		_posts_view.update(player_s)
