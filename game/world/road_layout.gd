@@ -63,6 +63,12 @@ func outer_barrier_u() -> float:
 	return -(road.shoulder_width_m + view.barrier_offset_m + view.barrier_width_m / 2.0)
 
 
+## Lateral position of the hectometre posts' centre: beside the right shoulder, in
+## the gap before the outer barrier, so it follows the profile's shoulder width.
+func hectometre_post_u() -> float:
+	return -(road.shoulder_width_m + view.hectometre_post_offset_m)
+
+
 ## Strips of one kind, in build order (player side first, then the mirrored side).
 func strips_of(surface: Surface) -> Array[Strip]:
 	var found: Array[Strip] = []
