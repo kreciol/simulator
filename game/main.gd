@@ -153,5 +153,7 @@ func _update_views() -> void:
 	_road_view.update(player.s)
 	_traffic_view.update()
 	_player_view.update(player, sim.lateral_position(player), sim.time_s)
+	# The end screen dims the frozen scene; the mirrors go with it.
+	_mirrors_view.set_shown(session.state != SessionManager.State.ENDED)
 	_mirrors_view.update(_player_view.position)
 	_hud.update(session)

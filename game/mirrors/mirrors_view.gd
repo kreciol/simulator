@@ -47,8 +47,21 @@ func mirrors() -> Array[Mirror]:
 	return _mirrors
 
 
-## Follows the player's rig at `rig_position`.
+## Shows or hides the built mirrors; hidden mirrors render nothing (the end screen
+## would otherwise show them bright above its dimmed backdrop, issue #58).
+func set_shown(shown: bool) -> void:
+	var was_visible: bool = visible
+	visible = shown and not _mirrors.is_empty()
+	if visible or not was_visible:
+		return
+	for mirror: Mirror in _mirrors:
+		mirror.viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
+
+
+## Follows the player's rig at `rig_position`; hidden mirrors stay still.
 func update(rig_position: Vector3) -> void:
+	if not visible:
+		return
 	for mirror: Mirror in _mirrors:
 		mirror.update(rig_position)
 
