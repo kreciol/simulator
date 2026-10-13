@@ -21,6 +21,7 @@ Before changing an area, read its file in [`docs/agents/`](docs/agents/): it lis
 - **Feedback texts and session summary** (`core/feedback/`, `ui/summary_panel.gd`) → [`docs/agents/feedback.md`](docs/agents/feedback.md)
 - **Rendering: road, player camera, traffic** (`game/world/`, `game/player/`, `game/traffic/`) → [`docs/agents/rendering.md`](docs/agents/rendering.md)
 - **Mirrors** (`game/mirrors/`) → [`docs/agents/mirrors.md`](docs/agents/mirrors.md)
+- **Sound effects** (`game/audio/`) → [`docs/agents/audio.md`](docs/agents/audio.md)
 - **HUD** (`ui/hud.gd`) → [`docs/agents/hud.md`](docs/agents/hud.md)
 - **Performance and the FPS probe** (`game/perf/`) → [`docs/agents/performance.md`](docs/agents/performance.md)
 - **Session flow, pause, respawn, dev launcher** (`game/session/`, `core/sim/respawn.gd`) → [`docs/agents/session-flow.md`](docs/agents/session-flow.md)

@@ -9,6 +9,7 @@ extends Node3D
 ## With `perf=1` an FPS probe samples the drive and prints its result (Phase 5 step 2);
 ## sustained low FPS suggests the low preset once per session (spec Edge Cases).
 ## `screen=history` opens the history screen instead of a session (Phase 9 step 2).
+## Sound effects follow the drive (issue #72); `M` mutes them.
 
 const HISTORY_SCENE: String = "res://ui/history_screen.tscn"
 
@@ -16,6 +17,7 @@ const HISTORY_SCENE: String = "res://ui/history_screen.tscn"
 @export var sim_config: SimConfig
 @export var view_config: ViewConfig
 @export var perf_config: PerfConfig
+@export var audio_config: AudioConfig
 
 ## Set before the scene enters the tree to skip the dev launcher (tests).
 var launch_options: LaunchOptions
@@ -41,6 +43,7 @@ var _low_fps_watch: LowFpsWatch
 @onready var _mirrors_view: MirrorsView = $MirrorsView
 @onready var _sun: DirectionalLight3D = $Sun
 @onready var _hud: Hud = $Hud
+@onready var _audio_view: AudioView = $AudioView
 @onready var _world_environment: WorldEnvironment = $WorldEnvironment
 
 
@@ -74,15 +77,21 @@ func _ready() -> void:
 	_player_view.setup(view_config)
 	_mirrors_view.setup(view_config, quality, launch_options.mirrors, _world_environment.environment)
 	_hud.setup(view_config)
+	_audio_view.setup(session, view_config, audio_config, _engine_top_speed_kmh())
 	# Fog fades the road out by the draw distance, hiding where it ends.
 	_world_environment.environment.fog_depth_end = view_config.draw_distance_m()
 	_update_views()
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if _is_gesture(event):
+		_audio_view.unlock()
 	# Esc or P (the `pause` action) stops and resumes the session (requirements §9.3).
 	if event.is_action_pressed(&"pause"):
 		session.toggle_pause()
+		get_viewport().set_input_as_handled()
+	elif event.is_action_pressed(&"mute"):
+		_audio_view.toggle_mute()
 		get_viewport().set_input_as_handled()
 	elif _input.handle_event(event):
 		get_viewport().set_input_as_handled()
@@ -151,6 +160,21 @@ func _on_session_ended() -> void:
 	_hud.show_save_status(saved, SaveManager.store)
 
 
+## A key, click or touch: what browsers count as the user's go-ahead for sound.
+static func _is_gesture(event: InputEvent) -> bool:
+	if event is InputEventKey or event is InputEventMouseButton or event is InputEventScreenTouch:
+		return event.is_pressed()
+	return false
+
+
+## Speed of the engine's top note: the profile's limit plus the S1 tolerance (issue #72).
+func _engine_top_speed_kmh() -> float:
+	var tolerance_kmh: float = 0.0
+	if session.scoring_config != null:
+		tolerance_kmh = session.scoring_config.speed_tolerance_kmh
+	return road_profile.speed_limit_kmh + tolerance_kmh
+
+
 func _update_views() -> void:
 	_road_view.update(player.s)
 	_hectometre_posts.update(player.s)
@@ -160,3 +184,5 @@ func _update_views() -> void:
 	_mirrors_view.set_shown(session.state != SessionManager.State.ENDED)
 	_mirrors_view.update(_player_view.position)
 	_hud.update(session)
+	_hud.set_muted(_audio_view.user_muted)
+	_audio_view.update()
