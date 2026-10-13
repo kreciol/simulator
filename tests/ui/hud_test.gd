@@ -512,3 +512,14 @@ func test_hint_rows_follow_the_configured_maximum() -> void:
 	_session.hint_engine.config = feedback
 	_hud.update(_session)
 	assert_int(_hud.hint_list.rows.size()).is_equal(3)
+
+
+func test_muted_sound_shows_an_icon_and_text() -> void:
+	# Issue #72: the mute state is shown as icon + text, never colour alone.
+	assert_bool(_hud.muted_indicator.visible).is_false()
+	_hud.set_muted(true)
+	assert_bool(_hud.muted_indicator.visible).is_true()
+	assert_object(_hud.muted_indicator.get_node("Icon")).is_not_null()
+	assert_str((_hud.muted_indicator.get_node("Text") as Label).text).is_equal("Dźwięk wyłączony (M)")
+	_hud.set_muted(false)
+	assert_bool(_hud.muted_indicator.visible).is_false()

@@ -26,7 +26,7 @@ All answered with the recommended default by the product owner.
 | Q12 | Lane change control | Discrete animated lane change, duration [PARAM] 1.75 s. |
 | Q13 | Difficulty beyond density | Higher levels also widen AI speed spread and lower AI discipline, moderately (per-level [PARAM]s). |
 | Q14 | Level unlocking | All levels available from the start; recommended level highlighted. |
-| Q15 | Feedback form | On-screen text + simple icons; no audio. |
+| Q15 | Feedback form | On-screen text + simple icons; no voice. Simple sound effects (engine, indicator, passing cars, collision, off-road) added by the product owner in #72 — spec [`2026-10-13-sound-effects.md`](2026-10-13-sound-effects.md). |
 
 ## 📝 Problem Statement
 

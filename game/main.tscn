@@ -1,4 +1,4 @@
-[gd_scene load_steps=18 format=3]
+[gd_scene load_steps=20 format=3]
 
 [ext_resource type="Script" path="res://game/main.gd" id="1_main"]
 [ext_resource type="Resource" path="res://config/dev_launcher.tres" id="2_launcher"]
@@ -14,6 +14,8 @@
 [ext_resource type="Resource" path="res://config/perf_config.tres" id="12_perf"]
 [ext_resource type="Resource" path="res://config/feedback.tres" id="13_feedback"]
 [ext_resource type="Script" path="res://game/world/hectometre_posts_view.gd" id="14_hectometre_posts"]
+[ext_resource type="Resource" path="res://config/audio_config.tres" id="15_audio"]
+[ext_resource type="Script" path="res://game/audio/audio_view.gd" id="16_audio_view"]
 
 [sub_resource type="ProceduralSkyMaterial" id="SkyMaterial_1"]
 sky_top_color = Color(0.32, 0.52, 0.82, 1)
@@ -45,6 +47,7 @@ launcher_config = ExtResource("2_launcher")
 sim_config = ExtResource("3_sim")
 view_config = ExtResource("4_view")
 perf_config = ExtResource("12_perf")
+audio_config = ExtResource("15_audio")
 
 [node name="SessionManager" type="Node" parent="."]
 script = ExtResource("7_session")
@@ -75,3 +78,6 @@ script = ExtResource("10_mirrors_view")
 
 [node name="Hud" type="CanvasLayer" parent="."]
 script = ExtResource("8_hud")
+
+[node name="AudioView" type="Node" parent="."]
+script = ExtResource("16_audio_view")

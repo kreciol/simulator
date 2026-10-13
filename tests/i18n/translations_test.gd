@@ -30,6 +30,7 @@ func test_hud_strings_are_translated_to_polish(key: StringName, polish: String, 
 		[&"TOAST_LOW_FPS", "Gra działa wolno na tym komputerze. Spróbuj niskiej jakości grafiki."],
 		[&"HUD_SCORE", "Punkty"],
 		[&"HUD_BLIND_SPOT", "Martwe pole"],
+		[&"HUD_SOUND_MUTED", "Dźwięk wyłączony (M)"],
 		]) -> void:
 	assert_str(TranslationServer.translate(key)).is_equal(polish)
 

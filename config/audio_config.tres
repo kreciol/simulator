@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="AudioConfig" format=3]
+
+[ext_resource type="Script" path="res://config/audio_config.gd" id="1_audio"]
+
+[resource]
+script = ExtResource("1_audio")
+master_volume_db = -6.0
+muted_by_default = false
+engine_pitch_min = 0.5
+engine_pitch_max = 2.0
+engine_volume_min_db = -30.0
+engine_volume_max_db = -20.0
+engine_base_hz = 190
+road_pitch_min = 0.7
+road_pitch_max = 1.3
+road_volume_min_db = -40.0
+road_volume_max_db = -14.0
+indicator_volume_db = -10.0
+pass_sound_range_m = 4.5
+pass_min_relative_speed_kmh = 5.0
+pass_edge_loudness = 0.5
+pass_full_speed_kmh = 60.0
+pass_volume_min_db = -19.0
+pass_volume_max_db = -5.0
+pass_scan_window_m = 30.0
+pass_voices = 3
+collision_volume_db = -3.0
+offroad_volume_db = -6.0
+synth_mix_rate = 22050
