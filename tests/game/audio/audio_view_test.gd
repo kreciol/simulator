@@ -1,0 +1,128 @@
+extends GdUnitTestSuite
+## Sound effects follow the session without changing it: the engine's pitch follows the
+## speed, nothing sounds in the countdown, while paused or on the end screen, and
+## nothing before the first gesture or while muted (issue #72 acceptance criteria, spec
+## `2026-10-13-sound-effects.md` Phase 1).
+
+const DT: float = 1.0 / 60.0
+const TOP_KMH: float = 150.0
+
+var _sim_config: SimConfig
+var _audio_config: AudioConfig
+var _session: SessionManager
+var _audio: AudioView
+
+
+func before_test() -> void:
+	_sim_config = load("res://config/sim_config.tres") as SimConfig
+	_audio_config = load("res://config/audio_config.tres") as AudioConfig
+	_session = auto_free(SessionManager.new()) as SessionManager
+	_session.setup(load("res://config/road_profiles/motorway.tres") as RoadProfile, _sim_config)
+	_audio = AudioView.new()
+	add_child(auto_free(_audio))
+	_audio.setup(_session, load("res://config/view_config.tres") as ViewConfig, _audio_config, TOP_KMH)
+
+
+func after_test() -> void:
+	AudioServer.set_bus_mute(AudioServer.get_bus_index(AudioView.MASTER_BUS), false)
+
+
+func _step(steps: int, commands: PlayerCommands = null) -> void:
+	for i: int in steps:
+		_session.step(DT, commands)
+		_audio.update()
+
+
+func _drive() -> void:
+	_step(roundi(_sim_config.countdown_s / DT) + 1)
+	assert_int(_session.state).is_equal(SessionManager.State.DRIVING)
+
+
+func _master_muted() -> bool:
+	return AudioServer.is_bus_mute(AudioServer.get_bus_index(AudioView.MASTER_BUS))
+
+
+func test_engine_pitch_follows_the_speed_smoothly() -> void:
+	assert_float(AudioView.engine_pitch(_audio_config, 0.0, TOP_KMH)).is_equal_approx(_audio_config.engine_pitch_min, 1e-5)
+	assert_float(AudioView.engine_pitch(_audio_config, TOP_KMH, TOP_KMH)).is_equal_approx(_audio_config.engine_pitch_max, 1e-5)
+	assert_float(AudioView.engine_pitch(_audio_config, TOP_KMH + 30.0, TOP_KMH)).is_equal_approx(_audio_config.engine_pitch_max, 1e-5)
+	# No steps: every km/h moves the pitch by the same small amount.
+	var previous: float = AudioView.engine_pitch(_audio_config, 0.0, TOP_KMH)
+	var per_kmh: float = (_audio_config.engine_pitch_max - _audio_config.engine_pitch_min) / TOP_KMH
+	for kmh: int in range(1, int(TOP_KMH) + 1):
+		var pitch: float = AudioView.engine_pitch(_audio_config, kmh, TOP_KMH)
+		assert_float(pitch - previous).is_equal_approx(per_kmh, 1e-5)
+		previous = pitch
+
+
+func test_engine_gets_louder_with_speed() -> void:
+	assert_float(AudioView.engine_volume_db(_audio_config, 0.0, TOP_KMH)).is_equal_approx(_audio_config.engine_volume_min_db, 1e-4)
+	assert_float(AudioView.engine_volume_db(_audio_config, TOP_KMH, TOP_KMH)).is_equal_approx(_audio_config.engine_volume_max_db, 1e-4)
+
+
+func test_engine_is_silent_in_the_countdown_and_plays_while_driving() -> void:
+	_step(1)
+	assert_int(_session.state).is_equal(SessionManager.State.INTRO)
+	assert_bool(_audio.is_sounding()).is_false()
+	assert_bool(_audio.engine_player.playing).is_false()
+	_drive()
+	assert_bool(_audio.is_sounding()).is_true()
+	assert_bool(_audio.engine_player.playing).is_true()
+	var speed_kmh: float = _session.player.speed_mps * TrafficSim.KMH_PER_MPS
+	assert_float(_audio.engine_player.pitch_scale).is_equal_approx(
+			AudioView.engine_pitch(_audio_config, speed_kmh, TOP_KMH), 1e-5)
+	assert_str(_audio.engine_player.bus).is_equal(AudioView.ENGINE_BUS)
+
+
+func test_pause_holds_the_sound_and_resume_releases_it() -> void:
+	_drive()
+	_session.pause()
+	_audio.update()
+	assert_bool(_audio.is_sounding()).is_false()
+	assert_bool(_audio.engine_player.stream_paused).is_true()
+	_session.resume()
+	_step(1)
+	assert_bool(_audio.engine_player.stream_paused).is_false()
+	assert_bool(_audio.engine_player.playing).is_true()
+
+
+func test_engine_stops_on_the_end_screen() -> void:
+	_drive()
+	_step(roundi(_sim_config.session_length_s / DT) + 1)
+	assert_int(_session.state).is_equal(SessionManager.State.ENDED)
+	assert_bool(_audio.is_sounding()).is_false()
+	assert_bool(_audio.engine_player.playing).is_false()
+
+
+func test_nothing_sounds_before_the_first_gesture() -> void:
+	assert_bool(_audio.locked).is_true()
+	assert_bool(_master_muted()).is_true()
+	_audio.unlock()
+	assert_bool(_audio.is_silenced()).is_false()
+	assert_bool(_master_muted()).is_false()
+
+
+func test_mute_toggles_the_master_bus_and_survives_the_unlock() -> void:
+	_audio.toggle_mute()
+	assert_bool(_audio.user_muted).is_true()
+	_audio.unlock()
+	# Unlocking does not undo the player's mute.
+	assert_bool(_master_muted()).is_true()
+	_audio.toggle_mute()
+	assert_bool(_master_muted()).is_false()
+
+
+func test_master_volume_comes_from_the_config() -> void:
+	assert_float(AudioServer.get_bus_volume_db(AudioServer.get_bus_index(AudioView.MASTER_BUS))).is_equal_approx(
+			_audio_config.master_volume_db, 1e-4)
+
+
+func test_audio_does_not_change_the_simulation() -> void:
+	var plain: SessionManager = auto_free(SessionManager.new()) as SessionManager
+	plain.setup(load("res://config/road_profiles/motorway.tres") as RoadProfile, _sim_config)
+	var commands: PlayerCommands = PlayerCommands.new()
+	commands.longitudinal = VehicleState.Longitudinal.ACCELERATE
+	for i: int in 600:
+		plain.step(DT, commands)
+	_step(600, commands)
+	assert_dict(_session.sim.snapshot()).is_equal(plain.sim.snapshot())
