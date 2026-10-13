@@ -450,3 +450,27 @@ func test_blind_spot_warning_hides_while_paused() -> void:
 	_session.resume()
 	_hud.update(_session)
 	assert_bool(_hud.blind_spot_left.visible).is_true()
+
+
+func test_end_screen_offers_again_history_and_menu_only_once_ended() -> void:
+	_finish_countdown()
+	assert_bool(_hud.end_actions.is_visible_in_tree()).is_false()
+	_step(_session.sim.config.session_length_s)
+	assert_int(_session.state).is_equal(SessionManager.State.ENDED)
+	assert_bool(_hud.end_actions.is_visible_in_tree()).is_true()
+	assert_str(_hud.again_button.text).is_equal("Jeszcze raz")
+	assert_str(_hud.history_button.text).is_equal("Historia wyników")
+	assert_str(_hud.menu_button.text).is_equal("Menu główne")
+	# Enter or Space picks "again" straight away.
+	assert_bool(_hud.again_button.has_focus()).is_true()
+
+
+func test_end_screen_buttons_ask_for_their_next_step() -> void:
+	var asked: Array[String] = []
+	_hud.again_requested.connect(func() -> void: asked.append("again"))
+	_hud.history_requested.connect(func() -> void: asked.append("history"))
+	_hud.menu_requested.connect(func() -> void: asked.append("menu"))
+	_hud.again_button.pressed.emit()
+	_hud.history_button.pressed.emit()
+	_hud.menu_button.pressed.emit()
+	assert_array(asked).contains_exactly(["again", "history", "menu"])

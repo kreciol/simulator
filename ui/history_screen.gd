@@ -6,7 +6,8 @@ extends Control
 ## it shows the empty state; when the browser's storage is unavailable it says so
 ## instead (sessions still playable, nothing saved); a history from a newer version or
 ## a recovered corrupt one gets its notice too. Only reads the `HistoryStore`.
-## Opened by the dev launcher's `screen=history` until the Phase 10 menus exist.
+## Opened from the start screen, the end screen or the dev launcher's `screen=history`;
+## its back button (or Esc) returns to the start screen (issue #43).
 ## Placeholder styling until the UI theme lands (Phase 10).
 
 const MARGIN: int = 32
@@ -15,6 +16,8 @@ const COLUMN_SEPARATION: int = 36
 const OUTLINE_SIZE: int = 6
 const TITLE_FONT_SIZE: int = 44
 const HEADING_FONT_SIZE: int = 26
+const BUTTON_FONT_SIZE: int = 20
+const BUTTON_SIZE: Vector2 = Vector2(220.0, 40.0)
 const TEXT_FONT_SIZE: int = 18
 const ROW_FONT_SIZE: int = 16
 ## Widths of the recent list and of the bests and trend beside it: together they fit
@@ -45,6 +48,10 @@ const EXAM_FAILED: StringName = &"HISTORY_EXAM_FAILED"
 ## Road profiles' display names; without it a profile shows its id.
 @export var launcher_config: DevLauncherConfig
 
+## Switches to another scene by path; tests replace it to watch instead.
+var open_scene: Callable = func(path: String) -> void: AppFlow.open_scene(get_tree(), path)
+
+var back_button: Button
 var title_label: Label
 var local_notice_label: Label
 ## Storage unavailable, read-only or recovered history; hidden when there is none.
@@ -86,6 +93,14 @@ func _init() -> void:
 	page.add_theme_constant_override("separation", SEPARATION)
 	margins.add_child(page)
 
+	back_button = Button.new()
+	back_button.name = "Back"
+	back_button.text = tr(&"HISTORY_BACK")
+	back_button.custom_minimum_size = BUTTON_SIZE
+	back_button.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	back_button.add_theme_font_size_override("font_size", BUTTON_FONT_SIZE)
+	back_button.pressed.connect(back)
+	page.add_child(back_button)
 	title_label = _label("Title", TITLE_FONT_SIZE)
 	title_label.text = tr(&"HISTORY_TITLE")
 	page.add_child(title_label)
@@ -127,11 +142,24 @@ func _init() -> void:
 
 
 func _ready() -> void:
+	if back_button.is_inside_tree():
+		back_button.grab_focus()
 	if not show_saved_on_ready:
 		return
 	recent_count = SaveManager.config.history_recent_count
 	trend_count = SaveManager.config.history_trend_count
 	show_history(SaveManager.store)
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed(&"ui_cancel"):
+		get_viewport().set_input_as_handled()
+		back()
+
+
+## Back to the start screen.
+func back() -> void:
+	open_scene.call(AppFlow.START_SCENE)
 
 
 func show_history(history: HistoryStore) -> void:

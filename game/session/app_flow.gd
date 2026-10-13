@@ -18,9 +18,14 @@ static func open_scene(tree: SceneTree, path: String) -> void:
 ## gets them before it enters the tree, so it does not read the dev launcher. Deferred,
 ## so a button of the scene being replaced can call it.
 static func start_session(tree: SceneTree, options: LaunchOptions) -> void:
+	_swap.call_deferred(tree, session_scene(options))
+
+
+## The drivable scene, not yet in the tree, set to start a session with `options`.
+static func session_scene(options: LaunchOptions) -> Node:
 	var main: Node = (load(MAIN_SCENE) as PackedScene).instantiate()
 	main.set(&"launch_options", options)
-	_swap.call_deferred(tree, main)
+	return main
 
 
 static func _swap(tree: SceneTree, scene: Node) -> void:

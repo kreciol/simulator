@@ -4,13 +4,15 @@ extends Node3D
 ## session flow and the sim; this node feeds it input and hands its state to the views
 ## and the HUD, shows the mirrors (Phase 5), and saves the finished session through
 ## `SaveManager` (Phase 9). What the session starts with — including graphics quality
-## and whether mirrors are shown — comes from the dev launcher (URL params on web, user
-## args on desktop) until the Phase 10 menus exist.
+## and whether mirrors are shown — comes from the start screen's setup (`AppFlow` sets
+## `launch_options`) or, when the scene runs on its own, from the dev launcher (URL
+## params on web, user args on desktop). The end screen leads on (issue #43): the same
+## session again with a new seed, the history or the start screen.
 ## With `perf=1` an FPS probe samples the drive and prints its result (Phase 5 step 2);
 ## sustained low FPS suggests the low preset once per session (spec Edge Cases).
 ## `screen=history` opens the history screen instead of a session (Phase 9 step 2).
 
-const HISTORY_SCENE: String = "res://ui/history_screen.tscn"
+const HISTORY_SCENE: String = AppFlow.HISTORY_SCENE
 
 @export var launcher_config: DevLauncherConfig
 @export var sim_config: SimConfig
@@ -26,7 +28,9 @@ var player: VehicleState
 ## The FPS probe's printed line, empty until it has reported (or without `perf=1`).
 var perf_report: String = ""
 ## Switches to another scene by path; tests replace it to watch instead.
-var change_scene: Callable = func(path: String) -> void: get_tree().change_scene_to_file(path)
+var change_scene: Callable = func(path: String) -> void: AppFlow.open_scene(get_tree(), path)
+## Starts another session in place of this one; tests replace it to watch instead.
+var start_session: Callable = func(options: LaunchOptions) -> void: AppFlow.start_session(get_tree(), options)
 
 var _input: PlayerInput = PlayerInput.new()
 ## Null unless the launch asked for the probe.
@@ -72,6 +76,9 @@ func _ready() -> void:
 	_player_view.setup(view_config)
 	_mirrors_view.setup(view_config, quality, launch_options.mirrors, _world_environment.environment)
 	_hud.setup(view_config)
+	_hud.again_requested.connect(func() -> void: start_session.call(launch_options.again(randi())))
+	_hud.history_requested.connect(func() -> void: change_scene.call(AppFlow.HISTORY_SCENE))
+	_hud.menu_requested.connect(func() -> void: change_scene.call(AppFlow.START_SCENE))
 	# Fog fades the road out by the draw distance, hiding where it ends.
 	_world_environment.environment.fog_depth_end = view_config.draw_distance_m()
 	_update_views()
