@@ -2,10 +2,11 @@ class_name AudioView
 extends Node
 ## Sound effects (issue #72, spec `2026-10-13-sound-effects.md`): an engine note whose
 ## pitch and loudness follow the player's speed, the indicator's tick-tock in step with
-## the blinking arrow (`SignalBlink`), and one sound per crash or exit from the road.
+## the blinking arrow (`SignalBlink`), a whoosh when a vehicle passes close by on a
+## neighbouring lane (`PassDetector`), and one sound per crash or exit from the road.
 ## Like the other views it only reads the session and the sim, once per rendered frame
-## (`update`), plus the sim's `collision` and `offroad` signals. The engine and the
-## indicator sound only while driving or respawning: never in the countdown, while
+## (`update`), plus the sim's `collision` and `offroad` signals. The engine, the
+## indicator and passes sound only while driving or respawning: never in the countdown, while
 ## paused or on the end screen; a pause holds every sound where it is, to resume with
 ## the session. During a respawn the engine fades with the screen. A crash or an exit
 ## sounds at once — before the learn-mode fade, and on into the exam's end screen. Nothing sounds before the first key,
@@ -32,16 +33,21 @@ var tick_player: AudioStreamPlayer
 var tock_player: AudioStreamPlayer
 var collision_player: AudioStreamPlayer
 var offroad_player: AudioStreamPlayer
+## Whooshes that can sound at once; the next pass takes the oldest.
+var pass_players: Array[AudioStreamPlayer] = []
 ## Sounds started so far, per kind: what tests check, since a player's `playing`
 ## depends on the audio driver's timing.
 var tick_count: int = 0
 var tock_count: int = 0
 var collision_count: int = 0
 var offroad_count: int = 0
+var pass_count: int = 0
 
 var _players: Array[AudioStreamPlayer] = []
 ## Whether the indicator was lit at the last update, to click on each change.
 var _was_lit: bool = false
+var _pass_detector: PassDetector
+var _next_pass_player: int = 0
 
 
 func setup(session_manager: SessionManager, view_config: ViewConfig, audio_config: AudioConfig,
@@ -58,6 +64,11 @@ func setup(session_manager: SessionManager, view_config: ViewConfig, audio_confi
 	tock_player = _player("Tock", AudioSynth.tock(rate), EFFECTS_BUS, config.indicator_volume_db)
 	collision_player = _player("Collision", AudioSynth.impact(rate), EFFECTS_BUS, config.collision_volume_db)
 	offroad_player = _player("Offroad", AudioSynth.rumble(rate), EFFECTS_BUS, config.offroad_volume_db)
+	var whoosh: AudioStreamWAV = AudioSynth.whoosh(rate)
+	for i: int in config.pass_voices:
+		pass_players.append(_player("Pass%d" % i, whoosh, EFFECTS_BUS))
+	_pass_detector = PassDetector.new(config)
+	session.player_respawned.connect(_pass_detector.reset)
 	session.sim.collision.connect(_on_collision)
 	session.sim.offroad.connect(_on_offroad)
 	_apply_mute()
@@ -71,6 +82,9 @@ func update() -> void:
 		return
 	_update_engine()
 	_update_indicator()
+	if is_sounding():
+		for loudness: float in _pass_detector.update(session.sim):
+			_play_pass(loudness)
 
 
 ## The player's first key, click or touch: sound may start (browser autoplay policy).
@@ -139,6 +153,14 @@ func _update_indicator() -> void:
 	else:
 		tock_player.play()
 		tock_count += 1
+
+
+func _play_pass(loudness: float) -> void:
+	var player: AudioStreamPlayer = pass_players[_next_pass_player]
+	_next_pass_player = (_next_pass_player + 1) % pass_players.size()
+	player.volume_db = lerpf(config.pass_volume_min_db, config.pass_volume_max_db, loudness)
+	player.play()
+	pass_count += 1
 
 
 func _on_collision(vehicle_id: int, other_id: int) -> void:

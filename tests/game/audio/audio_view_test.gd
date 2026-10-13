@@ -250,3 +250,26 @@ func test_an_ai_collision_makes_no_sound() -> void:
 	sim.add_vehicle(_session.player.s + 301.0, 1, 0.0)
 	_step(1)
 	assert_int(_audio.collision_count).is_equal(0)
+
+
+func test_each_pass_plays_one_whoosh_and_steals_the_oldest_voice() -> void:
+	_drive()
+	var player: VehicleState = _session.player
+	var voices: int = _audio_config.pass_voices
+	# More close, fast vehicles than voices, all overtaking on the left at once.
+	for i: int in voices + 1:
+		_session.sim.add_vehicle(player.s - 12.0 - 8.0 * i, 1, player.speed_mps + 50.0 / TrafficSim.KMH_PER_MPS)
+	_step(240)
+	assert_int(_audio.pass_count).is_equal(voices + 1)
+	assert_int(_audio.pass_players.size()).is_equal(voices)
+	for voice: AudioStreamPlayer in _audio.pass_players:
+		assert_str(voice.bus).is_equal(AudioView.EFFECTS_BUS)
+		assert_float(voice.volume_db).is_between(_audio_config.pass_volume_min_db, _audio_config.pass_volume_max_db)
+
+
+func test_no_pass_sounds_in_the_countdown() -> void:
+	var player: VehicleState = _session.player
+	_session.sim.add_vehicle(player.s + 1.0, 1, 0.0)
+	_session.sim.add_vehicle(player.s - 1.0, 1, 0.0)
+	_step(60)
+	assert_int(_audio.pass_count).is_equal(0)
