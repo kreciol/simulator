@@ -300,3 +300,36 @@ func test_leaving_restores_the_master_bus() -> void:
 	var master: int = AudioServer.get_bus_index(AudioView.MASTER_BUS)
 	assert_bool(AudioServer.is_bus_mute(master)).is_false()
 	assert_float(AudioServer.get_bus_volume_db(master)).is_equal(0.0)
+
+
+func test_road_noise_follows_the_speed_with_the_engine() -> void:
+	assert_float(AudioView.road_pitch(_audio_config, 0.0, TOP_KMH)).is_equal_approx(_audio_config.road_pitch_min, 1e-5)
+	assert_float(AudioView.road_pitch(_audio_config, TOP_KMH, TOP_KMH)).is_equal_approx(_audio_config.road_pitch_max, 1e-5)
+	assert_float(AudioView.road_volume_db(_audio_config, 0.0, TOP_KMH)).is_equal_approx(_audio_config.road_volume_min_db, 1e-4)
+	assert_float(AudioView.road_volume_db(_audio_config, TOP_KMH, TOP_KMH)).is_equal_approx(_audio_config.road_volume_max_db, 1e-4)
+	_step(1)
+	assert_bool(_audio.road_player.playing).is_false()
+	_drive()
+	assert_bool(_audio.road_player.playing).is_true()
+	assert_str(_audio.road_player.bus).is_equal(AudioView.ENGINE_BUS)
+	var speed_kmh: float = _session.player.speed_mps * TrafficSim.KMH_PER_MPS
+	assert_float(_audio.road_player.pitch_scale).is_equal_approx(
+			AudioView.road_pitch(_audio_config, speed_kmh, TOP_KMH), 1e-5)
+	_step(roundi(_sim_config.session_length_s / DT) + 1)
+	assert_int(_session.state).is_equal(SessionManager.State.ENDED)
+	assert_bool(_audio.road_player.playing).is_false()
+
+
+# Every `stream_paused` write pauses or resumes the browser's sample playback, which
+# made the web build stutter when it was written on every frame.
+func test_the_pause_is_written_to_the_players_only_when_it_changes() -> void:
+	_drive()
+	_step(30)
+	assert_int(_audio.pause_writes).is_equal(0)
+	_session.pause()
+	_audio.update()
+	_audio.update()
+	assert_int(_audio.pause_writes).is_equal(1)
+	_session.resume()
+	_step(30)
+	assert_int(_audio.pause_writes).is_equal(2)

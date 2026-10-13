@@ -11,3 +11,5 @@
 - Pass detection reads `TrafficSim.lanes`; it is reset on `SessionManager.player_respawned`.
 - Nothing sounds before the first key, click or touch; `mute` is handled by `main.gd`, not as a driving command.
 - Tests assert trigger counters and player settings, never `playing` timing of one-shots.
+- Write `stream_paused` only when the pause changes: every write pauses or resumes the browser's sample playback and makes it stutter.
+- The engine is an electric motor's whine plus a road-noise loop (`AudioSynth.road`), both following the speed.

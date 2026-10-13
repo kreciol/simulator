@@ -1,7 +1,7 @@
 class_name AudioView
 extends Node
-## Sound effects (issue #72, spec `2026-10-13-sound-effects.md`): an engine note whose
-## pitch and loudness follow the player's speed, the indicator's tick-tock in step with
+## Sound effects (issue #72, spec `2026-10-13-sound-effects.md`): an electric motor's
+## whine and the road's roar, whose pitch and loudness follow the player's speed, the indicator's tick-tock in step with
 ## the blinking arrow (`SignalBlink`), a whoosh when a vehicle passes close by on a
 ## neighbouring lane (`PassDetector`), and one sound per crash or exit from the road.
 ## Like the other views it only reads the session and the sim, once per rendered frame
@@ -29,6 +29,7 @@ var locked: bool = true
 ## The player's choice (`toggle_mute`); starts as `AudioConfig.muted_by_default`.
 var user_muted: bool = false
 var engine_player: AudioStreamPlayer
+var road_player: AudioStreamPlayer
 var tick_player: AudioStreamPlayer
 var tock_player: AudioStreamPlayer
 var collision_player: AudioStreamPlayer
@@ -42,8 +43,13 @@ var tock_count: int = 0
 var collision_count: int = 0
 var offroad_count: int = 0
 var pass_count: int = 0
+## Times the pause was written to the players.
+var pause_writes: int = 0
 
 var _players: Array[AudioStreamPlayer] = []
+## The pause last applied to the players: set only on a change, since every call pauses
+## or resumes the browser's sample playback, which makes it stutter.
+var _paused: bool = false
 ## Whether the indicator was lit at the last update, to click on each change.
 var _was_lit: bool = false
 var _pass_detector: PassDetector
@@ -60,6 +66,7 @@ func setup(session_manager: SessionManager, view_config: ViewConfig, audio_confi
 	AudioServer.set_bus_volume_db(AudioServer.get_bus_index(MASTER_BUS), config.master_volume_db)
 	var rate: int = config.synth_mix_rate
 	engine_player = _player("Engine", AudioSynth.engine(rate, config.engine_base_hz), ENGINE_BUS)
+	road_player = _player("Road", AudioSynth.road(rate), ENGINE_BUS)
 	tick_player = _player("Tick", AudioSynth.tick(rate), EFFECTS_BUS, config.indicator_volume_db)
 	tock_player = _player("Tock", AudioSynth.tock(rate), EFFECTS_BUS, config.indicator_volume_db)
 	collision_player = _player("Collision", AudioSynth.impact(rate), EFFECTS_BUS, config.collision_volume_db)
@@ -76,8 +83,11 @@ func setup(session_manager: SessionManager, view_config: ViewConfig, audio_confi
 
 ## Follows the session for one rendered frame.
 func update() -> void:
-	for player: AudioStreamPlayer in _players:
-		player.stream_paused = session.paused
+	if session.paused != _paused:
+		_paused = session.paused
+		pause_writes += 1
+		for player: AudioStreamPlayer in _players:
+			player.stream_paused = _paused
 	if session.paused:
 		return
 	_update_engine()
@@ -122,6 +132,16 @@ static func engine_volume_db(audio: AudioConfig, speed_kmh: float, top_kmh: floa
 	return lerpf(audio.engine_volume_min_db, audio.engine_volume_max_db, _speed_share(speed_kmh, top_kmh))
 
 
+## Road-noise pitch at `speed_kmh`, like the engine's.
+static func road_pitch(audio: AudioConfig, speed_kmh: float, top_kmh: float) -> float:
+	return lerpf(audio.road_pitch_min, audio.road_pitch_max, _speed_share(speed_kmh, top_kmh))
+
+
+## Road-noise loudness at `speed_kmh`: the roar that carries at motorway speed.
+static func road_volume_db(audio: AudioConfig, speed_kmh: float, top_kmh: float) -> float:
+	return lerpf(audio.road_volume_min_db, audio.road_volume_max_db, _speed_share(speed_kmh, top_kmh))
+
+
 static func _speed_share(speed_kmh: float, top_kmh: float) -> float:
 	return clampf(speed_kmh / top_kmh, 0.0, 1.0) if top_kmh > 0.0 else 1.0
 
@@ -129,13 +149,18 @@ static func _speed_share(speed_kmh: float, top_kmh: float) -> float:
 func _update_engine() -> void:
 	if not is_sounding():
 		engine_player.stop()
+		road_player.stop()
 		return
 	var speed_kmh: float = session.player.speed_mps * TrafficSim.KMH_PER_MPS
+	var fade_db: float = linear_to_db(maxf(1.0 - session.fade_amount(), MIN_FADE_GAIN))
 	engine_player.pitch_scale = engine_pitch(config, speed_kmh, top_speed_kmh)
-	var fade_gain: float = maxf(1.0 - session.fade_amount(), MIN_FADE_GAIN)
-	engine_player.volume_db = engine_volume_db(config, speed_kmh, top_speed_kmh) + linear_to_db(fade_gain)
+	engine_player.volume_db = engine_volume_db(config, speed_kmh, top_speed_kmh) + fade_db
+	road_player.pitch_scale = road_pitch(config, speed_kmh, top_speed_kmh)
+	road_player.volume_db = road_volume_db(config, speed_kmh, top_speed_kmh) + fade_db
 	if not engine_player.playing:
 		engine_player.play()
+	if not road_player.playing:
+		road_player.play()
 
 
 ## Tick when the arrow lights up, tock when it goes dark. The blink runs on sim time,

@@ -22,6 +22,7 @@ func _peak(stream: AudioStreamWAV) -> int:
 func test_every_sound_is_16_bit_mono_at_the_mix_rate() -> void:
 	var sounds: Array[AudioStreamWAV] = _one_shots()
 	sounds.append(AudioSynth.engine(MIX_RATE, BASE_HZ))
+	sounds.append(AudioSynth.road(MIX_RATE))
 	for stream: AudioStreamWAV in sounds:
 		assert_int(stream.format).is_equal(AudioStreamWAV.FORMAT_16_BITS)
 		assert_bool(stream.stereo).is_false()
@@ -56,3 +57,21 @@ func test_every_build_yields_the_same_bytes() -> void:
 	assert_bool(AudioSynth.whoosh(MIX_RATE).data == AudioSynth.whoosh(MIX_RATE).data).is_true()
 	assert_bool(AudioSynth.rumble(MIX_RATE).data == AudioSynth.rumble(MIX_RATE).data).is_true()
 	assert_bool(AudioSynth.engine(MIX_RATE, BASE_HZ).data == AudioSynth.engine(MIX_RATE, BASE_HZ).data).is_true()
+	assert_bool(AudioSynth.road(MIX_RATE).data == AudioSynth.road(MIX_RATE).data).is_true()
+
+
+func test_the_road_noise_loops_without_a_click() -> void:
+	var road: AudioStreamWAV = AudioSynth.road(MIX_RATE)
+	var length: int = roundi(AudioSynth.ROAD_S * MIX_RATE)
+	assert_int(road.loop_mode).is_equal(AudioStreamWAV.LOOP_FORWARD)
+	assert_int(road.loop_begin).is_equal(0)
+	assert_int(road.loop_end).is_equal(length)
+	assert_int(road.data.size()).is_equal(length * 2)
+	# The folded seam: the loop's end runs on into its start no harder than any two
+	# neighbouring samples inside the loop do.
+	var largest_step: int = 0
+	for i: int in range(2, road.data.size(), 2):
+		largest_step = maxi(largest_step, absi(road.data.decode_s16(i) - road.data.decode_s16(i - 2)))
+	var first: int = road.data.decode_s16(0)
+	var last: int = road.data.decode_s16(road.data.size() - 2)
+	assert_int(absi(first - last)).is_less_equal(largest_step)

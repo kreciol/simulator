@@ -12,6 +12,9 @@ func test_ranges_run_from_low_to_high() -> void:
 	assert_float(audio.engine_pitch_min).is_greater(0.0)
 	assert_float(audio.engine_pitch_max).is_greater(audio.engine_pitch_min)
 	assert_float(audio.engine_volume_max_db).is_greater(audio.engine_volume_min_db)
+	assert_float(audio.road_pitch_min).is_greater(0.0)
+	assert_float(audio.road_pitch_max).is_greater(audio.road_pitch_min)
+	assert_float(audio.road_volume_max_db).is_greater(audio.road_volume_min_db)
 	assert_float(audio.pass_volume_max_db).is_greater(audio.pass_volume_min_db)
 	assert_float(audio.pass_full_speed_kmh).is_greater(audio.pass_min_relative_speed_kmh)
 

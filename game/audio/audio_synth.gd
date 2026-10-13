@@ -12,11 +12,15 @@ const SEED: int = 72
 const PEAK: float = 0.8
 const S16_MAX: float = 32767.0
 
-## Engine harmonics' amplitudes, fundamental first: a buzzy, low hum.
-const ENGINE_HARMONICS: PackedFloat32Array = [1.0, 0.6, 0.45, 0.3, 0.2, 0.12]
-## Slow throb of the engine note: firing pulses at a fraction of the fundamental.
-const ENGINE_THROB_DIVISOR: int = 4
-const ENGINE_THROB_DEPTH: float = 0.25
+## Electric motor whine's partials, fundamental first: an almost pure, soft tone.
+const ENGINE_HARMONICS: PackedFloat32Array = [1.0, 0.18, 0.05]
+
+## Length of the road-noise loop, s; long enough that its pattern is not heard.
+const ROAD_S: float = 2.0
+## One-pole low-pass of the road noise: a dull tyre roar.
+const ROAD_SMOOTHING: float = 0.97
+## Cross-fade folded over the road loop's seam, s, so it loops without a click.
+const ROAD_SEAM_S: float = 0.1
 
 const TICK_HZ: float = 2100.0
 const TOCK_HZ: float = 1500.0
@@ -40,23 +44,37 @@ const RUMBLE_SMOOTHING: float = 0.95
 const RUMBLE_GRIT: float = 0.15
 
 
-## One second of engine note at `base_hz`, looping seamlessly: every partial and the
-## throb complete whole cycles in it.
+## One second of an electric motor's whine at `base_hz`, looping seamlessly: every
+## partial completes whole cycles in it.
 static func engine(mix_rate: int, base_hz: int) -> AudioStreamWAV:
 	var samples: PackedFloat32Array = PackedFloat32Array()
 	samples.resize(mix_rate)
-	var throb_hz: float = float(base_hz) / ENGINE_THROB_DIVISOR
 	for i: int in mix_rate:
 		var t: float = float(i) / mix_rate
 		var value: float = 0.0
 		for k: int in ENGINE_HARMONICS.size():
 			value += ENGINE_HARMONICS[k] * sin(TAU * base_hz * (k + 1) * t)
-		value *= 1.0 - ENGINE_THROB_DEPTH * (0.5 + 0.5 * sin(TAU * throb_hz * t))
 		samples[i] = value
 	var stream: AudioStreamWAV = _wav(samples, mix_rate)
 	stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
 	stream.loop_begin = 0
 	stream.loop_end = mix_rate
+	return stream
+
+
+## Tyre and wind roar: low-passed noise, looping without a click (the tail is folded
+## over the start).
+static func road(mix_rate: int) -> AudioStreamWAV:
+	var seam: int = roundi(ROAD_SEAM_S * mix_rate)
+	var length: int = roundi(ROAD_S * mix_rate)
+	var noise: PackedFloat32Array = _low_passed_noise(mix_rate, ROAD_S + ROAD_SEAM_S, ROAD_SMOOTHING)
+	var samples: PackedFloat32Array = noise.slice(0, length)
+	for i: int in seam:
+		samples[i] = lerpf(noise[length + i], noise[i], float(i) / seam)
+	var stream: AudioStreamWAV = _wav(samples, mix_rate)
+	stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
+	stream.loop_begin = 0
+	stream.loop_end = length
 	return stream
 
 

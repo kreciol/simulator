@@ -11,6 +11,7 @@ extends Resource
 @export var muted_by_default: bool
 
 @export_group("Engine")
+## The electric motor's whine.
 ## Pitch at 0 km/h and at the top speed (the profile's limit plus the S1 tolerance).
 @export var engine_pitch_min: float
 @export var engine_pitch_max: float
@@ -19,6 +20,14 @@ extends Resource
 @export var engine_volume_max_db: float
 ## Fundamental of the synthesised engine loop, Hz; a whole number, so the loop is seamless.
 @export var engine_base_hz: int
+
+@export_group("Road noise")
+## Tyre and wind roar under the motor's whine: pitch and loudness at 0 km/h and at the
+## top speed, like the engine's.
+@export var road_pitch_min: float
+@export var road_pitch_max: float
+@export var road_volume_min_db: float
+@export var road_volume_max_db: float
 
 @export_group("Indicator")
 @export var indicator_volume_db: float
