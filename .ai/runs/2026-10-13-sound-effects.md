@@ -29,6 +29,8 @@ Phases and steps follow the spec's Implementation Plan one to one.
 
 ## Progress
 
+PR: #75
+
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: Audio foundation and engine
@@ -45,5 +47,5 @@ Phases and steps follow the spec's Implementation Plan one to one.
 
 ### Phase 3: Passing vehicles
 
-- [ ] 3.1 PassDetector and pooled whoosh
-- [ ] 3.2 Docs: Q15, agents audio area
+- [x] 3.1 PassDetector and pooled whoosh — e09be07
+- [x] 3.2 Docs: Q15, agents audio area — 5dfca4d
