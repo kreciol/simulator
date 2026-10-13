@@ -36,3 +36,8 @@ func test_input_actions_have_primary_and_alternative_keys(
 		if key_event != null:
 			keys.append(key_event.physical_keycode)
 	assert_array(keys).contains_exactly([primary, alternative])
+
+
+func test_the_game_opens_on_the_start_screen() -> void:
+	# Spec UI/UX flow (issue #43); dev-launcher params skip it to a session.
+	assert_str(ProjectSettings.get_setting("application/run/main_scene")).is_equal(AppFlow.START_SCENE)

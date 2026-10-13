@@ -83,3 +83,30 @@ MODE_LEARN,Nauka
 MODE_EXAM,Egzamin
 ROAD_MOTORWAY,Autostrada
 ROAD_EXPRESSWAY,Droga ekspresowa
+LEVEL_CALM,Spokojny ruch
+LEVEL_MODERATE,Umiarkowany ruch
+LEVEL_BUSY,Duży ruch
+LEVEL_RUSH_HOUR,Godziny szczytu
+START_TITLE,Symulator autostrady
+START_SUBTITLE,"Ćwiczenie jazdy autostradą i drogą ekspresową: prawy pas, kierunkowskaz przy zmianie pasa i bezpieczny odstęp."
+START_NEW_SESSION,Nowa sesja
+START_HISTORY,Historia wyników
+START_SETTINGS,Ustawienia
+START_TUTORIAL,Samouczek
+START_COMING_SOON,{entry} — wkrótce
+START_LEGAL_NOTE,"To narzędzie edukacyjne, a nie porada prawna. Na drodze obowiązują przepisy ustawy Prawo o ruchu drogowym i znaki."
+SETUP_TITLE,Nowa sesja
+SETUP_MODE,Tryb
+SETUP_ROAD,Droga
+SETUP_LEVEL,Poziom ruchu
+SETUP_MODE_LEARN_HINT,"Nauka: podpowiedzi na bieżąco, a po kolizji powrót na prawy pas."
+SETUP_MODE_EXAM_HINT,"Egzamin: bez podpowiedzi, a kolizja lub zjechanie z drogi kończą przejazd."
+SETUP_EXAM_SUGGESTED,"Ukończone sesje nauki: {count}. Warto sprawdzić te nawyki w trybie egzaminu."
+SETUP_SUGGESTED,{name} (polecany)
+SETUP_LEVEL_ENTRY,{level}. {name}
+SETUP_START,Start
+SETUP_BACK,Wróć
+END_AGAIN,Jeszcze raz
+END_HISTORY,Historia wyników
+END_MENU,Menu główne
+HISTORY_BACK,Wróć do menu
