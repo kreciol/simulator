@@ -161,8 +161,10 @@ func _show_choice() -> void:
 	})})
 
 
-## Starts the chosen session; the drive opens with the 3-2-1 countdown.
+## Starts the chosen session; the drive opens with the 3-2-1 countdown. Pressing Start
+## is the player's gesture, so sound may play from the countdown on.
 func start() -> void:
+	AudioView.run_unlocked = true
 	start_session.call(SessionSetup.options_for(
 			selected_mode, selected_profile, selected_level, launcher_config, randi()))
 

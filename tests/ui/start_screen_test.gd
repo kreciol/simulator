@@ -228,3 +228,12 @@ func test_esc_on_the_setup_returns_to_the_menu() -> void:
 	screen._unhandled_input(esc)
 	assert_bool(screen.menu_page.visible).is_true()
 	assert_array(_started).is_empty()
+
+
+func test_start_counts_as_the_gesture_that_lets_sound_play() -> void:
+	AudioView.reset_run()
+	var screen: StartScreen = _make()
+	screen.show_setup()
+	screen.start_button.pressed.emit()
+	assert_bool(AudioView.run_unlocked).is_true()
+	AudioView.reset_run()

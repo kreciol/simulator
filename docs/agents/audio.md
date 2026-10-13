@@ -10,6 +10,7 @@
 - The indicator clicks on `SignalBlink` edges, never on its own timer.
 - Pass detection reads `TrafficSim.lanes`; it is reset on `SessionManager.player_respawned`.
 - Nothing sounds before the first key, click or touch; `mute` is handled by `main.gd`, not as a driving command.
+- The unlock and the player's mute choice last for the run (`AudioView.run_*` statics), not one scene: every session from the menu or "again" is a new scene; tests call `AudioView.reset_run()`.
 - Tests assert trigger counters and player settings, never `playing` timing of one-shots.
 - Write `stream_paused` only when the pause changes: every write pauses or resumes the browser's sample playback and makes it stutter.
 - The engine is an electric motor's whine plus a road-noise loop (`AudioSynth.road`), both following the speed.

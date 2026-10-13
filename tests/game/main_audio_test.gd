@@ -7,7 +7,12 @@ const DT: float = 1.0 / 60.0
 const MAIN_SCENE: String = "res://game/main.tscn"
 
 
+func before_test() -> void:
+	AudioView.reset_run()
+
+
 func after_test() -> void:
+	AudioView.reset_run()
 	AudioServer.set_bus_mute(AudioServer.get_bus_index(AudioView.MASTER_BUS), false)
 
 
@@ -110,3 +115,16 @@ func test_m_is_not_a_driving_command() -> void:
 	assert_int(player.signal_dir).is_equal(VehicleState.Dir.NONE)
 	assert_bool(player.lane_change_active).is_false()
 	assert_int(player.longitudinal).is_equal(VehicleState.Longitudinal.NONE)
+
+
+func test_mute_and_unlock_carry_over_to_the_next_session() -> void:
+	# Issue #43: "again" or the menu start a new scene; the player's mute stays.
+	var first: Node3D = _main()
+	_press(first, _key(KEY_W))
+	_press(first, _key(KEY_M))
+	var next: Node3D = _main()
+	assert_bool(_audio(next).locked).is_false()
+	assert_bool(_audio(next).user_muted).is_true()
+	_press(next, _key(KEY_M))
+	var third: Node3D = _main()
+	assert_bool(_audio(third).user_muted).is_false()
