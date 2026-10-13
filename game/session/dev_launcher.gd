@@ -8,7 +8,8 @@ extends RefCounted
 ## issue #26). `screen=history` opens the history screen instead of a session (issue
 ## #41). A missing or invalid value falls back to its default from `DevLauncherConfig`
 ## (`high` quality, mirrors on, probe off) or, for the screen, to a session; a missing
-## seed is drawn at random.
+## seed is drawn at random. Since the start screen (issue #43) the params are a debug
+## shortcut: any of them skips the menus.
 
 const KEY_MODE: String = "mode"
 const KEY_PROFILE: String = "profile"
@@ -18,11 +19,23 @@ const KEY_QUALITY: String = "quality"
 const KEY_MIRRORS: String = "mirrors"
 const KEY_PERF: String = "perf"
 const KEY_SCREEN: String = "screen"
+const KEYS: Array[String] = [KEY_MODE, KEY_PROFILE, KEY_LEVEL, KEY_SEED, KEY_QUALITY,
+		KEY_MIRRORS, KEY_PERF, KEY_SCREEN]
 
 
 ## Launch options from this platform's params: the page URL on web, user args elsewhere.
 static func from_environment(config: DevLauncherConfig) -> LaunchOptions:
 	return resolve(read_platform_params(), config, randi())
+
+
+## Whether `params` name anything the launcher reads: then the start screen is skipped
+## and they start the session (or `screen`) directly, as before the menus (issue #43).
+## Unknown keys alone do not.
+static func has_launch_params(params: Dictionary) -> bool:
+	for key: String in KEYS:
+		if params.has(key):
+			return true
+	return false
 
 
 static func read_platform_params() -> Dictionary:
