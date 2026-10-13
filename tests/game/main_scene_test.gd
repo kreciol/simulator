@@ -61,6 +61,21 @@ func _player_view() -> PlayerView:
 	return _main.get_node("PlayerView") as PlayerView
 
 
+## Issue #68: hectometre posts follow the road as the player drives.
+func test_scene_shows_hectometre_posts_that_follow_the_road() -> void:
+	var posts_view: HectometrePostsView = _main.get_node("HectometrePosts") as HectometrePostsView
+	assert_int(posts_view.posts().size()).is_equal(_main.view_config.hectometre_post_count())
+	_drive(120)
+	var spacing: float = _main.view_config.hectometre_post_spacing_m
+	var shown: int = 0
+	for post: MeshInstance3D in posts_view.posts():
+		if post.visible:
+			shown += 1
+			var k: float = (_player().s - post.position.z) / spacing
+			assert_float(absf(k - roundf(k)) * spacing).is_less(1e-2)
+	assert_int(shown).is_greater(0)
+
+
 func test_scene_shows_road_and_cockpit_camera() -> void:
 	assert_int(_road_view().segments().size()).is_greater(0)
 	var camera: Camera3D = _player_view().camera
