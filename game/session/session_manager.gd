@@ -12,7 +12,10 @@ extends Node
 ## own. With a `scoring_config` it also scores the drive and, at the end, builds the
 ## session's `SessionRecord` for `SaveManager` and — with a `feedback_config` — its
 ## `Summary`; with both configs, learn mode also coaches the drive through a
-## `HintEngine` (requirements §11.2), which the exam never has.
+## `HintEngine` (requirements §11.2), which the exam never has. The tutorial (spec
+## Phase 10 step 2) is a learn session on an empty road with no scoring, hints or time
+## limit: its `Tutorial` prompts the steps and the session ends once they are done or
+## the player skips them.
 
 signal session_started
 signal session_ended
@@ -22,8 +25,9 @@ signal session_resumed
 signal player_respawned
 
 enum State { INTRO, DRIVING, RESPAWNING, ENDED }
-## Why the session ended; NONE until it has.
-enum EndReason { NONE, TIME_UP, COLLISION, OFF_ROAD }
+## Why the session ended; NONE until it has. `TUTORIAL_OVER`: the tutorial was finished
+## or skipped (`Tutorial.skipped` says which).
+enum EndReason { NONE, TIME_UP, COLLISION, OFF_ROAD, TUTORIAL_OVER }
 
 ## Absorbs float drift when fixed steps should sum to exactly a configured duration.
 const TIME_EPSILON: float = 1e-6
@@ -34,6 +38,8 @@ const RESPAWN_MIDPOINT: float = 0.5
 @export var scoring_config: ScoringConfig
 ## Writes the end-of-session summary when set along with `scoring_config`.
 @export var feedback_config: FeedbackConfig
+## The tutorial's tunables; needed to start a tutorial.
+@export var tutorial_config: TutorialConfig
 
 var sim: TrafficSim
 var player: VehicleState
@@ -71,6 +77,8 @@ var summary: Summary
 ## Learn-mode hints, fed after every scored step and cleared on a respawn; null in the
 ## exam, or without both configs.
 var hint_engine: HintEngine
+## The tutorial's prompts, fed after every driving step; null outside the tutorial.
+var tutorial: Tutorial
 
 ## The player's collision or off-road seen during the current sim step; the session
 ## ends once the step is over.
@@ -79,11 +87,16 @@ var _player_end_reason: EndReason = EndReason.NONE
 
 ## Sets the session up on the launch options' profile and seed with traffic at the
 ## options' difficulty level, keeping the options (mode, level) for the rules that
-## depend on them.
+## depend on them. The tutorial gets an empty road and no scoring instead.
 func start(launch_options: LaunchOptions, sim_config: SimConfig) -> void:
 	setup(launch_options.profile, sim_config, launch_options.seed_value, launch_options.mode)
 	options = launch_options
-	if launch_options.difficulty != null:
+	if launch_options.is_tutorial():
+		# Scoring during the tutorial is out of scope (issue #45): nothing to observe.
+		scoring = null
+		hint_engine = null
+		tutorial = Tutorial.new(tutorial_config, player)
+	elif launch_options.difficulty != null:
 		Spawner.new(launch_options.difficulty).attach(sim)
 
 
@@ -99,6 +112,7 @@ func setup(road_profile: RoadProfile, sim_config: SimConfig, seed_value: int = 0
 	sim.offroad.connect(_on_offroad)
 	scoring = ScoringSystem.new(sim, scoring_config) if scoring_config != null else null
 	hint_engine = null
+	tutorial = null
 	if scoring != null and feedback_config != null and not is_exam():
 		hint_engine = HintEngine.new(sim, scoring, feedback_config)
 	started_at = ""
@@ -134,10 +148,14 @@ func step(dt: float, commands: PlayerCommands = null) -> void:
 				var events: Array[ScoreEvent] = scoring.observe(dt)
 				if hint_engine != null:
 					hint_engine.observe(events)
+			if tutorial != null:
+				tutorial.observe(dt)
 			elapsed_s += dt
 			var incident: EndReason = _player_end_reason
 			_player_end_reason = EndReason.NONE
-			if incident != EndReason.NONE and is_exam():
+			if tutorial != null and tutorial.is_finished():
+				_end(EndReason.TUTORIAL_OVER)
+			elif incident != EndReason.NONE and is_exam():
 				_end(incident)
 			elif _time_up():
 				_end(EndReason.TIME_UP)
@@ -168,6 +186,20 @@ func resume() -> void:
 		return
 	paused = false
 	session_resumed.emit()
+
+
+## Ends the tutorial at once, from any state but the end — paused too (requirements
+## §12: skippable). Does nothing outside the tutorial.
+func skip_tutorial() -> void:
+	if tutorial == null or state == State.ENDED:
+		return
+	tutorial.skip()
+	paused = false
+	_end(EndReason.TUTORIAL_OVER)
+
+
+func is_tutorial() -> bool:
+	return tutorial != null
 
 
 func toggle_pause() -> void:
@@ -232,7 +264,7 @@ func status() -> StringName:
 
 
 func _time_up() -> bool:
-	return elapsed_s >= sim.config.session_length_s - TIME_EPSILON
+	return tutorial == null and elapsed_s >= sim.config.session_length_s - TIME_EPSILON
 
 
 func _start_respawn(cause: EndReason) -> void:

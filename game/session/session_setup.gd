@@ -4,6 +4,7 @@ extends RefCounted
 ## learn mode is the default, the exam is suggested once enough learn sessions were
 ## completed, the recommended level is highlighted (Q14: every level is selectable),
 ## and a chosen mode · road profile · level becomes the `LaunchOptions` of a session.
+## The tutorial (spec Phase 10 step 2) is suggested until it has been seen.
 
 
 ## Saved sessions (`HistoryStore.sessions`) completed in learn mode; a learn session
@@ -50,3 +51,16 @@ static func options_for(mode: StringName, profile: StringName, level: int,
 		DevLauncher.KEY_LEVEL: str(level),
 	}
 	return DevLauncher.resolve(params, launcher, random_seed)
+
+
+## Whether the start screen suggests the tutorial: until it was finished or skipped
+## once (spec UI/UX flow: suggested on first run).
+static func suggests_tutorial(tutorial_seen: bool) -> bool:
+	return not tutorial_seen
+
+
+## The options of the tutorial: learn mode on the launcher's default road; it has no
+## traffic and no scoring whatever the level (`SessionManager`).
+static func tutorial_options(launcher: DevLauncherConfig, random_seed: int) -> LaunchOptions:
+	return DevLauncher.resolve({DevLauncher.KEY_SCREEN: String(LaunchOptions.SCREEN_TUTORIAL)},
+			launcher, random_seed)
