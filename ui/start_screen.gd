@@ -206,7 +206,8 @@ func show_settings() -> void:
 	quality_buttons[settings.quality].button_pressed = true
 	mirrors_buttons[settings.mirrors].button_pressed = true
 	_show_window_mode()
-	settings_save_failed_label.visible = false
+	# Said up front when nothing could last, not only after a change.
+	settings_save_failed_label.visible = not settings.can_save()
 	menu_page.visible = false
 	setup_page.visible = false
 	settings_page.visible = true

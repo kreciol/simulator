@@ -216,6 +216,8 @@ func test_storage_that_does_not_persist_is_explained() -> void:
 	settings.userfs_persistent = false
 	var screen: StartScreen = _make(settings)
 	screen.show_settings()
+	# Said when the page opens, before any change.
+	assert_bool(screen.settings_save_failed_label.visible).is_true()
 	screen.quality_buttons[&"low"].pressed.emit()
 	assert_bool(screen.settings_save_failed_label.visible).is_true()
 	assert_str(_start_session(screen).quality.id).is_equal(&"low")

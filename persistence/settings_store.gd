@@ -57,10 +57,15 @@ func load_settings() -> void:
 		mirrors = saved_mirrors
 
 
+## Whether a save can last: there is a file, and `user://` survives a restart.
+func can_save() -> bool:
+	return path != "" and userfs_persistent
+
+
 ## Writes the settings; false when they will not be there next time: no path, storage
 ## that does not persist, or a write that failed.
 func save_settings() -> bool:
-	if path == "" or not userfs_persistent:
+	if not can_save():
 		return false
 	var file: ConfigFile = ConfigFile.new()
 	file.set_value(SECTION, KEY_QUALITY, String(quality))
