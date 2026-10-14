@@ -22,7 +22,7 @@ extends RefCounted
 ## Emitted when a hint goes on screen.
 signal hint_shown(hint: Hint)
 
-## What `_show` did with a hint.
+## What `_show` did with a hint, or what `admission` says it would do.
 enum Shown { SHOWN, RATE_LIMITED, NO_ROOM }
 
 const KEEP_RIGHT: StringName = &"HINT_KEEP_RIGHT"
