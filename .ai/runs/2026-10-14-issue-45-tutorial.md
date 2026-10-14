@@ -62,13 +62,13 @@ A first-time player is offered a short tutorial (requirements §12; spec Phase 1
 
 ### Phase 1: Tutorial state machine
 
-- [ ] 1.1 TutorialConfig and its resource
-- [ ] 1.2 Tutorial prompts state machine
+- [x] 1.1 TutorialConfig and its resource — 833b219
+- [x] 1.2 Tutorial prompts state machine — 833b219
 
 ### Phase 2: Session and HUD
 
-- [ ] 2.1 Tutorial sessions in SessionManager
-- [ ] 2.2 HUD prompt, skip and recap
+- [x] 2.1 Tutorial sessions in SessionManager — beb159c
+- [x] 2.2 HUD prompt, skip and recap — 7fee27b
 
 ### Phase 3: Seen flag and start screen
 
