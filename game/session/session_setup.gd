@@ -38,15 +38,18 @@ static func recommended_level(launcher: DevLauncherConfig) -> int:
 	return launcher.default_level
 
 
-## The options of a session with the chosen mode, road profile and level; quality,
-## mirrors and the probe take the launcher's defaults until the settings screen
-## (E11-S02). Built through `DevLauncher.resolve`, so an unknown value falls back the
-## same way a URL param does.
+## The options of a session with the chosen mode, road profile and level, and the
+## quality and mirrors of the player's `settings` (issue #44; the launcher's defaults
+## without them); the probe takes the launcher's default. Built through
+## `DevLauncher.resolve`, so an unknown value falls back the same way a URL param does.
 static func options_for(mode: StringName, profile: StringName, level: int,
-		launcher: DevLauncherConfig, random_seed: int) -> LaunchOptions:
+		launcher: DevLauncherConfig, random_seed: int, settings: SettingsStore = null) -> LaunchOptions:
 	var params: Dictionary = {
 		DevLauncher.KEY_MODE: String(mode),
 		DevLauncher.KEY_PROFILE: String(profile),
 		DevLauncher.KEY_LEVEL: str(level),
 	}
+	if settings != null:
+		params[DevLauncher.KEY_QUALITY] = String(settings.quality)
+		params[DevLauncher.KEY_MIRRORS] = "1" if settings.mirrors else "0"
 	return DevLauncher.resolve(params, launcher, random_seed)
