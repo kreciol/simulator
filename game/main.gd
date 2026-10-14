@@ -183,8 +183,10 @@ func _on_session_ended() -> void:
 	_hud.show_save_status(saved, SaveManager.store)
 
 
-## A finished tutorial stays on its recap; a skipped one leaves for the menu at once.
+## A finished or skipped tutorial is no longer suggested on the start screen. A finished
+## one stays on its recap; a skipped one leaves for the menu at once.
 func _on_tutorial_ended() -> void:
+	SaveManager.settings.mark_tutorial_seen()
 	if session.tutorial.skipped:
 		change_scene.call(AppFlow.START_SCENE)
 

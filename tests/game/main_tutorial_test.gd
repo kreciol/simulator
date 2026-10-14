@@ -2,18 +2,40 @@ extends GdUnitTestSuite
 ## The tutorial in the drivable scene (issue #45, requirements §12): the HUD prompts the
 ## current step with a skip button and no time left; Tab or the button skips it straight
 ## back to the start screen; a finished tutorial recaps the three rules and offers it
-## again or the menu.
+## again or the menu. Finished or skipped, it is marked as seen.
 
 const MAIN_SCENE: String = "res://game/main.tscn"
 const DT: float = 1.0 / 60.0
+## Never the player's real settings.
+const TEST_SETTINGS: String = "user://test_main_tutorial/settings.cfg"
 
 var _opened: Array[String] = []
 var _started: Array[LaunchOptions] = []
+var _real_settings: SettingsStore
 
 
 func before_test() -> void:
 	_opened.clear()
 	_started.clear()
+	_real_settings = SaveManager.settings
+	_clear_test_settings()
+	SaveManager.settings = SettingsStore.new(TEST_SETTINGS)
+	SaveManager.settings.userfs_persistent = true
+	SaveManager.settings.load_settings()
+
+
+func after_test() -> void:
+	SaveManager.settings = _real_settings
+	_clear_test_settings()
+
+
+func _clear_test_settings() -> void:
+	var dir: String = TEST_SETTINGS.get_base_dir()
+	if not DirAccess.dir_exists_absolute(dir):
+		return
+	for file_name: String in DirAccess.get_files_at(dir):
+		DirAccess.remove_absolute(dir.path_join(file_name))
+	DirAccess.remove_absolute(dir)
 
 
 func _main(query: String = "?screen=tutorial") -> DriveScene:
@@ -151,3 +173,26 @@ func test_menu_after_the_tutorial_opens_the_start_screen() -> void:
 	_finish(main)
 	_hud(main).menu_requested.emit()
 	assert_array(_opened).contains_exactly([AppFlow.START_SCENE])
+
+
+func test_a_skipped_tutorial_is_marked_seen() -> void:
+	var main: DriveScene = _main()
+	await get_tree().process_frame
+	assert_bool(SaveManager.settings.tutorial_seen).is_false()
+	main.skip_tutorial()
+	assert_bool(SaveManager.settings.tutorial_seen).is_true()
+	assert_bool(FileAccess.file_exists(TEST_SETTINGS)).is_true()
+
+
+func test_a_finished_tutorial_is_marked_seen() -> void:
+	var main: DriveScene = _main()
+	await get_tree().process_frame
+	_finish(main)
+	assert_bool(SaveManager.settings.tutorial_seen).is_true()
+
+
+func test_a_normal_session_does_not_mark_the_tutorial_seen() -> void:
+	var main: DriveScene = _main("")
+	await get_tree().process_frame
+	assert_bool(main.session.is_tutorial()).is_false()
+	assert_bool(SaveManager.settings.tutorial_seen).is_false()
