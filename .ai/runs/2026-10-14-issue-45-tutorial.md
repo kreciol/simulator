@@ -58,6 +58,8 @@ A first-time player is offered a short tutorial (requirements §12; spec Phase 1
 
 ## Progress
 
+PR: #78
+
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: Tutorial state machine
@@ -72,10 +74,10 @@ A first-time player is offered a short tutorial (requirements §12; spec Phase 1
 
 ### Phase 3: Seen flag and start screen
 
-- [ ] 3.1 SettingsStore with tutorial_seen
-- [ ] 3.2 Start screen suggests and starts the tutorial
+- [x] 3.1 SettingsStore with tutorial_seen — aab2aea
+- [x] 3.2 Start screen suggests and starts the tutorial — f194e5a
 
 ### Phase 4: Strings and docs
 
-- [ ] 4.1 Polish strings
-- [ ] 4.2 Agent docs
+- [x] 4.1 Polish strings — 910317a
+- [x] 4.2 Agent docs — dc85cba
