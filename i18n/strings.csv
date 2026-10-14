@@ -126,3 +126,17 @@ END_HISTORY,Historia wyników
 END_MENU,Menu główne
 HISTORY_BACK,Wróć do menu
 SETUP_CHOICE,Wybrano: {choice}
+TUTORIAL_STEP,Krok {number} z {count}
+TUTORIAL_ACCELERATE,"Przyspiesz: przytrzymaj W lub strzałkę w górę. Na autostradzie wjeżdżasz w ruch, który jedzie szybko."
+TUTORIAL_SLOW_DOWN,"Zwolnij: przytrzymaj S lub strzałkę w dół. Hamowanie zwiększa odstęp od pojazdu przed tobą."
+TUTORIAL_SIGNAL,"Włącz lewy kierunkowskaz: Q lub przecinek. Inni kierowcy widzą wtedy, że chcesz zmienić pas."
+TUTORIAL_CHANGE_LANE,"Zmień pas na lewy: A lub strzałka w lewo. Kierunkowskaz zgaśnie sam po zmianie pasa."
+TUTORIAL_RETURN_RIGHT,"Wróć na prawy pas: włącz prawy kierunkowskaz (E lub kropka) i naciśnij D lub strzałkę w prawo. Lewy pas służy do wyprzedzania."
+TUTORIAL_CHECK_MIRRORS,"Spójrz w lusterka: wsteczne u góry i boczne po bokach. Przed każdą zmianą pasa sprawdź, czy nikt cię nie wyprzedza."
+TUTORIAL_SKIP,Pomiń samouczek (Tab)
+TUTORIAL_DONE,Samouczek ukończony
+TUTORIAL_RECAP_TITLE,Trzy zasady na autostradzie:
+TUTORIAL_RECAP_RIGHT_LANE,"Prawy pas: jedź prawym pasem, a lewym tylko wyprzedzaj."
+TUTORIAL_RECAP_SIGNAL,Kierunkowskaz: włącz go przed każdą zmianą pasa.
+TUTORIAL_RECAP_GAP,"Odstęp: w metrach co najmniej połowa prędkości w km/h, np. przy 120 km/h to 60 m."
+START_TUTORIAL_SUGGESTED,"Pierwszy raz? Zacznij od samouczka: krótki przejazd po pustej drodze, bez punktów."

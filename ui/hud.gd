@@ -14,7 +14,9 @@ extends CanvasLayer
 ## The score stays up through the countdown, a respawn and under the end screen. While
 ## the sound is muted a crossed-out speaker with text says so, in both modes. Under the
 ## summary the end screen offers the next step (spec UI/UX flow, issue #43): again, the
-## history or the menu, each a signal the scene acts on. Only reads session state.
+## history or the menu, each a signal the scene acts on. In the tutorial (spec Phase 10
+## step 2) it shows the current step's prompt with a skip button instead of the time
+## left, and the end screen recaps the three rules. Only reads session state.
 ## Placeholder styling until the UI theme lands (Phase 10).
 
 ## The player asked for the same session once more, from the end screen.
@@ -23,6 +25,8 @@ signal again_requested
 signal history_requested
 ## The player asked for the start screen, from the end screen.
 signal menu_requested
+## The player asked to skip the tutorial, from its prompt.
+signal tutorial_skip_requested
 
 const MARGIN: float = 24.0
 const OUTLINE_SIZE: int = 8
@@ -87,6 +91,15 @@ const NOTICE_BACKDROP: Color = Color(0.0, 0.0, 0.0, 0.55)
 const SUMMARY_BACKDROP: Color = Color(0.0, 0.0, 0.0, 0.8)
 const END_BUTTON_FONT_SIZE: int = 20
 const END_BUTTON_SIZE: Vector2 = Vector2(220.0, 40.0)
+const TUTORIAL_STEP_FONT_SIZE: int = 22
+const TUTORIAL_PROMPT_FONT_SIZE: int = 30
+const TUTORIAL_PROMPT_WIDTH: float = 760.0
+const TUTORIAL_BACKDROP: Color = Color(0.0, 0.0, 0.0, 0.6)
+const TUTORIAL_PADDING: int = 16
+const TUTORIAL_SKIP_FONT_SIZE: int = 18
+## The three rules the tutorial's end screen recaps (requirements §12).
+const TUTORIAL_RECAP_KEYS: Array[StringName] = [&"TUTORIAL_RECAP_RIGHT_LANE",
+		&"TUTORIAL_RECAP_SIGNAL", &"TUTORIAL_RECAP_GAP"]
 ## Driving actions bound to the arrow keys, which also move the focus between buttons.
 const FOCUS_SHARED_ACTIONS: Array[StringName] = [&"accelerate", &"brake", &"lane_left", &"lane_right"]
 ## Absorbs float drift so a whole second left never reads as the next one up.
@@ -135,6 +148,13 @@ var toast: PanelContainer
 var toast_label: Label
 ## Shown while the sound is muted: icon and text.
 var muted_indicator: HBoxContainer
+## Tutorial only: the current step and its prompt under the rear-view mirror, with a
+## skip button; and the three-rule recap on the end screen.
+var tutorial_panel: PanelContainer
+var tutorial_step_label: Label
+var tutorial_prompt_label: Label
+var tutorial_skip_button: Button
+var tutorial_recap: VBoxContainer
 
 ## The summary the panel shows, so it is filled once rather than every frame.
 var _shown_summary: Summary
@@ -273,6 +293,8 @@ func setup(view_config: ViewConfig) -> void:
 	ended_notice.add_child(comparison_label)
 	save_status_label = _wrapped_label("SaveStatus")
 	ended_notice.add_child(save_status_label)
+	tutorial_recap = _tutorial_recap()
+	ended_notice.add_child(tutorial_recap)
 	end_actions = HBoxContainer.new()
 	end_actions.name = "EndActions"
 	end_actions.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -290,6 +312,16 @@ func setup(view_config: ViewConfig) -> void:
 	muted_indicator.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT, Control.PRESET_MODE_MINSIZE, int(MARGIN))
 	muted_indicator.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	muted_indicator.grow_vertical = Control.GROW_DIRECTION_BEGIN
+
+	tutorial_panel = _tutorial_panel()
+	root.add_child(tutorial_panel)
+	tutorial_panel.anchor_left = 0.5
+	tutorial_panel.anchor_right = 0.5
+	tutorial_panel.anchor_top = view.rear_mirror_rect.end.y
+	tutorial_panel.anchor_bottom = view.rear_mirror_rect.end.y
+	tutorial_panel.offset_top = HINTS_GAP
+	tutorial_panel.offset_bottom = HINTS_GAP
+	tutorial_panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
 
 	toast = _toast()
 	root.add_child(toast)
@@ -358,9 +390,12 @@ func update(session: SessionManager) -> void:
 	if respawning:
 		var respawn_cause: StringName = RESPAWN_CAUSES.get(session.respawn_cause, &"RESPAWN_COLLISION")
 		respawn_label.text = tr(respawn_cause)
-	if session.state == SessionManager.State.ENDED and not ended_screen.visible:
+	var tutorial: Tutorial = session.tutorial
+	# A skipped tutorial leaves for the menu at once: no end screen in between.
+	var ended: bool = session.state == SessionManager.State.ENDED and not (tutorial != null and tutorial.skipped)
+	if ended and not ended_screen.visible:
 		_focus_again_pending = true
-	ended_screen.visible = session.state == SessionManager.State.ENDED
+	ended_screen.visible = ended
 	# Enter or Space picks "again"; the arrows reach the others. The arrows also drive,
 	# so focus waits until none is held: a key still down from the drive would walk it
 	# on to another button.
@@ -369,6 +404,15 @@ func update(session: SessionManager) -> void:
 		again_button.grab_focus()
 	for widget: Control in _driving_widgets:
 		widget.visible = not ended_screen.visible
+	# The tutorial has no time limit.
+	time_label.visible = time_label.visible and tutorial == null
+	tutorial_panel.visible = tutorial != null and session.state != SessionManager.State.ENDED
+	if tutorial_panel.visible:
+		tutorial_step_label.text = tr(&"TUTORIAL_STEP").format(
+				{"number": tutorial.step_number(), "count": tutorial.step_count()})
+		tutorial_prompt_label.text = tr(tutorial.prompt_key())
+	tutorial_recap.visible = ended_screen.visible and tutorial != null
+	history_button.visible = tutorial == null
 	ended_label.visible = ended_screen.visible
 	var summary: Summary = session.summary if ended_screen.visible else null
 	summary_panel.visible = summary != null
@@ -380,6 +424,9 @@ func update(session: SessionManager) -> void:
 			ended_label.text = tr(summary.status_key)
 			ended_cause_label.text = tr(cause) if cause != &"" else ""
 			summary_panel.show_summary(summary)
+	elif ended_screen.visible and tutorial != null:
+		ended_label.text = tr(&"TUTORIAL_DONE")
+		ended_cause_label.text = ""
 	elif ended_screen.visible:
 		# Unscored session: the exam ends as failed on a collision or leaving the road
 		# (requirements §9.2).
@@ -480,6 +527,53 @@ func _end_button(node_name: String, key: StringName, request: Signal) -> Button:
 	button.add_theme_font_size_override("font_size", END_BUTTON_FONT_SIZE)
 	button.pressed.connect(request.emit)
 	return button
+
+
+## The tutorial's prompt: "Krok n z 6", what to do and why, and the skip button. It
+## never takes the focus, so Tab stays the skip key.
+func _tutorial_panel() -> PanelContainer:
+	var panel: PanelContainer = PanelContainer.new()
+	panel.name = "Tutorial"
+	panel.visible = false
+	var style: StyleBoxFlat = StyleBoxFlat.new()
+	style.bg_color = TUTORIAL_BACKDROP
+	style.set_content_margin_all(TUTORIAL_PADDING)
+	style.set_corner_radius_all(TUTORIAL_PADDING)
+	panel.add_theme_stylebox_override("panel", style)
+	var box: VBoxContainer = VBoxContainer.new()
+	box.name = "Box"
+	panel.add_child(box)
+	tutorial_step_label = _label("Step", TUTORIAL_STEP_FONT_SIZE)
+	box.add_child(tutorial_step_label)
+	tutorial_prompt_label = _label("Prompt", TUTORIAL_PROMPT_FONT_SIZE)
+	tutorial_prompt_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	tutorial_prompt_label.custom_minimum_size = Vector2(TUTORIAL_PROMPT_WIDTH, 0.0)
+	box.add_child(tutorial_prompt_label)
+	tutorial_skip_button = Button.new()
+	tutorial_skip_button.name = "Skip"
+	tutorial_skip_button.text = tr(&"TUTORIAL_SKIP")
+	tutorial_skip_button.focus_mode = Control.FOCUS_NONE
+	tutorial_skip_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	tutorial_skip_button.add_theme_font_size_override("font_size", TUTORIAL_SKIP_FONT_SIZE)
+	tutorial_skip_button.pressed.connect(tutorial_skip_requested.emit)
+	box.add_child(tutorial_skip_button)
+	return panel
+
+
+## The three rules, one line each, on the tutorial's end screen.
+func _tutorial_recap() -> VBoxContainer:
+	var recap: VBoxContainer = VBoxContainer.new()
+	recap.name = "TutorialRecap"
+	recap.visible = false
+	var title: Label = _label("Title", CAUSE_FONT_SIZE)
+	title.text = tr(&"TUTORIAL_RECAP_TITLE")
+	recap.add_child(title)
+	for key: StringName in TUTORIAL_RECAP_KEYS:
+		var rule: Label = _wrapped_label(String(key))
+		rule.text = tr(key)
+		rule.visible = true
+		recap.add_child(rule)
+	return recap
 
 
 func _centered_label(node_name: String, font_size: int) -> Label:

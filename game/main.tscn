@@ -1,4 +1,4 @@
-[gd_scene load_steps=20 format=3]
+[gd_scene load_steps=21 format=3]
 
 [ext_resource type="Script" path="res://game/main.gd" id="1_main"]
 [ext_resource type="Resource" path="res://config/dev_launcher.tres" id="2_launcher"]
@@ -16,6 +16,7 @@
 [ext_resource type="Script" path="res://game/world/hectometre_posts_view.gd" id="14_hectometre_posts"]
 [ext_resource type="Resource" path="res://config/audio_config.tres" id="15_audio"]
 [ext_resource type="Script" path="res://game/audio/audio_view.gd" id="16_audio_view"]
+[ext_resource type="Resource" path="res://config/tutorial.tres" id="17_tutorial"]
 
 [sub_resource type="ProceduralSkyMaterial" id="SkyMaterial_1"]
 sky_top_color = Color(0.32, 0.52, 0.82, 1)
@@ -53,6 +54,7 @@ audio_config = ExtResource("15_audio")
 script = ExtResource("7_session")
 scoring_config = ExtResource("11_scoring")
 feedback_config = ExtResource("13_feedback")
+tutorial_config = ExtResource("17_tutorial")
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("Environment_1")

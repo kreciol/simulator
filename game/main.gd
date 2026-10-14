@@ -13,6 +13,8 @@ extends Node3D
 ## sustained low FPS suggests the low preset once per session (spec Edge Cases).
 ## `screen=history` opens the history screen instead of a session (Phase 9 step 2).
 ## Sound effects follow the drive (issue #72); `M` mutes them.
+## The tutorial (issue #45) runs in this scene too: Tab (`tutorial_skip`) or the HUD's
+## skip button ends it and goes back to the start screen at once.
 
 const HISTORY_SCENE: String = AppFlow.HISTORY_SCENE
 
@@ -85,6 +87,7 @@ func _ready() -> void:
 	_hud.again_requested.connect(func() -> void: start_session.call(launch_options.again(randi())))
 	_hud.history_requested.connect(func() -> void: change_scene.call(AppFlow.HISTORY_SCENE))
 	_hud.menu_requested.connect(func() -> void: change_scene.call(AppFlow.START_SCENE))
+	_hud.tutorial_skip_requested.connect(skip_tutorial)
 	_audio_view.setup(session, view_config, audio_config, _engine_top_speed_kmh())
 	# Fog fades the road out by the draw distance, hiding where it ends.
 	_world_environment.environment.fog_depth_end = view_config.draw_distance_m()
@@ -100,6 +103,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed(&"mute"):
 		_audio_view.toggle_mute()
+		get_viewport().set_input_as_handled()
+	elif event.is_action_pressed(&"tutorial_skip") and session.is_tutorial():
+		skip_tutorial()
 		get_viewport().set_input_as_handled()
 	elif _input.handle_event(event):
 		get_viewport().set_input_as_handled()
@@ -144,6 +150,12 @@ func _notification(what: int) -> void:
 		_input.reset()
 
 
+## Ends the tutorial at once (requirements §12: skippable); `_on_session_ended` then
+## goes back to the start screen, where it can be run again.
+func skip_tutorial() -> void:
+	session.skip_tutorial()
+
+
 ## Compares the finished session with the earlier results of its combination, saves it
 ## to the local history and tells the player how both went. Play never depends on it:
 ## with saving disabled the session just is not kept.
@@ -151,6 +163,9 @@ func _on_session_ended() -> void:
 	# A session that ends before the probe's window fills still reports what it measured.
 	if _fps_probe != null and perf_report.is_empty():
 		_report_probe()
+	if session.is_tutorial():
+		_on_tutorial_ended()
+		return
 	if session.record == null:
 		return
 	var record: SessionRecord = session.record
@@ -166,6 +181,12 @@ func _on_session_ended() -> void:
 	_hud.show_comparison(comparison)
 	var saved: bool = SaveManager.save_record(record)
 	_hud.show_save_status(saved, SaveManager.store)
+
+
+## A finished tutorial stays on its recap; a skipped one leaves for the menu at once.
+func _on_tutorial_ended() -> void:
+	if session.tutorial.skipped:
+		change_scene.call(AppFlow.START_SCENE)
 
 
 ## A key, click or touch: what browsers count as the user's go-ahead for sound.
