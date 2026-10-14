@@ -19,7 +19,7 @@ Open the project in the Godot editor and press **F5**, or from a terminal:
 godot --path .
 ```
 
-The game opens on the start screen: **Nowa sesja** picks mode, road profile and level (learn mode selected, the recommended level marked, the exam marked as suggested after 3 completed learn sessions — `config/menu.tres`), then the 3-2-1 countdown starts the drive. The end screen offers the same session again (new seed), the history or the menu. Settings and the tutorial are listed but not available yet.
+The game opens on the start screen: **Nowa sesja** picks mode, road profile and level (learn mode selected, the recommended level marked, the exam marked as suggested after 3 completed learn sessions — `config/menu.tres`), then the 3-2-1 countdown starts the drive. The end screen offers the same session again (new seed), the history or the menu. **Samouczek** (suggested until it has been finished or skipped once) walks through accelerate → slow down → signal → change lane → return right → check mirrors on an empty road with no scoring, then recaps the three rules; Tab skips it. Settings are listed but not available yet.
 
 ### Dev launcher
 
@@ -41,7 +41,7 @@ godot --path . -- --mode=exam --profile=expressway --level=3 --seed=42 --quality
 | `quality` | `low`, `high` — mirror resolution and refresh, shadows, draw distance (`config/quality_presets/`) | `high` |
 | `mirrors` | `0` (off), `1` (on) | `1` |
 | `perf` | `0` (off), `1` — print average and 5th-percentile FPS after 60 s of driving (see [Performance measurement](#performance-measurement)) | `0` |
-| `screen` | `drive`, `history` — open the result history (recent sessions, bests, score trend) instead of a session | `drive` |
+| `screen` | `drive`, `history` — open the result history (recent sessions, bests, score trend) instead of a session, `tutorial` — start the tutorial (always learn mode) | `drive` |
 
 A missing or invalid value falls back to its default (with a warning in the console); defaults live in `config/dev_launcher.tres`. The resolved options, including the seed, are printed at start (`Dev launcher: mode=… seed=…`), so a session can be replayed with the same seed.
 
