@@ -37,12 +37,10 @@ const SETTINGS_COLUMN_WIDTH: float = 540.0
 const KEY_ACTION_WIDTH: float = 260.0
 const WARNING_COLOR: Color = Color(1.0, 0.6, 0.45)
 
-const QUALITY_KEYS: Dictionary[StringName, StringName] = {
-	&"low": &"SETTINGS_QUALITY_LOW",
-	&"high": &"SETTINGS_QUALITY_HIGH",
-}
+## Translation key of a quality preset's name: this + its id in upper case.
+const QUALITY_KEY_PREFIX: String = "SETTINGS_QUALITY_"
 
-const MODE_KEYS:Dictionary[StringName, StringName] = {
+const MODE_KEYS: Dictionary[StringName, StringName] = {
 	LaunchOptions.MODE_LEARN: &"MODE_LEARN",
 	LaunchOptions.MODE_EXAM: &"MODE_EXAM",
 }
@@ -57,7 +55,8 @@ const MODE_HINT_KEYS: Dictionary[StringName, StringName] = {
 ## tree (the scene sets it); tests set `completed_learn` and `settings` themselves.
 @export var use_platform_state: bool = false
 
-## The player's settings; the launcher's defaults, never saved, when nothing set them.
+## The player's settings; when nothing set them, the launcher's defaults in a store
+## without a file, whose saves report a failure.
 var settings: SettingsStore
 ## Completed learn sessions in the saved history; decides the exam suggestion.
 var completed_learn: int = 0
@@ -122,6 +121,7 @@ func _ready() -> void:
 	if settings == null:
 		settings = SettingsStore.new("", launcher_config)
 	_build()
+	get_viewport().size_changed.connect(_on_viewport_size_changed)
 	show_menu()
 
 
@@ -205,7 +205,7 @@ func _show_choice() -> void:
 func show_settings() -> void:
 	quality_buttons[settings.quality].button_pressed = true
 	mirrors_buttons[settings.mirrors].button_pressed = true
-	display_buttons[is_fullscreen.call()].button_pressed = true
+	_show_window_mode()
 	settings_save_failed_label.visible = false
 	menu_page.visible = false
 	setup_page.visible = false
@@ -239,6 +239,22 @@ func key_text(action: StringName) -> String:
 		var translated: String = tr(label_key)
 		names.append(key_name if translated == String(label_key) else translated)
 	return tr(&"SETTINGS_KEY_SEPARATOR").join(names)
+
+
+## Translation key of the quality preset's name (`SETTINGS_QUALITY_LOW`).
+static func quality_label_key(id: StringName) -> StringName:
+	return StringName(QUALITY_KEY_PREFIX + String(id).to_upper())
+
+
+## Selects fullscreen or window as the window is now — it also changes outside the page
+## (the browser's Esc, F11), which resizes the viewport.
+func _show_window_mode() -> void:
+	display_buttons[is_fullscreen.call()].button_pressed = true
+
+
+func _on_viewport_size_changed() -> void:
+	if settings_page.visible:
+		_show_window_mode()
 
 
 func _show_saved(saved: bool) -> void:
@@ -382,7 +398,7 @@ func _build_settings() -> void:
 	choices.add_child(qualities)
 	var quality_group: ButtonGroup = ButtonGroup.new()
 	for preset: QualityPreset in launcher_config.quality_presets:
-		var button: Button = _option("Quality_" + preset.id, tr(QUALITY_KEYS.get(preset.id, preset.id)), quality_group)
+		var button: Button = _option("Quality_" + preset.id, tr(quality_label_key(preset.id)), quality_group)
 		button.pressed.connect(select_quality.bind(preset.id))
 		qualities.add_child(button)
 		quality_buttons[preset.id] = button

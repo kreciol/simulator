@@ -36,6 +36,7 @@ func _clear_dir() -> void:
 
 func _settings(path: String = PATH) -> SettingsStore:
 	var settings: SettingsStore = SettingsStore.new(path, _launcher)
+	settings.userfs_persistent = true
 	settings.load_settings()
 	return settings
 
@@ -208,3 +209,30 @@ func test_the_page_fits_1280_by_720() -> void:
 		var label: Label = node as Label
 		if label.visible and label.text != "":
 			assert_int(label.get_theme_font_size("font_size")).is_greater_equal(StartScreen.NOTE_FONT_SIZE)
+
+
+func test_storage_that_does_not_persist_is_explained() -> void:
+	var settings: SettingsStore = _settings()
+	settings.userfs_persistent = false
+	var screen: StartScreen = _make(settings)
+	screen.show_settings()
+	screen.quality_buttons[&"low"].pressed.emit()
+	assert_bool(screen.settings_save_failed_label.visible).is_true()
+	assert_str(_start_session(screen).quality.id).is_equal(&"low")
+
+
+func test_the_fullscreen_choice_follows_the_window() -> void:
+	# Leaving fullscreen with the browser's Esc or F11 resizes the viewport.
+	var screen: StartScreen = _make()
+	_fullscreen = true
+	screen.show_settings()
+	_fullscreen = false
+	screen.get_viewport().size_changed.emit()
+	assert_bool(screen.display_buttons[false].button_pressed).is_true()
+
+
+func test_every_quality_preset_has_a_polish_name() -> void:
+	var screen: StartScreen = _make()
+	for preset: QualityPreset in _launcher.quality_presets:
+		var key: StringName = StartScreen.quality_label_key(preset.id)
+		assert_str(screen.quality_buttons[preset.id].text).is_not_equal(String(key))

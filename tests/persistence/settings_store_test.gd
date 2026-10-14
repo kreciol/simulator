@@ -29,6 +29,7 @@ func _clear_dir() -> void:
 
 func _loaded() -> SettingsStore:
 	var store: SettingsStore = SettingsStore.new(PATH, _launcher)
+	store.userfs_persistent = true
 	store.load_settings()
 	return store
 
@@ -102,6 +103,7 @@ func test_a_failed_save_reports_false_and_keeps_the_choice() -> void:
 	var blocked: String = DIR + "/blocked.cfg"
 	DirAccess.make_dir_recursive_absolute(blocked)
 	var store: SettingsStore = SettingsStore.new(blocked, _launcher)
+	store.userfs_persistent = true
 	store.load_settings()
 	assert_bool(store.set_mirrors(false)).is_false()
 	assert_bool(store.mirrors).is_false()
@@ -111,3 +113,20 @@ func test_a_failed_save_reports_false_and_keeps_the_choice() -> void:
 func test_the_settings_file_lives_in_user_storage() -> void:
 	var config: PersistenceConfig = load("res://config/persistence.tres") as PersistenceConfig
 	assert_str(config.settings_path).is_equal("user://settings.cfg")
+
+
+func test_storage_that_does_not_persist_reports_a_failed_save() -> void:
+	# On web with IndexedDB blocked the write succeeds in memory and is lost on reload.
+	var store: SettingsStore = SettingsStore.new(PATH, _launcher)
+	store.userfs_persistent = false
+	store.load_settings()
+	assert_bool(store.set_quality(&"low")).is_false()
+	assert_str(store.quality).is_equal(&"low")
+	assert_bool(FileAccess.file_exists(PATH)).is_false()
+
+
+func test_a_store_without_a_path_is_never_saved() -> void:
+	var store: SettingsStore = SettingsStore.new("", _launcher)
+	store.userfs_persistent = true
+	assert_bool(store.set_mirrors(false)).is_false()
+	assert_bool(store.mirrors).is_false()

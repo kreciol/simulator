@@ -5,7 +5,9 @@ extends RefCounted
 ## `ConfigFile`). Owned by the `SaveManager` autoload and read by the new-session setup.
 ## A missing file, or a missing or unknown value in it, takes the launcher's default; the
 ## file is only written when the player changes a setting. Saving never blocks play: a
-## failed write just reports false and the settings stay as chosen until the page closes.
+## failed write — or `user://` that does not survive a restart (IndexedDB blocked on
+## web, where the write itself still succeeds in memory) — just reports false and the
+## settings stay as chosen until the page closes. A store without a path is never saved.
 ## Key bindings are not stored: the settings screen only previews them.
 
 const SECTION: String = "graphics"
@@ -15,6 +17,9 @@ const KEY_MIRRORS: String = "mirrors"
 var path: String
 ## The launcher's quality presets and defaults, which the values are checked against.
 var launcher: DevLauncherConfig
+## Whether `user://` survives a restart; false on web when IndexedDB is unavailable.
+## Tests set it.
+var userfs_persistent: bool = OS.is_userfs_persistent()
 
 ## Id of the chosen `QualityPreset` (`low`, `high`).
 var quality: StringName
@@ -52,8 +57,11 @@ func load_settings() -> void:
 		mirrors = saved_mirrors
 
 
-## Writes the settings; false when the file could not be written.
+## Writes the settings; false when they will not be there next time: no path, storage
+## that does not persist, or a write that failed.
 func save_settings() -> bool:
+	if path == "" or not userfs_persistent:
+		return false
 	var file: ConfigFile = ConfigFile.new()
 	file.set_value(SECTION, KEY_QUALITY, String(quality))
 	file.set_value(SECTION, KEY_MIRRORS, mirrors)
