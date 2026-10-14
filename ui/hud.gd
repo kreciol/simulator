@@ -390,6 +390,8 @@ func update(session: SessionManager) -> void:
 	if respawning:
 		var respawn_cause: StringName = RESPAWN_CAUSES.get(session.respawn_cause, &"RESPAWN_COLLISION")
 		respawn_label.text = tr(respawn_cause)
+		# The tutorial has no session time to run on.
+		respawn_hint_label.text = tr(&"RESPAWN_BACK_ON_ROAD" if session.tutorial == null else &"TUTORIAL_RESPAWN")
 	var tutorial: Tutorial = session.tutorial
 	# A skipped tutorial leaves for the menu at once: no end screen in between.
 	var ended: bool = session.state == SessionManager.State.ENDED and not (tutorial != null and tutorial.skipped)

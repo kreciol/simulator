@@ -140,3 +140,4 @@ TUTORIAL_RECAP_RIGHT_LANE,"Prawy pas: jedź prawym pasem, a lewym tylko wyprzedz
 TUTORIAL_RECAP_SIGNAL,Kierunkowskaz: włącz go przed każdą zmianą pasa.
 TUTORIAL_RECAP_GAP,"Odstęp: w metrach co najmniej połowa prędkości w km/h, np. przy 120 km/h to 60 m."
 START_TUTORIAL_SUGGESTED,"Pierwszy raz? Zacznij od samouczka: krótki przejazd po pustej drodze, bez punktów."
+TUTORIAL_RESPAWN,"Wracasz na prawy pas, a samouczek trwa dalej."

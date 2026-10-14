@@ -196,3 +196,19 @@ func test_a_normal_session_does_not_mark_the_tutorial_seen() -> void:
 	await get_tree().process_frame
 	assert_bool(main.session.is_tutorial()).is_false()
 	assert_bool(SaveManager.settings.tutorial_seen).is_false()
+
+
+func test_leaving_the_road_in_the_tutorial_does_not_mention_the_session_time() -> void:
+	var main: DriveScene = _main()
+	await get_tree().process_frame
+	var session: SessionManager = main.session
+	for i: int in roundi(session.sim.config.countdown_s / DT):
+		session.step(DT)
+	session.step(DT, PlayerCommands.create(VehicleState.Longitudinal.NONE, VehicleState.Dir.RIGHT))
+	while session.state != SessionManager.State.RESPAWNING:
+		session.step(DT)
+	var hud: Hud = _hud(main)
+	hud.update(session)
+	assert_bool(hud.respawn_notice.visible).is_true()
+	assert_str(hud.respawn_hint_label.text).is_equal(tr(&"TUTORIAL_RESPAWN"))
+	assert_str(hud.respawn_hint_label.text).not_contains("Czas sesji")
