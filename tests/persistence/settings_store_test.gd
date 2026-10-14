@@ -88,3 +88,9 @@ func test_without_persistent_storage_nothing_is_written() -> void:
 func test_save_manager_loads_the_settings() -> void:
 	assert_object(SaveManager.settings).is_not_null()
 	assert_str(SaveManager.settings.path).is_equal("user://settings.cfg")
+
+
+func test_a_value_that_is_not_a_bool_reads_as_not_seen() -> void:
+	for value: String in ["\"yes\"", "1.0", "[true]"]:
+		_write_file("[settings]\ntutorial_seen=%s\n" % value)
+		assert_bool(_new_store().tutorial_seen).override_failure_message(value).is_false()

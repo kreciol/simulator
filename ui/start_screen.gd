@@ -5,9 +5,10 @@ extends Control
 ## settings — shown but disabled until it exists (E11-S02) — and the tutorial, with the
 ## "educational tool, not legal advice" note (spec Risks: teaching correctness). Until
 ## the tutorial was finished or skipped once it is suggested (issue #45): marked, with
-## the focus and a line saying why; it can be run again from here any time. The setup picks mode · road profile · level: learn mode is
-## selected, the recommended level is highlighted and every level is selectable (Q14),
-## and after enough completed learn sessions the exam is marked as suggested
+## the focus and a line saying why; it can be run again from here any time. The setup
+## picks mode · road profile · level: learn mode is selected, the recommended level is
+## highlighted and every level is selectable (Q14), and after enough completed learn
+## sessions the exam is marked as suggested
 ## (`SessionSetup`). Start begins the session with the 3-2-1 countdown.
 ## Dev-launcher params in the URL (user args on desktop) skip the menus and start the
 ## session (or the history screen) directly, once per run, so returning to the menu

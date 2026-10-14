@@ -212,3 +212,16 @@ func test_leaving_the_road_in_the_tutorial_does_not_mention_the_session_time() -
 	assert_bool(hud.respawn_notice.visible).is_true()
 	assert_str(hud.respawn_hint_label.text).is_equal(tr(&"TUTORIAL_RESPAWN"))
 	assert_str(hud.respawn_hint_label.text).not_contains("Czas sesji")
+
+
+func test_tab_through_the_viewport_skips_the_tutorial() -> void:
+	# Tab is also `ui_focus_next`: no control may take it while driving.
+	var main: DriveScene = _main()
+	await get_tree().process_frame
+	var event: InputEventKey = InputEventKey.new()
+	event.physical_keycode = KEY_TAB
+	event.keycode = KEY_TAB
+	event.pressed = true
+	main.get_viewport().push_input(event)
+	assert_bool(main.session.tutorial.skipped).is_true()
+	assert_array(_opened).contains_exactly([AppFlow.START_SCENE])

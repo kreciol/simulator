@@ -6,9 +6,10 @@ extends RefCounted
 ## (`godot -- --profile=expressway --seed=42`), and so do the graphics quality and
 ## the mirrors (`&quality=low&mirrors=0`, issue #25), and the FPS probe (`&perf=1`,
 ## issue #26). `screen=history` opens the history screen instead of a session (issue
-## #41) and `screen=tutorial` the tutorial, always in learn mode (issue #45). A missing or invalid value falls back to its default from `DevLauncherConfig`
-## (`high` quality, mirrors on, probe off) or, for the screen, to a session; a missing
-## seed is drawn at random. Since the start screen (issue #43) the params are a debug
+## #41) and `screen=tutorial` the tutorial, always in learn mode (issue #45). A missing
+## or invalid value falls back to its default from `DevLauncherConfig` (`high` quality,
+## mirrors on, probe off) or, for the screen, to a session; a missing seed is drawn at
+## random. Since the start screen (issue #43) the params are a debug
 ## shortcut: any of them skips the menus.
 
 const KEY_MODE: String = "mode"

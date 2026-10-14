@@ -21,10 +21,12 @@
 - Learn: a player collision or leaving the road starts a respawn instead — K4 is charged, the sim freezes and input is dropped for `respawn_fade_s` while the HUD fades and names what happened.
 - The player is put back at the fade's midpoint through `Respawn`: the nearest free window on the right lane via `LaneQuery.is_lane_free` with no slower vehicle just beyond it, else the vehicles in the window are despawned; then `TrafficSim.place_vehicle` and `ScoringSystem.restart_after_respawn`.
 - The timer runs on during a respawn — time-up still ends the session.
+- A respawn moves the player outside `TrafficSim.step`, so a learn session with a respawn replays through `SessionManager` (seed + the commands fed while `DRIVING`), not `TrafficSim.replay` alone.
+
+## Tutorial
 - The tutorial (`LaunchOptions.SCREEN_TUTORIAL`) is a learn session with no spawner, scoring, hints or time limit; its `Tutorial` only reads the player after each driving step.
 - Skipping the tutorial (`SessionManager.skip_tutorial`) ends it at once from any state, paused too, and `main.gd` returns to the start screen.
 - A finished or skipped tutorial is marked seen in `SaveManager.settings`; until then the start screen suggests it.
-- A respawn moves the player outside `TrafficSim.step`, so a learn session with a respawn replays through `SessionManager` (seed + the commands fed while `DRIVING`), not `TrafficSim.replay` alone.
 
 ## Wiring
 - `start` attaches a `Spawner` for the launch options' `DifficultyLevel`.

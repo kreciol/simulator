@@ -34,7 +34,9 @@ func load_settings() -> void:
 			push_warning("SettingsStore: cannot read %s (error %d); not writing to it." % [path, error])
 			_file = ConfigFile.new()
 			can_save = false
-	tutorial_seen = bool(_file.get_value(SECTION, KEY_TUTORIAL_SEEN, false))
+	# Anything but a bool (a hand edit, a later format) reads as not seen.
+	var seen: Variant = _file.get_value(SECTION, KEY_TUTORIAL_SEEN, false)
+	tutorial_seen = seen is bool and seen
 
 
 ## Remembers that the tutorial was seen; false when it could not be saved (it still
