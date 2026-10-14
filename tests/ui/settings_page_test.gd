@@ -238,3 +238,20 @@ func test_every_quality_preset_has_a_polish_name() -> void:
 	for preset: QualityPreset in _launcher.quality_presets:
 		var key: StringName = StartScreen.quality_label_key(preset.id)
 		assert_str(screen.quality_buttons[preset.id].text).is_not_equal(String(key))
+
+
+func test_each_heading_names_the_choice_not_shade_alone() -> void:
+	var screen: StartScreen = _make()
+	screen.show_settings()
+	var quality: Label = screen.settings_page.find_child("QualityHeading", true, false) as Label
+	var mirrors: Label = screen.settings_page.find_child("MirrorsHeading", true, false) as Label
+	var display: Label = screen.settings_page.find_child("DisplayHeading", true, false) as Label
+	assert_str(quality.text).is_equal("Jakość grafiki: Wysoka")
+	assert_str(mirrors.text).is_equal("Lusterka: Włączone")
+	assert_str(display.text).is_equal("Ekran: Okno")
+	screen.quality_buttons[&"low"].pressed.emit()
+	screen.mirrors_buttons[false].pressed.emit()
+	screen.display_buttons[true].pressed.emit()
+	assert_str(quality.text).is_equal("Jakość grafiki: Niska")
+	assert_str(mirrors.text).is_equal("Lusterka: Wyłączone")
+	assert_str(display.text).is_equal("Ekran: Pełny ekran")

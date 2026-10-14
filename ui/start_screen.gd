@@ -102,6 +102,9 @@ var settings_save_failed_label: Label
 ## The keys of each game action, as previewed.
 var key_labels: Dictionary[StringName, Label] = {}
 var settings_back_button: Button
+## Each setting's heading and the group of its options; the heading names the choice.
+var setting_headings: Dictionary[Label, ButtonGroup] = {}
+var heading_keys: Dictionary[Label, StringName] = {}
 
 var selected_mode: StringName = LaunchOptions.MODE_LEARN
 var selected_profile: StringName
@@ -218,18 +221,21 @@ func show_settings() -> void:
 func select_quality(id: StringName) -> void:
 	quality_buttons[id].button_pressed = true
 	_show_saved(settings.set_quality(id))
+	_show_setting_choices()
 
 
 ## Shows or hides the mirrors in the next sessions and saves it.
 func select_mirrors(shown: bool) -> void:
 	mirrors_buttons[shown].button_pressed = true
 	_show_saved(settings.set_mirrors(shown))
+	_show_setting_choices()
 
 
 ## Switches between fullscreen and a window, now.
 func select_fullscreen(fullscreen: bool) -> void:
 	display_buttons[fullscreen].button_pressed = true
 	set_fullscreen.call(fullscreen)
+	_show_setting_choices()
 
 
 ## The keys of `action` in words: "W lub Strzałka w górę".
@@ -251,6 +257,19 @@ static func quality_label_key(id: StringName) -> StringName:
 ## (the browser's Esc, F11), which resizes the viewport.
 func _show_window_mode() -> void:
 	display_buttons[is_fullscreen.call()].button_pressed = true
+	_show_setting_choices()
+
+
+## Each setting's heading names its current choice ("Jakość grafiki: Niska"), so the
+## selection never shows by shade alone.
+func _show_setting_choices() -> void:
+	for heading: Label in setting_headings:
+		var group: ButtonGroup = setting_headings[heading]
+		var pressed: BaseButton = group.get_pressed_button()
+		heading.text = tr(heading_keys[heading]) if pressed == null else tr(&"SETTINGS_CURRENT").format({
+			"setting": tr(heading_keys[heading]),
+			"choice": (pressed as Button).text,
+		})
 
 
 func _on_viewport_size_changed() -> void:
@@ -394,18 +413,17 @@ func _build_settings() -> void:
 
 	var choices: VBoxContainer = _column("Choices")
 	columns.add_child(choices)
-	choices.add_child(_label("QualityHeading", HEADING_FONT_SIZE, &"SETTINGS_QUALITY"))
+	var quality_group: ButtonGroup = ButtonGroup.new()
+	_setting_heading(choices, "QualityHeading", &"SETTINGS_QUALITY", quality_group)
 	var qualities: HBoxContainer = _row("Qualities")
 	choices.add_child(qualities)
-	var quality_group: ButtonGroup = ButtonGroup.new()
 	for preset: QualityPreset in launcher_config.quality_presets:
 		var button: Button = _option("Quality_" + preset.id, tr(quality_label_key(preset.id)), quality_group)
 		button.pressed.connect(select_quality.bind(preset.id))
 		qualities.add_child(button)
 		quality_buttons[preset.id] = button
 	choices.add_child(_note("QualityHint", &"SETTINGS_QUALITY_HINT"))
-	choices.add_child(_label("MirrorsHeading", HEADING_FONT_SIZE, &"SETTINGS_MIRRORS"))
-	choices.add_child(_switch("Mirrors", mirrors_buttons, &"SETTINGS_ON", &"SETTINGS_OFF", select_mirrors))
+	_switch(choices, "Mirrors", &"SETTINGS_MIRRORS", mirrors_buttons, &"SETTINGS_ON", &"SETTINGS_OFF", select_mirrors)
 	choices.add_child(_note("NextSession", &"SETTINGS_NEXT_SESSION"))
 	settings_save_failed_label = _note("SaveFailed", &"SETTINGS_SAVE_FAILED")
 	settings_save_failed_label.add_theme_color_override("font_color", WARNING_COLOR)
@@ -430,26 +448,38 @@ func _build_settings() -> void:
 		keys_label.text = key_text(action)
 		grid.add_child(keys_label)
 		key_labels[action] = keys_label
-	keys.add_child(_label("DisplayHeading", HEADING_FONT_SIZE, &"SETTINGS_DISPLAY"))
-	keys.add_child(_switch("Display", display_buttons, &"SETTINGS_FULLSCREEN", &"SETTINGS_WINDOWED", select_fullscreen))
+	_switch(keys, "Display", &"SETTINGS_DISPLAY", display_buttons, &"SETTINGS_FULLSCREEN",
+			&"SETTINGS_WINDOWED", select_fullscreen)
 
 	settings_back_button = _button("Back", tr(&"SETUP_BACK"), OPTION_BUTTON_SIZE)
+	settings_back_button.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	settings_back_button.pressed.connect(show_menu)
 	settings_page.add_child(settings_back_button)
 
 
-## A pair of options for a yes/no setting, the `true` one first; fills `buttons` by value.
-func _switch(node_name: String, buttons: Dictionary[bool, Button], on_key: StringName,
-		off_key: StringName, select: Callable) -> HBoxContainer:
-	var row: HBoxContainer = _row(node_name)
+## A yes/no setting under `parent`: its heading, then its two options, the `true` one
+## first; fills `buttons` by value.
+func _switch(parent: Container, node_name: String, heading_key: StringName,
+		buttons: Dictionary[bool, Button], on_key: StringName, off_key: StringName,
+		select: Callable) -> void:
 	var group: ButtonGroup = ButtonGroup.new()
+	_setting_heading(parent, node_name + "Heading", heading_key, group)
+	var row: HBoxContainer = _row(node_name)
+	parent.add_child(row)
 	for value: bool in [true, false]:
 		var button: Button = _option(node_name + ("_On" if value else "_Off"),
 				tr(on_key if value else off_key), group)
 		button.pressed.connect(select.bind(value))
 		row.add_child(button)
 		buttons[value] = button
-	return row
+
+
+## A setting's heading under `parent`; it names the choice pressed in `group`.
+func _setting_heading(parent: Container, node_name: String, key: StringName, group: ButtonGroup) -> void:
+	var heading: Label = _label(node_name, HEADING_FONT_SIZE, key)
+	parent.add_child(heading)
+	setting_headings[heading] = group
+	heading_keys[heading] = key
 
 
 func _column(node_name: String) -> VBoxContainer:

@@ -52,9 +52,11 @@ func load_settings() -> void:
 	if (saved_quality is String or saved_quality is StringName) \
 			and launcher.find_quality(StringName(saved_quality)) != null:
 		quality = StringName(saved_quality)
-	var saved_mirrors: Variant = file.get_value(SECTION, KEY_MIRRORS, null)
-	if saved_mirrors is bool:
-		mirrors = saved_mirrors
+	# `get_value` with a null default reports an error for a missing key, so ask first.
+	if file.has_section_key(SECTION, KEY_MIRRORS):
+		var saved_mirrors: Variant = file.get_value(SECTION, KEY_MIRRORS)
+		if saved_mirrors is bool:
+			mirrors = saved_mirrors
 
 
 ## Whether a save can last: there is a file, and `user://` survives a restart.

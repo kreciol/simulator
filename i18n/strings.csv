@@ -157,3 +157,4 @@ KEY_NAME_RIGHT,Strzałka w prawo
 KEY_NAME_ESCAPE,Esc
 KEY_NAME_COMMA,"Przecinek (,)"
 KEY_NAME_PERIOD,Kropka (.)
+SETTINGS_CURRENT,{setting}: {choice}
