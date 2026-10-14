@@ -48,6 +48,8 @@ A player sets the graphics quality and the mirrors on a settings screen reached 
 
 ## Progress
 
+PR: #77
+
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: Settings file and session options
@@ -57,8 +59,8 @@ A player sets the graphics quality and the mirrors on a settings screen reached 
 
 ### Phase 2: Settings screen
 
-- [ ] 2.1 Settings page with quality, mirrors, fullscreen and the key-bindings preview
+- [x] 2.1 Settings page with quality, mirrors, fullscreen and the key-bindings preview — 412d097
 
 ### Phase 3: Docs
 
-- [ ] 3.1 Agent docs and README
+- [x] 3.1 Agent docs and README — 97ace47
