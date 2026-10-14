@@ -7,6 +7,8 @@ extends Resource
 @export var history_limit: int
 ## The history file, under `user://` (IndexedDB on web).
 @export var history_path: String
+## The player's settings file (`ConfigFile`), under `user://` (issue #44).
+@export var settings_path: String
 ## Sessions listed on the history screen, newest first [PARAM].
 @export var history_recent_count: int
 ## Latest sessions plotted on the history screen's score trend [PARAM].
