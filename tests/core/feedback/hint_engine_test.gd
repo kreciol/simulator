@@ -265,6 +265,27 @@ func test_the_maximum_on_screen_comes_from_the_config() -> void:
 	assert_int(_engine.hints.size()).is_equal(1)
 
 
+## Issue #76: preventive hints are built only once `admission` lets their type on
+## screen, so admission must answer as `_show` would, without changing anything.
+func test_admission_holds_back_a_type_on_screen_in_its_cooldown_or_without_room() -> void:
+	var feedback: FeedbackConfig = _feedback_copy()
+	feedback.hint_max_on_screen = 1
+	_setup(1, 120.0, feedback)
+	_drive(DT)
+	var on_screen: Array[Hint] = _engine.hints.duplicate()
+	assert_array(_keys_on_screen()).is_equal([HintEngine.KEEP_RIGHT])
+	assert_int(_engine.admission(HintEngine.TYPE_KEEP_RIGHT)).is_equal(HintEngine.Shown.RATE_LIMITED)
+	assert_int(_engine.admission(HintEngine.TYPE_SPEEDING)).is_equal(HintEngine.Shown.NO_ROOM)
+	assert_array(_engine.hints).is_equal(on_screen)
+	# Off the screen but still within its cooldown; the free slot takes any other type.
+	_drive(_feedback.hint_duration_s + DT)
+	assert_array(_engine.hints).is_empty()
+	assert_float(_world.sim.time_s).is_less(_feedback.hint_cooldown_s)
+	assert_int(_engine.admission(HintEngine.TYPE_KEEP_RIGHT)).is_equal(HintEngine.Shown.RATE_LIMITED)
+	assert_int(_engine.admission(HintEngine.TYPE_SPEEDING)).is_equal(HintEngine.Shown.SHOWN)
+	assert_int(_shown.size()).is_equal(1)
+
+
 func test_clear_takes_every_hint_off_the_screen() -> void:
 	_setup(1, 150.0)
 	_drive(DT)
