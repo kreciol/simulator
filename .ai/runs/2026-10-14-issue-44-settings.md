@@ -52,8 +52,8 @@ A player sets the graphics quality and the mirrors on a settings screen reached 
 
 ### Phase 1: Settings file and session options
 
-- [ ] 1.1 SettingsStore in settings.cfg and SaveManager wiring
-- [ ] 1.2 New-session options use the saved settings
+- [x] 1.1 SettingsStore in settings.cfg and SaveManager wiring — f78696f
+- [x] 1.2 New-session options use the saved settings — d5a75dd
 
 ### Phase 2: Settings screen
 
