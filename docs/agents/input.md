@@ -5,4 +5,6 @@
 - Actions are defined in the Godot **Input Map**, never hard-coded keys.
 - `PlayerInput` turns action events into one `PlayerCommands` per physics step.
 - The `pause` action is handled by `main.gd` (`SessionManager.toggle_pause`), not as a driving command.
+- The settings screen previews the game's Input Map actions through `KeyBindings`, read-only — keys are not remapped.
+- A new action needs `ACTION_<NAME>` in `i18n/strings.csv` (and `KEY_NAME_<KEY>` for a key named by more than one letter).
 - The `mute` action is handled by `main.gd` (`AudioView.toggle_mute`), not as a driving command.

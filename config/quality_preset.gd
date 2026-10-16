@@ -3,7 +3,8 @@ extends Resource
 ## Graphics quality (requirements §5.2, §14 Jakość; spec Data Model): what the
 ## low and high settings change — mirror render size and update rate, shadows and
 ## draw distance. Instances live in res://config/quality_presets/; nothing is
-## defaulted here. Chosen through the dev launcher until the settings screen (Phase 10).
+## defaulted here. Chosen on the settings screen (`SettingsStore`) or through the dev
+## launcher's `quality` param.
 
 ## `low` or `high`; the dev launcher's `quality` param selects by it.
 @export var id: StringName

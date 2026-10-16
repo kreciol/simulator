@@ -30,6 +30,8 @@
 ## Menus and navigation
 - The game opens on `StartScreen` (`ui/start_screen.tscn`, the main scene).
 - The new-session setup turns mode · profile · level into `LaunchOptions` through `SessionSetup.options_for`, which reuses `DevLauncher.resolve` — one validation path for menus and URL.
+- A session started from the menu takes quality and mirrors from the player's settings (`SessionSetup.options_for` with the `SettingsStore`); URL params keep the launcher defaults.
+- Fullscreen is switched from the settings screen and not remembered (a browser enters it only on a gesture).
 - Learn mode is selected when the setup opens; a suggested exam is marked, never pre-selected.
 - The exam is suggested after `MenuConfig.exam_suggested_after_learn_sessions` completed learn sessions (`SessionSetup.suggests_exam`).
 - Every switch between screens goes through `AppFlow`; `AppFlow.start_session` hands the options to a fresh `game/main.tscn` before it enters the tree.

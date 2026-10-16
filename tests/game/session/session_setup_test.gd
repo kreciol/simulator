@@ -86,9 +86,37 @@ func test_every_level_can_be_chosen(level: int, test_parameters: Array = [[1], [
 	assert_str(options.screen).is_equal(LaunchOptions.SCREEN_DRIVE)
 
 
-func test_a_choice_keeps_the_default_quality_and_mirrors() -> void:
+func test_without_settings_a_choice_keeps_the_default_quality_and_mirrors() -> void:
 	var options: LaunchOptions = SessionSetup.options_for(
 			LaunchOptions.MODE_LEARN, &"motorway", 2, _launcher, RANDOM_SEED)
 	assert_str(options.quality.id).is_equal(_launcher.default_quality)
 	assert_bool(options.mirrors).is_equal(_launcher.default_mirrors)
 	assert_bool(options.perf).is_equal(_launcher.default_perf)
+
+
+## Settings that never touch a file: these tests only read them.
+func _settings(quality: StringName, mirrors: bool) -> SettingsStore:
+	var settings: SettingsStore = SettingsStore.new("user://test_session_setup/unused.cfg", _launcher)
+	settings.quality = quality
+	settings.mirrors = mirrors
+	return settings
+
+
+func test_a_choice_uses_the_saved_quality_and_mirrors(quality: StringName, mirrors: bool, test_parameters: Array = [
+		[&"low", false],
+		[&"low", true],
+		[&"high", false],
+		[&"high", true],
+		]) -> void:
+	var options: LaunchOptions = SessionSetup.options_for(
+			LaunchOptions.MODE_LEARN, &"motorway", 2, _launcher, RANDOM_SEED, _settings(quality, mirrors))
+	assert_str(options.quality.id).is_equal(quality)
+	assert_bool(options.mirrors).is_equal(mirrors)
+	assert_bool(options.perf).is_equal(_launcher.default_perf)
+
+
+func test_an_unknown_saved_quality_falls_back_to_the_default() -> void:
+	var options: LaunchOptions = SessionSetup.options_for(
+			LaunchOptions.MODE_LEARN, &"motorway", 2, _launcher, RANDOM_SEED, _settings(&"ultra", false))
+	assert_str(options.quality.id).is_equal(_launcher.default_quality)
+	assert_bool(options.mirrors).is_false()
