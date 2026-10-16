@@ -2,11 +2,13 @@ class_name StartScreen
 extends Control
 ## The start screen and the new-session setup (requirements §9.1, §9.4, spec Phase 10
 ## step 1 and UI/UX flow, issue #43). The menu offers a new session, the history,
-## settings and the tutorial — the last two shown but disabled until they exist
-## (E11-S02, E11-S03) — with the "educational tool, not legal advice" note (spec Risks:
-## teaching correctness). The setup picks mode · road profile · level: learn mode is
-## selected, the recommended level is highlighted and every level is selectable (Q14),
-## and after enough completed learn sessions the exam is marked as suggested
+## settings — shown but disabled until it exists (E11-S02) — and the tutorial, with the
+## "educational tool, not legal advice" note (spec Risks: teaching correctness). Until
+## the tutorial was finished or skipped once it is suggested (issue #45): marked, with
+## the focus and a line saying why; it can be run again from here any time. The setup
+## picks mode · road profile · level: learn mode is selected, the recommended level is
+## highlighted and every level is selectable (Q14), and after enough completed learn
+## sessions the exam is marked as suggested
 ## (`SessionSetup`). Start begins the session with the 3-2-1 countdown.
 ## Dev-launcher params in the URL (user args on desktop) skip the menus and start the
 ## session (or the history screen) directly, once per run, so returning to the menu
@@ -40,12 +42,14 @@ const MODE_HINT_KEYS: Dictionary[StringName, StringName] = {
 
 @export var launcher_config: DevLauncherConfig
 @export var menu_config: MenuConfig
-## Follows the launch params and reads `SaveManager`'s history once in the tree (the
-## scene sets it); tests set `completed_learn` themselves.
+## Follows the launch params and reads `SaveManager`'s history and settings once in the
+## tree (the scene sets it); tests set `completed_learn` and `tutorial_seen` themselves.
 @export var use_platform_state: bool = false
 
 ## Completed learn sessions in the saved history; decides the exam suggestion.
 var completed_learn: int = 0
+## Whether the tutorial was finished or skipped once; until then it is suggested.
+var tutorial_seen: bool = false
 ## Switches to another scene by path; tests replace it to watch instead.
 var open_scene: Callable = func(path: String) -> void: AppFlow.open_scene(get_tree(), path)
 ## Starts a session with the given options; tests replace it to watch instead.
@@ -56,6 +60,8 @@ var new_session_button: Button
 var history_button: Button
 var settings_button: Button
 var tutorial_button: Button
+## Shown while the tutorial is suggested; says why.
+var tutorial_suggestion_label: Label
 var legal_note_label: Label
 
 var setup_page: VBoxContainer
@@ -84,6 +90,7 @@ func _ready() -> void:
 			_launch(DevLauncher.resolve(params, launcher_config, randi()))
 			return
 		completed_learn = SessionSetup.completed_learn_sessions(SaveManager.store.sessions)
+		tutorial_seen = SaveManager.settings.tutorial_seen
 	_build()
 	show_menu()
 
@@ -106,7 +113,21 @@ func _launch(options: LaunchOptions) -> void:
 func show_menu() -> void:
 	menu_page.visible = true
 	setup_page.visible = false
-	_focus(new_session_button)
+	var suggested: bool = tutorial_suggested()
+	tutorial_button.text = _option_text(tr(&"START_TUTORIAL"), suggested)
+	tutorial_suggestion_label.visible = suggested
+	_focus(tutorial_button if suggested else new_session_button)
+
+
+func tutorial_suggested() -> bool:
+	return SessionSetup.suggests_tutorial(tutorial_seen)
+
+
+## Starts the tutorial: an empty road, no scoring, the steps prompted one by one. Like
+## Start, pressing it is the player's gesture for sound.
+func start_tutorial() -> void:
+	AudioView.run_unlocked = true
+	start_session.call(SessionSetup.tutorial_options(launcher_config, randi()))
 
 
 ## Opens the setup with its defaults: learn mode (§9.1), the launcher's road profile and
@@ -213,11 +234,18 @@ func _build_menu() -> void:
 	history_button = _button("History", tr(&"START_HISTORY"), MENU_BUTTON_SIZE)
 	history_button.pressed.connect(func() -> void: open_scene.call(AppFlow.HISTORY_SCENE))
 	buttons.add_child(history_button)
-	# Enabled once the settings screen (E11-S02) and the tutorial (E11-S03) exist.
+	# Enabled once the settings screen (E11-S02) exists.
 	settings_button = _coming_soon("Settings", &"START_SETTINGS")
 	buttons.add_child(settings_button)
-	tutorial_button = _coming_soon("Tutorial", &"START_TUTORIAL")
+	tutorial_button = _button("Tutorial", tr(&"START_TUTORIAL"), MENU_BUTTON_SIZE)
+	tutorial_button.pressed.connect(start_tutorial)
 	buttons.add_child(tutorial_button)
+	tutorial_suggestion_label = _wrapped("TutorialSuggestion", TEXT_FONT_SIZE, &"START_TUTORIAL_SUGGESTED")
+	tutorial_suggestion_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	tutorial_suggestion_label.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	tutorial_suggestion_label.add_theme_color_override("font_color", SUGGESTION_COLOR)
+	tutorial_suggestion_label.visible = false
+	menu_page.add_child(tutorial_suggestion_label)
 	legal_note_label = _wrapped("LegalNote", NOTE_FONT_SIZE, &"START_LEGAL_NOTE")
 	legal_note_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	legal_note_label.size_flags_horizontal = Control.SIZE_SHRINK_CENTER

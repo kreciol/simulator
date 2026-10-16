@@ -100,3 +100,17 @@ func test_no_polish_string_uses_a_gendered_verb_form() -> void:
 		for found: RegExMatch in regex.search_all(row[polish]):
 			offenders.append("%s: %s" % [row[0], found.get_string()])
 	assert_array(offenders).is_empty()
+
+
+func test_every_tutorial_text_is_translated_to_polish() -> void:
+	# Issue #45: the prompts, the skip button, the recap and the start-screen suggestion.
+	var keys: Array[StringName] = [&"TUTORIAL_STEP", &"TUTORIAL_SKIP", &"TUTORIAL_DONE",
+			&"TUTORIAL_RECAP_TITLE", &"START_TUTORIAL_SUGGESTED", &"TUTORIAL_RESPAWN"]
+	keys.append_array(Tutorial.PROMPT_KEYS.values())
+	keys.append_array(Hud.TUTORIAL_RECAP_KEYS)
+	var untranslated: Array[StringName] = []
+	for key: StringName in keys:
+		if TranslationServer.translate(key) == String(key):
+			untranslated.append(key)
+	assert_array(untranslated).is_empty()
+	assert_str(TranslationServer.translate(&"TUTORIAL_STEP").format({"number": 2, "count": 6})).is_equal("Krok 2 z 6")

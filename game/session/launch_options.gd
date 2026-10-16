@@ -7,10 +7,12 @@ extends RefCounted
 const MODE_LEARN: StringName = SessionRecord.MODE_LEARN
 const MODE_EXAM: StringName = SessionRecord.MODE_EXAM
 const MODES: Array[StringName] = [MODE_LEARN, MODE_EXAM]
-## What the launch opens: a session, or the history screen (issue #41).
+## What the launch opens: a session, the history screen (issue #41) or the tutorial, a
+## learn session on an empty road with no scoring (issue #45).
 const SCREEN_DRIVE: StringName = &"drive"
 const SCREEN_HISTORY: StringName = &"history"
-const SCREENS: Array[StringName] = [SCREEN_DRIVE, SCREEN_HISTORY]
+const SCREEN_TUTORIAL: StringName = &"tutorial"
+const SCREENS: Array[StringName] = [SCREEN_DRIVE, SCREEN_HISTORY, SCREEN_TUTORIAL]
 
 var mode: StringName
 var profile: RoadProfile
@@ -30,8 +32,8 @@ var screen: StringName = SCREEN_DRIVE
 
 
 ## The same session once more (the end screen's "again", issue #43): mode, road
-## profile, level, quality, mirrors and probe kept, with `random_seed` so the traffic
-## differs from the last attempt.
+## profile, level, quality, mirrors, probe and whether it is the tutorial kept, with
+## `random_seed` so the traffic differs from the last attempt.
 func again(random_seed: int) -> LaunchOptions:
 	var options: LaunchOptions = LaunchOptions.new()
 	options.mode = mode
@@ -43,10 +45,14 @@ func again(random_seed: int) -> LaunchOptions:
 	options.quality = quality
 	options.mirrors = mirrors
 	options.perf = perf
-	options.screen = SCREEN_DRIVE
+	options.screen = SCREEN_TUTORIAL if is_tutorial() else SCREEN_DRIVE
 	return options
 
 
+func is_tutorial() -> bool:
+	return screen == SCREEN_TUTORIAL
+
+
 func describe() -> String:
-	return "mode=%s profile=%s level=%d seed=%d quality=%s mirrors=%d perf=%d" % [
-			mode, profile.id, level, seed_value, quality.id, int(mirrors), int(perf)]
+	return "mode=%s profile=%s level=%d seed=%d quality=%s mirrors=%d perf=%d screen=%s" % [
+			mode, profile.id, level, seed_value, quality.id, int(mirrors), int(perf), screen]

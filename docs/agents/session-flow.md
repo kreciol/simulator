@@ -1,11 +1,12 @@
 # Session flow
 
-**Read first:** requirements §9.3, §9.4; `game/session/`; `ui/start_screen.gd`, `MenuConfig` + `config/menu.tres`; `SimConfig.countdown_s` / `session_length_s` / `respawn_*`; `core/sim/respawn.gd`; `config/dev_launcher.tres`.
+**Read first:** requirements §9.3, §9.4; `game/session/`; `ui/start_screen.gd`, `MenuConfig` + `config/menu.tres`; `SimConfig.countdown_s` / `session_length_s` / `respawn_*`; `core/sim/respawn.gd`; `core/tutorial/`, `TutorialConfig` + `config/tutorial.tres`; `config/dev_launcher.tres`.
 
 ## States
 - `SessionManager` owns the sim and is the only node that steps it.
 - States: `INTRO` (countdown, sim frozen, input dropped) → `DRIVING` ⇄ `RESPAWNING` (learn only) → `ENDED`.
 - `end_reason` is `TIME_UP`, `COLLISION` or `OFF_ROAD`; its §13 `status()` is `completed` / `aborted_collision` / `aborted_offroad`.
+- A tutorial ends with `TUTORIAL_OVER` (finished or skipped — `Tutorial.skipped` says which); it has no `status()` and no record.
 - Views and the HUD only read its state.
 
 ## Pause
@@ -21,6 +22,11 @@
 - The player is put back at the fade's midpoint through `Respawn`: the nearest free window on the right lane via `LaneQuery.is_lane_free` with no slower vehicle just beyond it, else the vehicles in the window are despawned; then `TrafficSim.place_vehicle` and `ScoringSystem.restart_after_respawn`.
 - The timer runs on during a respawn — time-up still ends the session.
 - A respawn moves the player outside `TrafficSim.step`, so a learn session with a respawn replays through `SessionManager` (seed + the commands fed while `DRIVING`), not `TrafficSim.replay` alone.
+
+## Tutorial
+- The tutorial (`LaunchOptions.SCREEN_TUTORIAL`) is a learn session with no spawner, scoring, hints or time limit; its `Tutorial` only reads the player after each driving step.
+- Skipping the tutorial (`SessionManager.skip_tutorial`) ends it at once from any state, paused too, and `main.gd` returns to the start screen.
+- A finished or skipped tutorial is marked seen in `SaveManager.settings`; until then the start screen suggests it.
 
 ## Wiring
 - `start` attaches a `Spawner` for the launch options' `DifficultyLevel`.
@@ -40,5 +46,6 @@
 - `DevLauncher` turns URL params (web) or user args (desktop) into `LaunchOptions`; any known param (`DevLauncher.has_launch_params`) skips the menus.
 - Platform params are taken once per run (`DevLauncher.take_platform_params`), so returning to the menu never bounces back into the same launch.
 - Params: `mode`, `profile`, `level` (and its `DifficultyLevel`), `seed`, `quality` (`QualityPreset`), `mirrors` on/off, `perf` (FPS probe) on/off, `screen`.
+- `screen=tutorial` starts the tutorial, always in learn mode.
 - `screen=history` makes `main.gd` open `ui/history_screen.tscn` instead of starting a session.
 - Invalid or missing values take the config default (`high`, mirrors on, probe off, a session).

@@ -10,6 +10,11 @@
 - Saving must never block play — when storage is unavailable it is disabled and the UI explains why.
 - Tests use their own `user://test_*` paths, never the real history.
 
+## Settings file
+- `settings.cfg` (`ConfigFile`, `PersistenceConfig.settings_path`) is read and written only through `SettingsStore` (`SaveManager.settings`).
+- `SettingsStore` keeps keys it does not know when it writes, and never writes over a file it cannot parse.
+- Tests swap `SaveManager.settings` for a `user://test_*` store, never the real settings.
+
 ## History screen
 - It only reads `HistoryStore` (`recent`, `bests`, `previous_for`, `trend_scores`; counts `history_recent_count` / `history_trend_count`).
 - It always shows the data-is-local notice.

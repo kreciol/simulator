@@ -24,7 +24,7 @@ Before changing an area, read its file in [`docs/agents/`](docs/agents/): it lis
 - **Sound effects** (`game/audio/`) → [`docs/agents/audio.md`](docs/agents/audio.md)
 - **HUD** (`ui/hud.gd`) → [`docs/agents/hud.md`](docs/agents/hud.md)
 - **Performance and the FPS probe** (`game/perf/`) → [`docs/agents/performance.md`](docs/agents/performance.md)
-- **Session flow, pause, respawn, dev launcher** (`game/session/`, `core/sim/respawn.gd`) → [`docs/agents/session-flow.md`](docs/agents/session-flow.md)
+- **Session flow, pause, respawn, tutorial, dev launcher** (`game/session/`, `core/sim/respawn.gd`, `core/tutorial/`) → [`docs/agents/session-flow.md`](docs/agents/session-flow.md)
 - **Input** (`game/player/player_input.gd`) → [`docs/agents/input.md`](docs/agents/input.md)
 - **Persistence and history** (`persistence/`, `ui/history_screen.gd`) → [`docs/agents/persistence.md`](docs/agents/persistence.md)
 - **Tunable numbers** (`config/`) → [`docs/agents/config.md`](docs/agents/config.md)

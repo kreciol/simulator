@@ -225,3 +225,20 @@ func test_platform_params_are_taken_once_per_run() -> void:
 	DevLauncher.from_environment(_config)
 	assert_bool(DevLauncher.params_taken).is_true()
 	DevLauncher.params_taken = was_taken
+
+
+func test_screen_tutorial_starts_the_tutorial_in_learn_mode() -> void:
+	var tutorial: LaunchOptions = _from_query("?screen=tutorial")
+	assert_str(tutorial.screen).is_equal(LaunchOptions.SCREEN_TUTORIAL)
+	assert_bool(tutorial.is_tutorial()).is_true()
+	assert_str(tutorial.mode).is_equal(LaunchOptions.MODE_LEARN)
+	# Never an exam, even when asked for.
+	assert_str(_from_query("?screen=tutorial&mode=exam").mode).is_equal(LaunchOptions.MODE_LEARN)
+	assert_bool(_from_query("").is_tutorial()).is_false()
+	assert_str(tutorial.describe()).contains("screen=tutorial")
+
+
+func test_again_after_the_tutorial_is_the_tutorial_again() -> void:
+	var again: LaunchOptions = _from_query("?screen=tutorial&seed=5").again(9)
+	assert_bool(again.is_tutorial()).is_true()
+	assert_int(again.seed_value).is_equal(9)

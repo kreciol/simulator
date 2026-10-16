@@ -14,11 +14,12 @@ func before_test() -> void:
 	_started.clear()
 
 
-func _make(completed_learn: int = 0) -> StartScreen:
+func _make(completed_learn: int = 0, tutorial_seen: bool = false) -> StartScreen:
 	_screen = auto_free(StartScreen.new()) as StartScreen
 	_screen.launcher_config = load("res://config/dev_launcher.tres") as DevLauncherConfig
 	_screen.menu_config = load("res://config/menu.tres") as MenuConfig
 	_screen.completed_learn = completed_learn
+	_screen.tutorial_seen = tutorial_seen
 	_screen.open_scene = func(path: String) -> void: _opened.append(path)
 	_screen.start_session = func(options: LaunchOptions) -> void: _started.append(options)
 	add_child(_screen)
@@ -38,14 +39,14 @@ func test_the_menu_offers_every_entry_and_the_educational_note() -> void:
 	assert_str(screen.legal_note_label.text).contains("nie porada prawna")
 
 
-func test_settings_and_tutorial_are_shown_but_not_available_yet() -> void:
+func test_settings_are_shown_but_not_available_yet() -> void:
 	var screen: StartScreen = _make()
-	for button: Button in [screen.settings_button, screen.tutorial_button]:
-		assert_bool(button.visible).is_true()
-		assert_bool(button.disabled).is_true()
-		assert_str(button.text).ends_with("wkrótce")
+	assert_bool(screen.settings_button.visible).is_true()
+	assert_bool(screen.settings_button.disabled).is_true()
+	assert_str(screen.settings_button.text).ends_with("wkrótce")
 	assert_bool(screen.new_session_button.disabled).is_false()
 	assert_bool(screen.history_button.disabled).is_false()
+	assert_bool(screen.tutorial_button.disabled).is_false()
 
 
 func test_history_opens_the_history_screen() -> void:
@@ -237,3 +238,36 @@ func test_start_counts_as_the_gesture_that_lets_sound_play() -> void:
 	screen.start_button.pressed.emit()
 	assert_bool(AudioView.run_unlocked).is_true()
 	AudioView.reset_run()
+
+
+func test_on_first_launch_the_tutorial_is_suggested() -> void:
+	# Issue #45: the tutorial is suggested when the start screen first opens.
+	var screen: StartScreen = _make()
+	assert_bool(screen.tutorial_suggested()).is_true()
+	assert_str(screen.tutorial_button.text).is_equal("Samouczek (polecany)")
+	assert_bool(screen.tutorial_suggestion_label.visible).is_true()
+	assert_str(screen.tutorial_suggestion_label.text).contains("samouczka")
+	await get_tree().process_frame
+	assert_bool(screen.tutorial_button.has_focus()).is_true()
+
+
+func test_once_seen_the_tutorial_is_no_longer_suggested() -> void:
+	var screen: StartScreen = _make(0, true)
+	assert_bool(screen.tutorial_suggested()).is_false()
+	assert_str(screen.tutorial_button.text).is_equal("Samouczek")
+	assert_bool(screen.tutorial_suggestion_label.visible).is_false()
+	assert_bool(screen.tutorial_button.disabled).is_false()
+	await get_tree().process_frame
+	assert_bool(screen.new_session_button.has_focus()).is_true()
+
+
+func test_the_tutorial_entry_starts_the_tutorial_and_can_be_rerun() -> void:
+	# Issue #45: it can be (re-)run from the menu, seen or not.
+	for seen: bool in [false, true]:
+		_started.clear()
+		var screen: StartScreen = _make(0, seen)
+		screen.tutorial_button.pressed.emit()
+		assert_int(_started.size()).is_equal(1)
+		assert_bool(_started[0].is_tutorial()).is_true()
+		assert_str(_started[0].mode).is_equal(LaunchOptions.MODE_LEARN)
+		assert_array(_opened).is_empty()
