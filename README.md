@@ -77,8 +77,12 @@ The product owner's laptop, measured on its integrated GPU:
 |---|---|---|---|---|---|
 | 2026-10-12 | PR #57 (`1a09a3e`), local Web export | `low` | 60.0 | 60.0 | 3599 |
 | 2026-10-12 | PR #57 (`1a09a3e`), local Web export | `high` | 60.0 | 60.0 | 3599 |
+| 2026-10-20 | `main` (`7f3b206`), GitHub Pages | `low` | 59.7 | 60.0 | 3596 |
+| 2026-10-20 | `main` (`7f3b206`), GitHub Pages | `high` | 52.6 | 42.0 | 3168 |
 
-Both presets hold the display's 60 Hz vsync cap at level 4 with mirrors on, so the §16 criterion is met with margin.
+In the 2026-10-12 run both presets held the display's 60 Hz vsync cap at level 4 with mirrors on, so the §16 criterion is met with margin.
+
+The 2026-10-20 re-run on the final MVP build (spec Phase 11, issue #47) deviated from the method in three ways: Chrome 155, an agent-driven window of 1889 × 1381 instead of full screen, and no driving input (the car held its start speed on the right lane). `low` still holds 60 FPS; `high` drops to 52.6 average and a 42 p5 — still above the 30 FPS criterion, which is judged on `low`.
 
 Separately from the probe, any session whose FPS stays below 30 for a few seconds shows a short notice suggesting the low preset — once per session at most, and never when already on `low`.
 

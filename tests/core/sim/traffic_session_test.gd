@@ -110,3 +110,65 @@ func test_slow_vehicles_are_due_on_schedule() -> void:
 				counts[checkpoint] = spawner.overtake_opportunities
 	assert_int(counts[checkpoints[0]]).is_greater_equal(1)
 	assert_int(counts[checkpoints[1]]).is_greater_equal(mini(2, config.min_overtake_opportunities))
+
+
+## Requirements §16: AI never causes a collision with the player. The player here just
+## holds its lane and speed, so an AI that fails to brake behind it or cuts into it
+## shows up — a self-driving player bot would hide both (issue #47). The player may
+## still run into a slower car ahead itself; that is its own fault and not counted.
+func test_ai_never_runs_into_a_player_that_holds_its_speed(
+		level_id: int,
+		lane: int,
+		test_parameters: Array = [[1, 0], [2, 0], [3, 0], [4, 0], [1, 1], [2, 1], [3, 1], [4, 1]]) -> void:
+	var config: SimConfig = load("res://config/sim_config.tres") as SimConfig
+	var road: RoadProfile = load("res://config/road_profiles/motorway.tres") as RoadProfile
+	_sim = TrafficSim.new(road, config, level_id * 31 + lane)
+	_sim.player = _sim.add_vehicle(0.0, lane, config.start_speed_kmh * KMH)
+	Spawner.new(load("res://config/difficulty_levels/level_%d.tres" % level_id) as DifficultyLevel).attach(_sim)
+	var caused_by_ai: Array[String] = []
+	_sim.collision.connect(func(vehicle_id: int, other_id: int) -> void:
+		var player: VehicleState = _sim.player
+		if vehicle_id != player.id and other_id != player.id:
+			return
+		var other: VehicleState = _sim.find_vehicle(other_id if vehicle_id == player.id else vehicle_id)
+		if other.s < player.s or other.lane_change_active:
+			caused_by_ai.append("t=%.1f s: vehicle %d %s" % [_sim.time_s, other.id,
+					"cut in" if other.lane_change_active else "ran into the back"]))
+	# The run must actually test something: AI closing in right behind the player, on
+	# its lane or the one it could cut in from.
+	const CLOSE_BEHIND_M: float = 40.0
+	var close_behind_steps: int = 0
+	for i: int in roundi(SESSION_S / DT):
+		_sim.step(DT)
+		for on_lane: int in road.lane_count:
+			var behind: VehicleState = LaneQuery.follower_in_lane(_sim.lanes, on_lane, _sim.player.s, _sim.player)
+			if behind != null and _sim.player.s - behind.s < CLOSE_BEHIND_M:
+				close_behind_steps += 1
+	assert_int(close_behind_steps).is_greater(0)
+	assert_array(caused_by_ai).override_failure_message("AI collisions with the player: %s" % [caused_by_ai]).is_empty()
+
+
+## Requirements §16: a higher level brings noticeably more traffic — measured, not just
+## configured: each level's mean count is well above the level below (issue #47).
+func test_higher_levels_bring_noticeably_more_traffic() -> void:
+	const MIN_STEP_RATIO: float = 1.2
+	var config: SimConfig = load("res://config/sim_config.tres") as SimConfig
+	var road: RoadProfile = load("res://config/road_profiles/motorway.tres") as RoadProfile
+	var means: Array[float] = []
+	for level_id: int in range(1, 5):
+		_sim = TrafficSim.new(road, config, level_id * 31)
+		_sim.player = _sim.add_ai_vehicle(0.0, 0, config.start_speed_kmh * KMH, road.speed_limit_kmh * KMH, 1.0)
+		var spawner: Spawner = Spawner.new(load("res://config/difficulty_levels/level_%d.tres" % level_id) as DifficultyLevel)
+		spawner.attach(_sim)
+		var samples: int = 0
+		var total: int = 0
+		for i: int in roundi(SESSION_S / DT):
+			_sim.step(DT)
+			if _sim.time_s >= WARM_UP_S and i % 60 == 0:
+				samples += 1
+				total += spawner.count_in_window(_sim)
+		means.append(float(total) / samples)
+	for i: int in range(1, means.size()):
+		assert_float(means[i]).override_failure_message("level means %s" % [means]) \
+				.is_greater_equal(means[i - 1] * MIN_STEP_RATIO)
+	assert_float(means[3]).is_greater_equal(2.0 * means[0])

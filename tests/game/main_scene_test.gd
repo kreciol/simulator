@@ -101,6 +101,23 @@ func test_scene_shows_road_and_cockpit_camera() -> void:
 	assert_int(_player().lane).is_equal(0)
 
 
+## Requirements §16: the opposite carriageway is visible from the cockpit, beyond the
+## median barrier that separates it (issue #47).
+func test_the_opposite_carriageway_is_in_the_cockpit_view() -> void:
+	const AHEAD_M: float = 60.0
+	_drive(1)
+	var layout: RoadLayout = RoadLayout.new(_main.road_profile, _main.view_config)
+	var opposite: RoadLayout.Strip = layout.strips_of(RoadLayout.Surface.ASPHALT)[1]
+	var camera: Camera3D = _player_view().camera
+	assert_bool(camera.is_position_in_frustum(Vector3(RoadLayout.x_of(opposite.center_u()), 0.0, -AHEAD_M))).is_true()
+	assert_bool(camera.is_position_in_frustum(Vector3(RoadLayout.x_of(layout.median_center_u()), 0.5, -AHEAD_M))).is_true()
+	# The median lies between the player's carriageway and the opposite one.
+	assert_float(layout.median_center_u()).is_between(layout.carriageway_width(), opposite.u_min)
+	# And the rendered road really carries it.
+	var aabb: AABB = _road_view().segments()[0].mesh.get_aabb()
+	assert_float(aabb.position.x).is_less_equal(RoadLayout.x_of(opposite.u_max))
+
+
 func test_player_starts_on_the_right_lane_at_the_start_speed() -> void:
 	assert_int(_player().lane).is_equal(0)
 	assert_float(_player().speed_mps * TrafficSim.KMH_PER_MPS).is_equal_approx(_main.sim_config.start_speed_kmh, 1e-6)
