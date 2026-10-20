@@ -67,6 +67,15 @@ func test_the_reward_comes_when_the_change_completes() -> void:
 	assert_int(_world.player.lane).is_equal(1)
 
 
+## Requirements §16: a signal on for at least the minimum (1 s) earns N1 — the same
+## boundary at which K3 stops (issue #47).
+func test_a_signal_held_for_exactly_the_minimum_earns_the_reward() -> void:
+	_behind_slow_car()
+	_signal(LEFT, _world.sim.config.signal_min_on_s)
+	_change_lane(LEFT)
+	assert_array(_n1_events()).has_size(1)
+
+
 func test_a_late_signal_earns_no_reward() -> void:
 	_behind_slow_car()
 	_signal(LEFT, 0.5)
