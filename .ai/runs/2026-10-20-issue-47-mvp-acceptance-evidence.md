@@ -25,7 +25,7 @@ Check every requirements §16 criterion off with evidence — a test name or a r
 
 ### Phase 1: Missing headless evidence
 1. W3 test: the opposite carriageway and the median barrier are in the cockpit camera's view.
-2. A3 test: across levels and profiles, AI never runs into a player that just holds its speed.
+2. A3 test: across levels 1–4, on the right and the left lane, AI never runs into a player that just holds its speed.
 3. A4 test: the measured traffic of each level is clearly denser than the level below.
 4. O5 boundary test: a signal held for exactly `signal_min_on_s` earns N1.
 5. [PARAM] check: every requirements [PARAM] is written in its `.tres`.

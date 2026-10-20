@@ -80,4 +80,4 @@ func test_every_listed_param_is_a_resource_property() -> void:
 			assert_bool(param in resource).override_failure_message("%s has no %s" % [path, param]).is_true()
 	var level: Resource = load("res://config/difficulty_levels/level_1.tres")
 	for param: String in LEVEL_PARAMS:
-		assert_bool(param in level).is_true()
+		assert_bool(param in level).override_failure_message("DifficultyLevel has no %s" % param).is_true()
