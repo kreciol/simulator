@@ -44,6 +44,37 @@ func test_a_collision_logs_k4_once_in_category_collision() -> void:
 	assert_array(completed).contains([events[0]])
 
 
+## Issue #62: touching two vehicles in one step is one incident, one K4.
+func test_touching_two_vehicles_in_one_step_logs_k4_once() -> void:
+	var world: ScoringTestHelper = ScoringTestHelper.new(0, 120.0)
+	var ahead: VehicleState = world.add_car_ahead(0, 5.1, 60.0)
+	# Mirrors the car ahead, closing at the same speed, so both touch in the same step.
+	world.sim.add_vehicle(-ahead.s, 0, ScoringTestHelper.kmh(180.0))
+	var contacts: Array[float] = []
+	world.sim.collision.connect(func(a: int, b: int) -> void:
+		if a == world.player.id or b == world.player.id:
+			contacts.append(world.sim.time_s))
+	world.drive(2.0)
+	assert_array(contacts).has_size(2)
+	assert_float(contacts[1]).is_equal(contacts[0])
+	var events: Array[ScoreEvent] = world.scoring.event_log.events_of_type(CollisionRule.TYPE_COLLISION)
+	assert_array(events).has_size(1)
+	assert_float(world.total_for(CollisionRule.CATEGORY)).is_equal(-_config.k4_penalty)
+
+
+func test_a_later_separate_collision_is_charged_again() -> void:
+	var world: ScoringTestHelper = ScoringTestHelper.new(0, 120.0)
+	world.add_car_ahead(0, 5.0, 60.0)
+	world.drive(2.0)
+	# A respawn far ahead, then a new crash.
+	world.sim.place_vehicle(world.player, 1000.0, 0, ScoringTestHelper.kmh(120.0))
+	world.scoring.restart_after_respawn()
+	world.add_car_ahead(0, 5.0, 60.0)
+	world.drive(2.0)
+	assert_array(world.scoring.event_log.events_of_type(CollisionRule.TYPE_COLLISION)).has_size(2)
+	assert_float(world.total_for(CollisionRule.CATEGORY)).is_equal(-2.0 * _config.k4_penalty)
+
+
 func test_other_vehicles_colliding_is_not_charged_to_the_player() -> void:
 	var world: ScoringTestHelper = ScoringTestHelper.new(0, 120.0)
 	world.add_car_ahead(1, 300.0, 60.0)

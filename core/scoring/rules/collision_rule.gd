@@ -1,8 +1,9 @@
 class_name CollisionRule
 extends RefCounted
 ## K4 — collision or leaving the road (requirements §8.2, §9.2): `k4_penalty` once per
-## player collision (the sim reports each contact once) and once when the player ends
-## off the road. Category &"collision": counted in the total, shown in the session
+## player collision incident and once when the player ends off the road. The sim reports
+## each contact once; contacts with several vehicles in the same step are one incident
+## (issue #62). Category &"collision": counted in the total, shown in the session
 ## status rather than as a score bar (spec Architecture: Scoring). What the session
 ## does next depends on the mode (learn respawn / exam end, E08).
 
@@ -15,6 +16,8 @@ var _config: ScoringConfig
 var _event_log: EventLog
 ## Events logged since the last `take_events`.
 var _pending: Array[ScoreEvent] = []
+## Sim time of the last charged player collision; NAN before the first.
+var _last_collision_s: float = NAN
 
 
 func _init(sim: TrafficSim, config: ScoringConfig, event_log: EventLog) -> void:
@@ -36,6 +39,10 @@ func _on_collision(vehicle_id: int, other_id: int) -> void:
 	var player: VehicleState = _sim.player
 	if player == null or (vehicle_id != player.id and other_id != player.id):
 		return
+	# A further contact in the same step belongs to the incident already charged.
+	if _sim.time_s == _last_collision_s:
+		return
+	_last_collision_s = _sim.time_s
 	var other: int = other_id if vehicle_id == player.id else vehicle_id
 	_log(TYPE_COLLISION, {"other_id": other, "speed_kmh": ScoringSystem.speed_kmh(player)})
 
