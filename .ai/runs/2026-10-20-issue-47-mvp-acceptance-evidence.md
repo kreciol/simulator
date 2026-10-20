@@ -41,6 +41,8 @@ Check every requirements §16 criterion off with evidence — a test name or a r
 
 ## Progress
 
+PR: #82
+
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: Missing headless evidence
