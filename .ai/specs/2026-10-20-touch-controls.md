@@ -35,13 +35,13 @@ Alternatives considered:
 ## 📝 Architecture
 
 - **`TouchButton`** (new, `game/player/`) — a `Control` with an `action`. Its `_gui_input` takes `InputEventScreenTouch` (Godot's GUI routes each touch index to the control it started on, and its release and cancel to the same control) and a real left `InputEventMouseButton` (the `touch=1` desktop path); mouse events with `device == InputEvent.DEVICE_ID_EMULATION` — the emulated copy of a touch — are accepted (so they never reach the HUD beneath) and otherwise ignored. It tracks the set of pointers holding it: the first pointer down emits a pressed action event, the last pointer up (or a cancelled touch) a released one. A finger that slides off the button keeps it held until lifted. `release_all()` drops every pointer and emits the release.
-- **`TouchControls`** (new, `ui/`) — a `CanvasLayer` above the HUD that builds one `TouchButton` per `TouchConfig` entry, with an icon glyph and its `ACTION_*` label (translation keys already used by the settings screen's key list), and lays them out on resize. It `release_all()`s on hide and on focus loss.
+- **`TouchControls`** (new, `ui/`) — a `CanvasLayer` above the HUD that builds one `TouchButton` per `TouchConfig` entry, with a drawn icon (polygons, not a font glyph, so every browser shows it) and its `ACTION_*` label (translation keys already used by the settings screen's key list), and lays them out on resize. It `release_all()`s on hide and on focus loss.
 - **`PlayerInput`** (changed) — also accepts `InputEventAction` for the driving actions. Held accelerate/brake are tracked per source: a key by its physical keycode, an action event by its action (the button aggregates its own fingers), so releasing a key keeps the action held by a touch and vice versa. Lane change and signal stay one-shot per press. `reset()` clears every source.
 - **`main.gd`** (changed) — decides whether the controls exist (below), builds them lazily, and on focus loss also releases them. The `pause` action already toggles the session.
 - **`DevLauncher` / `LaunchOptions`** (changed) — a `touch` param: `1` on, `0` off, missing or invalid → `DevLauncherConfig.default_touch` (`auto`). Like every known param, it skips the menus. `LaunchOptions.again` keeps it.
-- **`TouchConfig`** (new, `config/touch_config.gd` + `config/touch.tres`) — every button's action, glyph, anchor, offset and size, the reference height they scale from, and the idle / pressed opacity ([PARAM]s).
+- **`TouchConfig`** (new, `config/touch_config.gd` + `config/touch.tres`) — every button's action, icon, anchor, offset and size, the reference size they scale from, and the look: opacities, colours, border, label size ([PARAM]s).
 
-When the controls exist (`TouchControls.should_show`, a pure function so it is unit-tested):
+When the controls exist (`TouchControls.builds_at_start` / `builds_on_touch` / `hides_on_key`, pure functions so they are unit-tested):
 
 | `touch` | Device | Controls |
 |---|---|---|
@@ -62,14 +62,14 @@ No persisted data changes. The history does not tell touch and keyboard results 
 
 | Field | Meaning |
 |---|---|
-| `buttons: Array[TouchButtonSpec]` | `action`, `glyph`, `anchor` (0–1 of the viewport), `offset` and `size` in reference pixels |
-| `reference_height_px` | viewport height at which offsets and sizes apply 1:1; they scale with the actual height |
+| `buttons: Array[TouchButtonSpec]` | `action`, `icon`, `anchor` (0–1 of the viewport), `offset` and `size` in reference pixels |
+| `reference_height_px`, `reference_width_px` | viewport size at which offsets and sizes apply 1:1; they scale with the height, or the width when that is relatively smaller, so no button leaves the screen |
 | `idle_alpha`, `pressed_alpha` | button opacity at rest and while held |
-| `label_font_size`, `glyph_font_size` | text sizes in reference pixels |
+| `idle_icon_alpha`, `background_color`, `icon_color`, `border_width_px`, `label_outline_px`, `label_font_size`, `icon_fraction`, `corner_radius_px` | the rest of the look |
 
 ## 📝 UI/UX
 
-- The overlay sits above the HUD and below nothing; buttons are translucent so the road stays visible. Each button pairs a glyph (▲ gas, ▼ brake, ◀ ▶ lane, ⟸ ⟹ signal, ⏸ pause) with its Polish `ACTION_*` label — never colour alone.
+- The overlay sits above the HUD and below nothing; buttons are translucent so the road stays visible. Each button pairs a drawn icon (▲ gas, ▼ brake, ◀ ▶ lane, ⟸ ⟹ signal, ⏸ pause) with its Polish `ACTION_*` label — never colour alone.
 - A held button is drawn opaque (`pressed_alpha`) so the player sees what is held.
 - The controls show in every session state but the end screen — the pause button must resume, and a held accelerator during the countdown behaves like a held key (the press counts once driving starts).
 - Out of scope here, phase 2 (#87): orientation handling, touch wording in the tutorial and settings, and moving HUD elements the buttons cover.
@@ -111,7 +111,7 @@ No persisted data changes. The history does not tell touch and keyboard results 
 1. **`PlayerInput` accepts action events.** `InputEventAction` for the six driving actions (accelerate, brake, lane ×2, signal ×2 — `pause` stays with `main.gd`); held accelerate/brake keyed per source (key keycode / action); one-shot lane and signal; `reset()` clears all. Tests: action-only driving, key + touch mixes (release one, other keeps it held), brake wins, one lane change per tap, `reset`.
 2. **`touch` launch param.** `LaunchOptions.touch` (`auto` / `on` / `off`), `DevLauncher.KEY_TOUCH`, `DevLauncherConfig.default_touch` = `auto` in `dev_launcher.tres`, `again` keeps it, `describe` prints it. Tests: parse, invalid → default, skips menus.
 3. **`TouchConfig` + `TouchButton`.** The resource and `config/touch.tres` with the #85 layout; `TouchButton` pointer tracking (touch by index, real mouse, emulated mouse swallowed, cancel, multi-finger, `release_all`) emitting action events through an injectable sink (`Input.parse_input_event` by default). Tests drive `_gui_input` directly.
-4. **`TouchControls` overlay and `main.gd` wiring.** Build per `TouchConfig`, layout scaled to the viewport, `should_show` policy table, lazy build on the first touch, hide on key in `auto`, hide on the end screen, release on focus loss. Tests: no node on desktop without the param; `touch=1` shows and a mouse press on the accelerator speeds the car up; pause button pauses and resumes; held accelerator plus signal and lane taps (multitouch); input dropped in the countdown; a seeded replay of a touch-driven session reproduces it.
+4. **`TouchControls` overlay and `main.gd` wiring.** Build per `TouchConfig`, layout scaled to the viewport, the show/hide policy table, lazy build on the first touch, hide on key in `auto`, hide on the end screen, release on focus loss. Tests: no node on desktop without the param; `touch=1` shows and a mouse press on the accelerator speeds the car up; pause button pauses and resumes; held accelerator plus signal and lane taps (multitouch); input dropped in the countdown; a seeded replay of a touch-driven session reproduces it.
 5. **Docs.** Q16 in the MVP spec's *Decisions* table; the `touch` param and the touch rules in `docs/agents/input.md` / `session-flow.md`.
 
 ### Phase 2 (#87) and Phase 3 (#88)
