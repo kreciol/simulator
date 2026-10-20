@@ -115,7 +115,8 @@ func _input(event: InputEvent) -> void:
 	var touch: InputEventScreenTouch = event as InputEventScreenTouch
 	if touch != null and touch.pressed and TouchControls.builds_on_touch(launch_options.touch):
 		show_touch_controls()
-	elif event is InputEventKey and event.is_pressed() and touch_controls != null 			and TouchControls.hides_on_key(launch_options.touch):
+	elif event is InputEventKey and event.is_pressed() and touch_controls != null \
+			and TouchControls.hides_on_key(launch_options.touch):
 		_touch_wanted = false
 		touch_controls.set_shown(false)
 

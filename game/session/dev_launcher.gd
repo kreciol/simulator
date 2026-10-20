@@ -9,8 +9,8 @@ extends RefCounted
 ## #41) and `screen=tutorial` the tutorial, always in learn mode (issue #45). A missing
 ## or invalid value falls back to its default from `DevLauncherConfig` (`high` quality,
 ## mirrors on, probe off) or, for the screen, to a session; a missing seed is drawn at
-## random. `touch=1` / `touch=0` force the on-screen touch buttons on or off (issue #86;
-## the default builds them on a touch device). Since the start screen (issue #43) the params are a debug
+## random. `touch=1` / `touch=0` force the on-screen touch buttons on or off (issue
+## #86; the default builds them on a touch device). Since the start screen (issue #43) the params are a debug
 ## shortcut: any of them skips the menus.
 
 const KEY_MODE: String = "mode"

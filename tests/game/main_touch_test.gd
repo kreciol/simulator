@@ -20,6 +20,10 @@ func before_test() -> void:
 
 func after_test() -> void:
 	SaveManager.store = _real_store
+	# The buttons go through the real `Input`: never leave an action held for the next test.
+	for action: StringName in [&"accelerate", &"brake", &"lane_left", &"lane_right",
+			&"signal_left", &"signal_right", &"pause"]:
+		Input.action_release(action)
 	var dir: String = TEST_HISTORY.get_base_dir()
 	if DirAccess.dir_exists_absolute(dir):
 		for file_name: String in DirAccess.get_files_at(dir):

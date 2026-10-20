@@ -11,20 +11,18 @@ extends Control
 
 ## Pointer id of the real mouse; touch indices are 0 and up.
 const MOUSE_POINTER: int = -1
-const ICON_COLOR: Color = Color.WHITE
-const BACKGROUND_COLOR: Color = Color(0.1, 0.1, 0.12)
-const OUTLINE_SIZE: int = 4
 
 var action: StringName
 var icon: StringName
 var config: TouchConfig
-## Actual viewport height over `TouchConfig.reference_height_px`, set by the layout.
+## Actual viewport size over the reference size, set by the layout.
 var ui_scale: float = 1.0
 ## Receives the action events; tests replace it to watch instead.
 var sink: Callable = func(event: InputEvent) -> void: Input.parse_input_event(event)
 
 ## Pointers holding the button down.
 var _pointers: Dictionary[int, bool] = {}
+var _box: StyleBoxFlat = StyleBoxFlat.new()
 
 
 ## A button for `spec`, drawn as `config` says.
@@ -96,22 +94,21 @@ func _emit(pressed: bool) -> void:
 
 
 func _draw() -> void:
-	var box: StyleBoxFlat = StyleBoxFlat.new()
-	box.bg_color = Color(BACKGROUND_COLOR, config.pressed_alpha if is_held() else config.idle_alpha)
-	box.set_corner_radius_all(int(config.corner_radius_px * ui_scale))
-	box.border_color = Color(ICON_COLOR, box.bg_color.a)
-	box.set_border_width_all(2)
-	draw_style_box(box, Rect2(Vector2.ZERO, size))
-	var icon_alpha: float = 1.0 if is_held() else maxf(config.idle_alpha * 2.0, 0.6)
+	_box.bg_color = Color(config.background_color, config.pressed_alpha if is_held() else config.idle_alpha)
+	_box.set_corner_radius_all(int(config.corner_radius_px * ui_scale))
+	_box.border_color = Color(config.icon_color, _box.bg_color.a)
+	_box.set_border_width_all(maxi(1, int(config.border_width_px * ui_scale)))
+	draw_style_box(_box, Rect2(Vector2.ZERO, size))
+	var icon_alpha: float = 1.0 if is_held() else config.idle_icon_alpha
 	var side: float = minf(size.x, size.y) * config.icon_fraction
 	var font_size: int = maxi(1, int(config.label_font_size * ui_scale))
 	var centre: Vector2 = Vector2(size.x / 2.0, (size.y - font_size) / 2.0)
-	_draw_icon(Rect2(centre - Vector2(side, side) / 2.0, Vector2(side, side)), Color(ICON_COLOR, icon_alpha))
+	_draw_icon(Rect2(centre - Vector2(side, side) / 2.0, Vector2(side, side)), Color(config.icon_color, icon_alpha))
 	var font: Font = get_theme_default_font()
 	var text: String = tr(StringName("ACTION_%s" % String(action).to_upper()))
 	var baseline: Vector2 = Vector2(0.0, size.y - font_size * 0.6)
-	draw_string_outline(font, baseline, text, HORIZONTAL_ALIGNMENT_CENTER, size.x, font_size, OUTLINE_SIZE, Color(Color.BLACK, icon_alpha))
-	draw_string(font, baseline, text, HORIZONTAL_ALIGNMENT_CENTER, size.x, font_size, Color(ICON_COLOR, icon_alpha))
+	draw_string_outline(font, baseline, text, HORIZONTAL_ALIGNMENT_CENTER, size.x, font_size, config.label_outline_px, Color(Color.BLACK, icon_alpha))
+	draw_string(font, baseline, text, HORIZONTAL_ALIGNMENT_CENTER, size.x, font_size, Color(config.icon_color, icon_alpha))
 
 
 ## The icon inside `rect`: triangles for speed and lanes, a double arrow for a signal,

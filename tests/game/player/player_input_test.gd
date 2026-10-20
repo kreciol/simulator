@@ -213,7 +213,7 @@ func test_releasing_the_key_keeps_the_touch_held_and_back() -> void:
 
 func test_brake_wins_over_accelerate_in_any_mix(
 		accelerate_by_key: bool, brake_by_key: bool,
-		test_parameters: Array = [[true, false], [false, true], [false, false]]) -> void:
+		test_parameters: Array = [[true, true], [true, false], [false, true], [false, false]]) -> void:
 	if accelerate_by_key:
 		_press(KEY_W)
 	else:

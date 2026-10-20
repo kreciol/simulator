@@ -148,3 +148,24 @@ func test_config_has_one_sized_button_per_driving_action_and_pause() -> void:
 	assert_array(actions).contains_exactly_in_any_order([&"accelerate", &"brake", &"lane_left",
 			&"lane_right", &"signal_left", &"signal_right", &"pause"])
 	assert_float(_config.reference_height_px).is_greater(0.0)
+
+
+func test_a_touch_never_clicks_a_button_beneath() -> void:
+	# The mouse click Godot emulates from a touch lands on the touch button and stops
+	# there, so a HUD button under it (e.g. the tutorial's skip) never fires.
+	var viewport: SubViewport = auto_free(SubViewport.new())
+	viewport.size = Vector2i(200, 200)
+	add_child(viewport)
+	var beneath: Button = Button.new()
+	beneath.size = Vector2(200.0, 200.0)
+	viewport.add_child(beneath)
+	var gas: TouchButton = _button(&"accelerate")
+	viewport.add_child(gas)
+	await get_tree().process_frame
+	var clicks: Array[int] = [0]
+	beneath.pressed.connect(func() -> void: clicks[0] += 1)
+	for pressed: bool in [true, false]:
+		viewport.push_input(_touch(0, pressed))
+		viewport.push_input(_mouse(pressed, InputEvent.DEVICE_ID_EMULATION))
+	assert_int(clicks[0]).is_equal(0)
+	assert_array(_pressed_log()).is_equal([true, false])

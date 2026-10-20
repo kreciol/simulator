@@ -2,7 +2,8 @@ class_name TouchControls
 extends CanvasLayer
 ## The on-screen touch buttons over the HUD (issue #86, spec
 ## `2026-10-20-touch-controls.md`): one `TouchButton` per `TouchConfig` entry, placed
-## from its viewport anchor and scaled with the viewport's height. Whether they exist
+## from its viewport anchor and scaled with the viewport (its height, or its width when
+## that is relatively smaller). Whether they exist
 ## and show is the launch's `touch` mode (`builds_at_start`, `builds_on_touch`,
 ## `hides_on_key`); `main.gd` decides, this layer only draws and lays them out. Hiding
 ## lets go of every held button, so nothing stays pressed behind a hidden control.
@@ -49,10 +50,16 @@ func setup(touch_config: TouchConfig, sink: Callable = Callable()) -> void:
 	layout()
 
 
+## How much the reference layout grows or shrinks to fit `viewport_size`.
+static func scale_for(viewport_size: Vector2, touch_config: TouchConfig) -> float:
+	return minf(viewport_size.y / touch_config.reference_height_px,
+			viewport_size.x / touch_config.reference_width_px)
+
+
 ## Places every button for the current viewport size.
 func layout() -> void:
 	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
-	var ui_scale: float = viewport_size.y / config.reference_height_px
+	var ui_scale: float = TouchControls.scale_for(viewport_size, config)
 	for i: int in buttons.size():
 		var spec: TouchButtonSpec = config.buttons[i]
 		var button: TouchButton = buttons[i]
