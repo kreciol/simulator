@@ -15,6 +15,9 @@ extends Node3D
 ## Sound effects follow the drive (issue #72); `M` mutes them.
 ## The tutorial (issue #45) runs in this scene too: Tab (`tutorial_skip`) or the HUD's
 ## skip button ends it and goes back to the start screen at once.
+## On a touch device (or with `touch=1`) on-screen buttons drive the car through the
+## same Input Map actions as the keys (issue #86); with the launch's `touch` left to the
+## device they also appear on the first touch and hide on a key press.
 
 const HISTORY_SCENE: String = AppFlow.HISTORY_SCENE
 
@@ -23,6 +26,7 @@ const HISTORY_SCENE: String = AppFlow.HISTORY_SCENE
 @export var view_config: ViewConfig
 @export var perf_config: PerfConfig
 @export var audio_config: AudioConfig
+@export var touch_config: TouchConfig
 
 ## Set before the scene enters the tree to skip the dev launcher (tests).
 var launch_options: LaunchOptions
@@ -36,11 +40,18 @@ var perf_report: String = ""
 var change_scene: Callable = func(path: String) -> void: AppFlow.open_scene(get_tree(), path)
 ## Starts another session in place of this one; tests replace it to watch instead.
 var start_session: Callable = func(options: LaunchOptions) -> void: AppFlow.start_session(get_tree(), options)
+## Whether the device has a touchscreen; tests replace it.
+var touchscreen_available: Callable = func() -> bool: return DisplayServer.is_touchscreen_available()
+## The on-screen touch buttons; null until they are built (never on a desktop without
+## touch and no `touch` param).
+var touch_controls: TouchControls
 
-var _input: PlayerInput = PlayerInput.new()
+var _player_input: PlayerInput = PlayerInput.new()
 ## Null unless the launch asked for the probe.
 var _fps_probe: FpsProbe
 var _low_fps_watch: LowFpsWatch
+## Whether the touch buttons should show; the end screen hides them regardless.
+var _touch_wanted: bool = false
 
 @onready var session: SessionManager = $SessionManager
 @onready var _road_view: RoadView = $RoadView
@@ -64,6 +75,7 @@ func _ready() -> void:
 		set_process(false)
 		set_physics_process(false)
 		set_process_unhandled_input(false)
+		set_process_input(false)
 		change_scene.call_deferred(HISTORY_SCENE)
 		return
 	road_profile = launch_options.profile
@@ -89,14 +101,26 @@ func _ready() -> void:
 	_hud.menu_requested.connect(func() -> void: change_scene.call(AppFlow.START_SCENE))
 	_hud.tutorial_skip_requested.connect(skip_tutorial)
 	_audio_view.setup(session, view_config, audio_config, _engine_top_speed_kmh())
+	if TouchControls.builds_at_start(launch_options.touch, touchscreen_available.call()):
+		show_touch_controls()
 	# Fog fades the road out by the draw distance, hiding where it ends.
 	_world_environment.environment.fog_depth_end = view_config.draw_distance_m()
 	_update_views()
 
 
-func _unhandled_input(event: InputEvent) -> void:
+## Seen before the GUI, which takes a touch on a touch button for itself.
+func _input(event: InputEvent) -> void:
 	if _is_gesture(event):
 		_audio_view.unlock()
+	var touch: InputEventScreenTouch = event as InputEventScreenTouch
+	if touch != null and touch.pressed and TouchControls.builds_on_touch(launch_options.touch):
+		show_touch_controls()
+	elif event is InputEventKey and event.is_pressed() and touch_controls != null 			and TouchControls.hides_on_key(launch_options.touch):
+		_touch_wanted = false
+		touch_controls.set_shown(false)
+
+
+func _unhandled_input(event: InputEvent) -> void:
 	# Esc or P (the `pause` action) stops and resumes the session (requirements §9.3).
 	if event.is_action_pressed(&"pause"):
 		session.toggle_pause()
@@ -107,13 +131,13 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event.is_action_pressed(&"tutorial_skip") and session.is_tutorial():
 		skip_tutorial()
 		get_viewport().set_input_as_handled()
-	elif _input.handle_event(event):
+	elif _player_input.handle_event(event):
 		get_viewport().set_input_as_handled()
 
 
 func _physics_process(delta: float) -> void:
 	# Consumed every step, so presses during the countdown are dropped, not queued.
-	session.step(delta, _input.consume())
+	session.step(delta, _player_input.consume())
 
 
 func _process(delta: float) -> void:
@@ -147,7 +171,26 @@ func _notification(what: int) -> void:
 	# Key releases are not delivered while unfocused; never leave a key stuck down.
 	# `SessionManager` pauses itself on the same notification.
 	if what == NOTIFICATION_APPLICATION_FOCUS_OUT or what == NOTIFICATION_WM_WINDOW_FOCUS_OUT:
-		_input.reset()
+		_player_input.reset()
+		if touch_controls != null:
+			touch_controls.release_all()
+
+
+## Builds the touch buttons the first time and shows them.
+func show_touch_controls() -> void:
+	_touch_wanted = true
+	if touch_controls == null:
+		touch_controls = TouchControls.new()
+		touch_controls.name = "TouchControls"
+		add_child(touch_controls)
+		touch_controls.setup(touch_config)
+	_update_touch_controls()
+
+
+## Hidden on the end screen, so they never cover its again / history / menu buttons.
+func _update_touch_controls() -> void:
+	if touch_controls != null:
+		touch_controls.set_shown(_touch_wanted and session.state != SessionManager.State.ENDED)
 
 
 ## Ends the tutorial at once (requirements §12: skippable); `_on_session_ended` then
@@ -216,4 +259,5 @@ func _update_views() -> void:
 	_mirrors_view.update(_player_view.position)
 	_hud.update(session)
 	_hud.set_muted(_audio_view.user_muted)
+	_update_touch_controls()
 	_audio_view.update()

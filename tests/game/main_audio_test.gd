@@ -32,7 +32,9 @@ func _hud(main: Node3D) -> Hud:
 	return main.get_node("Hud") as Hud
 
 
+## As the viewport delivers it: `_input` first, then `_unhandled_input`.
 func _press(main: Node3D, event: InputEvent) -> void:
+	main._input(event)
 	main._unhandled_input(event)
 
 

@@ -1,4 +1,4 @@
-[gd_scene load_steps=21 format=3]
+[gd_scene load_steps=22 format=3]
 
 [ext_resource type="Script" path="res://game/main.gd" id="1_main"]
 [ext_resource type="Resource" path="res://config/dev_launcher.tres" id="2_launcher"]
@@ -17,6 +17,7 @@
 [ext_resource type="Resource" path="res://config/audio_config.tres" id="15_audio"]
 [ext_resource type="Script" path="res://game/audio/audio_view.gd" id="16_audio_view"]
 [ext_resource type="Resource" path="res://config/tutorial.tres" id="17_tutorial"]
+[ext_resource type="Resource" path="res://config/touch.tres" id="18_touch"]
 
 [sub_resource type="ProceduralSkyMaterial" id="SkyMaterial_1"]
 sky_top_color = Color(0.32, 0.52, 0.82, 1)
@@ -49,6 +50,7 @@ sim_config = ExtResource("3_sim")
 view_config = ExtResource("4_view")
 perf_config = ExtResource("12_perf")
 audio_config = ExtResource("15_audio")
+touch_config = ExtResource("18_touch")
 
 [node name="SessionManager" type="Node" parent="."]
 script = ExtResource("7_session")
