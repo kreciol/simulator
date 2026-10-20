@@ -145,3 +145,97 @@ func test_reset_releases_everything() -> void:
 	assert_int(commands.longitudinal).is_equal(VehicleState.Longitudinal.NONE)
 	assert_int(commands.lane_change).is_equal(NO_DIR)
 	assert_int(commands.signal_toggle).is_equal(NO_DIR)
+
+
+# --- Action events: the on-screen touch buttons (issue #86) ---
+
+func _action(action: StringName, pressed: bool) -> InputEventAction:
+	var event: InputEventAction = InputEventAction.new()
+	event.action = action
+	event.pressed = pressed
+	return event
+
+
+func _touch(action: StringName) -> bool:
+	return _input.handle_event(_action(action, true))
+
+
+func _lift(action: StringName) -> bool:
+	return _input.handle_event(_action(action, false))
+
+
+func test_held_action_controls_speed_like_its_key(
+		action: StringName,
+		expected: VehicleState.Longitudinal,
+		test_parameters: Array = [
+			[&"accelerate", VehicleState.Longitudinal.ACCELERATE],
+			[&"brake", VehicleState.Longitudinal.BRAKE],
+		]) -> void:
+	assert_bool(_touch(action)).is_true()
+	assert_int(_input.consume().longitudinal).is_equal(expected)
+	assert_int(_input.consume().longitudinal).is_equal(expected)
+	assert_bool(_lift(action)).is_true()
+	assert_int(_input.consume().longitudinal).is_equal(VehicleState.Longitudinal.NONE)
+
+
+func test_lane_change_fires_once_per_tap() -> void:
+	assert_bool(_touch(&"lane_right")).is_true()
+	assert_int(_input.consume().lane_change).is_equal(RIGHT)
+	assert_int(_input.consume().lane_change).is_equal(NO_DIR)
+	assert_bool(_lift(&"lane_right")).is_true()
+	assert_int(_input.consume().lane_change).is_equal(NO_DIR)
+
+
+func test_signal_then_lane_change_while_the_accelerator_is_held() -> void:
+	_touch(&"accelerate")
+	_touch(&"signal_left")
+	_lift(&"signal_left")
+	var signalled: PlayerCommands = _input.consume()
+	assert_int(signalled.signal_toggle).is_equal(LEFT)
+	assert_int(signalled.longitudinal).is_equal(VehicleState.Longitudinal.ACCELERATE)
+	_touch(&"lane_left")
+	var changed: PlayerCommands = _input.consume()
+	assert_int(changed.lane_change).is_equal(LEFT)
+	assert_int(changed.longitudinal).is_equal(VehicleState.Longitudinal.ACCELERATE)
+
+
+func test_releasing_the_key_keeps_the_touch_held_and_back() -> void:
+	_press(KEY_W)
+	_touch(&"accelerate")
+	_release(KEY_W)
+	assert_int(_input.consume().longitudinal).is_equal(VehicleState.Longitudinal.ACCELERATE)
+	_press(KEY_UP)
+	_lift(&"accelerate")
+	assert_int(_input.consume().longitudinal).is_equal(VehicleState.Longitudinal.ACCELERATE)
+	_release(KEY_UP)
+	assert_int(_input.consume().longitudinal).is_equal(VehicleState.Longitudinal.NONE)
+
+
+func test_brake_wins_over_accelerate_in_any_mix(
+		accelerate_by_key: bool, brake_by_key: bool,
+		test_parameters: Array = [[true, false], [false, true], [false, false]]) -> void:
+	if accelerate_by_key:
+		_press(KEY_W)
+	else:
+		_touch(&"accelerate")
+	if brake_by_key:
+		_press(KEY_S)
+	else:
+		_touch(&"brake")
+	assert_int(_input.consume().longitudinal).is_equal(VehicleState.Longitudinal.BRAKE)
+
+
+func test_non_driving_action_is_not_handled() -> void:
+	assert_bool(_touch(&"pause")).is_false()
+	assert_bool(_touch(&"mute")).is_false()
+	assert_int(_input.consume().longitudinal).is_equal(VehicleState.Longitudinal.NONE)
+
+
+func test_reset_releases_held_touches() -> void:
+	_touch(&"accelerate")
+	_press(KEY_S)
+	_touch(&"lane_left")
+	_input.reset()
+	var commands: PlayerCommands = _input.consume()
+	assert_int(commands.longitudinal).is_equal(VehicleState.Longitudinal.NONE)
+	assert_int(commands.lane_change).is_equal(NO_DIR)
