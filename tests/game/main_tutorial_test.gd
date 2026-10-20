@@ -19,7 +19,7 @@ func before_test() -> void:
 	_started.clear()
 	_real_settings = SaveManager.settings
 	_clear_test_settings()
-	SaveManager.settings = SettingsStore.new(TEST_SETTINGS)
+	SaveManager.settings = SettingsStore.new(TEST_SETTINGS, load("res://config/dev_launcher.tres") as DevLauncherConfig)
 	SaveManager.settings.userfs_persistent = true
 	SaveManager.settings.load_settings()
 

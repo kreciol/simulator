@@ -3,9 +3,11 @@ extends Node
 ## Phase 9 step 1). Loads the history once at start-up and saves finished sessions to
 ## it; the history file itself is `HistoryStore`. Saving never blocks play: when it is
 ## disabled, `save_record` just reports false and the screens explain why. It also
-## holds the player's settings (`SettingsStore`), loaded at start-up the same way.
+## loads the player's settings (`SettingsStore`, issues #44, #45): quality and mirrors
+## checked against the launcher's presets and defaults, and whether the tutorial was seen.
 
 const CONFIG_PATH: String = "res://config/persistence.tres"
+const LAUNCHER_CONFIG_PATH: String = "res://config/dev_launcher.tres"
 
 var config: PersistenceConfig
 var store: HistoryStore
@@ -16,7 +18,7 @@ func _ready() -> void:
 	config = load(CONFIG_PATH) as PersistenceConfig
 	store = HistoryStore.new(config.history_path, config.history_limit)
 	store.load_history()
-	settings = SettingsStore.new(config.settings_path)
+	settings = SettingsStore.new(config.settings_path, load(LAUNCHER_CONFIG_PATH) as DevLauncherConfig)
 	settings.load_settings()
 
 

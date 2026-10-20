@@ -39,14 +39,15 @@ func test_the_menu_offers_every_entry_and_the_educational_note() -> void:
 	assert_str(screen.legal_note_label.text).contains("nie porada prawna")
 
 
-func test_settings_are_shown_but_not_available_yet() -> void:
+func test_settings_and_the_tutorial_are_available() -> void:
 	var screen: StartScreen = _make()
-	assert_bool(screen.settings_button.visible).is_true()
-	assert_bool(screen.settings_button.disabled).is_true()
-	assert_str(screen.settings_button.text).ends_with("wkrótce")
-	assert_bool(screen.new_session_button.disabled).is_false()
-	assert_bool(screen.history_button.disabled).is_false()
-	assert_bool(screen.tutorial_button.disabled).is_false()
+	for button: Button in [screen.new_session_button, screen.history_button, screen.settings_button,
+			screen.tutorial_button]:
+		assert_bool(button.visible).is_true()
+		assert_bool(button.disabled).is_false()
+	assert_str(screen.settings_button.text).is_equal("Ustawienia")
+	assert_str(screen.settings_button.text).not_contains("wkrótce")
+	assert_str(screen.tutorial_button.text).not_contains("wkrótce")
 
 
 func test_history_opens_the_history_screen() -> void:
