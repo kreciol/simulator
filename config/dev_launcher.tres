@@ -25,3 +25,4 @@ quality_presets = Array[ExtResource("10_quality")]([ExtResource("11_low"), ExtRe
 default_quality = &"high"
 default_mirrors = true
 default_perf = false
+default_touch = &"auto"
