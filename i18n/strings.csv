@@ -126,3 +126,35 @@ END_HISTORY,Historia wyników
 END_MENU,Menu główne
 HISTORY_BACK,Wróć do menu
 SETUP_CHOICE,Wybrano: {choice}
+SETTINGS_TITLE,Ustawienia
+SETTINGS_QUALITY,Jakość grafiki
+SETTINGS_QUALITY_LOW,Niska
+SETTINGS_QUALITY_HIGH,Wysoka
+SETTINGS_QUALITY_HINT,"Niska jakość pomaga, gdy gra działa wolno: lusterka odświeżają się rzadziej, a droga widoczna jest na krótszym odcinku."
+SETTINGS_MIRRORS,Lusterka
+SETTINGS_ON,Włączone
+SETTINGS_OFF,Wyłączone
+SETTINGS_DISPLAY,Ekran
+SETTINGS_WINDOWED,Okno
+SETTINGS_FULLSCREEN,Pełny ekran
+SETTINGS_NEXT_SESSION,Jakość i lusterka obowiązują od następnej sesji i zostają zapamiętane w tej przeglądarce.
+SETTINGS_SAVE_FAILED,"Tym razem ustawień nie zapisaliśmy: pamięć przeglądarki jest niedostępna (np. w trybie prywatnym). Obowiązują do zamknięcia strony."
+SETTINGS_KEYS,Sterowanie
+SETTINGS_KEYS_HINT,Podgląd klawiszy — tutaj nie da się ich zmienić.
+SETTINGS_KEY_SEPARATOR," lub "
+ACTION_ACCELERATE,Przyspieszanie
+ACTION_BRAKE,Hamowanie
+ACTION_LANE_LEFT,Zmiana pasa w lewo
+ACTION_LANE_RIGHT,Zmiana pasa w prawo
+ACTION_SIGNAL_LEFT,Kierunkowskaz w lewo
+ACTION_SIGNAL_RIGHT,Kierunkowskaz w prawo
+ACTION_PAUSE,Pauza
+ACTION_MUTE,Wyciszenie dźwięku
+KEY_NAME_UP,Strzałka w górę
+KEY_NAME_DOWN,Strzałka w dół
+KEY_NAME_LEFT,Strzałka w lewo
+KEY_NAME_RIGHT,Strzałka w prawo
+KEY_NAME_ESCAPE,Esc
+KEY_NAME_COMMA,"Przecinek (,)"
+KEY_NAME_PERIOD,Kropka (.)
+SETTINGS_CURRENT,{setting}: {choice}

@@ -19,7 +19,7 @@ Open the project in the Godot editor and press **F5**, or from a terminal:
 godot --path .
 ```
 
-The game opens on the start screen: **Nowa sesja** picks mode, road profile and level (learn mode selected, the recommended level marked, the exam marked as suggested after 3 completed learn sessions — `config/menu.tres`), then the 3-2-1 countdown starts the drive. The end screen offers the same session again (new seed), the history or the menu. Settings and the tutorial are listed but not available yet.
+The game opens on the start screen: **Nowa sesja** picks mode, road profile and level (learn mode selected, the recommended level marked, the exam marked as suggested after 3 completed learn sessions — `config/menu.tres`), then the 3-2-1 countdown starts the drive. The end screen offers the same session again (new seed), the history or the menu. **Ustawienia** sets the graphics quality and the mirrors for the next sessions — remembered in `user://settings.cfg` (IndexedDB on web) — toggles fullscreen and previews the key bindings (read-only). The tutorial is listed but not available yet.
 
 ### Dev launcher
 

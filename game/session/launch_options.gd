@@ -1,8 +1,9 @@
 class_name LaunchOptions
 extends RefCounted
-## What one session is started with: mode, road profile, difficulty level, seed, and
-## until the settings screen the graphics quality and whether mirrors are shown.
-## Built by the new-session setup (`SessionSetup`) or, from URL params, `DevLauncher`.
+## What one session is started with: mode, road profile, difficulty level, seed, the
+## graphics quality and whether mirrors are shown. Built by the new-session setup
+## (`SessionSetup`, quality and mirrors from the player's settings) or, from URL params,
+## `DevLauncher`.
 
 const MODE_LEARN: StringName = SessionRecord.MODE_LEARN
 const MODE_EXAM: StringName = SessionRecord.MODE_EXAM

@@ -10,6 +10,12 @@
 - Saving must never block play — when storage is unavailable it is disabled and the UI explains why.
 - Tests use their own `user://test_*` paths, never the real history.
 
+## Settings file
+- `user://settings.cfg` (`SettingsStore`, a `ConfigFile`, loaded by `SaveManager`) holds the quality and mirrors.
+- A missing or unknown value in it takes the `DevLauncherConfig` default.
+- A save that will not last (failed write, or `user://` not persistent) keeps the choice for the run, and the settings screen says why.
+- Key bindings are never stored.
+
 ## History screen
 - It only reads `HistoryStore` (`recent`, `bests`, `previous_for`, `trend_scores`; counts `history_recent_count` / `history_trend_count`).
 - It always shows the data-is-local notice.
