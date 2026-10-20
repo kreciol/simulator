@@ -4,8 +4,15 @@ extends GdUnitTestSuite
 ## countdown is over (issue #8, step 3).
 
 const DT: float = 1.0 / 60.0
+const MAIN_SCENE: String = "res://game/main.tscn"
 ## Sessions finished here are saved to this file, never to the player's real history.
 const TEST_HISTORY: String = "user://test_main_scene/history.json"
+## Every scene here drives the same traffic, so a result never depends on a random
+## seed (issue #80).
+const SEED: int = 1
+## A seed whose traffic leaves no safe window near the wreck, so the respawn falls
+## back to despawning it (issue #80). Tied to the spawner: re-pick it if traffic changes.
+const NO_FREE_WINDOW_SEED: int = 14
 
 var _runner: GdUnitSceneRunner
 var _main: Node3D
@@ -18,9 +25,18 @@ func before_test() -> void:
 	SaveManager.store = HistoryStore.new(TEST_HISTORY, 5)
 	SaveManager.store.userfs_persistent = true
 	SaveManager.store.load_history()
-	_runner = scene_runner("res://game/main.tscn")
+	_runner = scene_runner(_scene(SEED))
 	_main = _runner.scene() as Node3D
 	_finish_countdown()
+
+
+## The main scene with the dev launcher's defaults and a fixed traffic seed, freed
+## after the test (a runner frees only the scenes it loads itself).
+func _scene(seed_value: int) -> Node3D:
+	var main: Node3D = (load(MAIN_SCENE) as PackedScene).instantiate() as Node3D
+	var launcher: DevLauncherConfig = load("res://config/dev_launcher.tres") as DevLauncherConfig
+	main.launch_options = DevLauncher.resolve({}, launcher, seed_value)
+	return auto_free(main)
 
 
 func after_test() -> void:
@@ -91,7 +107,7 @@ func test_player_starts_on_the_right_lane_at_the_start_speed() -> void:
 
 
 func test_countdown_runs_first_and_holds_the_car() -> void:
-	var runner: GdUnitSceneRunner = scene_runner("res://game/main.tscn")
+	var runner: GdUnitSceneRunner = scene_runner(_scene(SEED))
 	var main: Node3D = runner.scene() as Node3D
 	var session: SessionManager = main.session
 	assert_int(session.state).is_equal(SessionManager.State.INTRO)
@@ -192,15 +208,17 @@ func test_unmapped_key_does_nothing_to_the_vehicle() -> void:
 
 
 func test_scene_starts_from_the_dev_launcher_defaults_without_params() -> void:
-	# The headless test run passes no user args, so every launch option is a default.
-	var launcher: DevLauncherConfig = _main.launcher_config
-	var options: LaunchOptions = _main.session.options
-	assert_object(options).is_same(_main.launch_options)
+	# Started without launch options, as on its own; the headless test run passes no
+	# user args, so every launch option is a default. Nothing here depends on traffic.
+	var main: Node3D = scene_runner(MAIN_SCENE).scene() as Node3D
+	var launcher: DevLauncherConfig = main.launcher_config
+	var options: LaunchOptions = main.session.options
+	assert_object(options).is_same(main.launch_options)
 	assert_str(options.mode).is_equal(launcher.default_mode)
 	assert_int(options.level).is_equal(launcher.default_level)
-	assert_object(_main.road_profile).is_same(launcher.find_profile(launcher.default_profile))
-	assert_object(_main.sim.road).is_same(_main.road_profile)
-	assert_int(_main.sim.rng_seed).is_equal(options.seed_value)
+	assert_object(main.road_profile).is_same(launcher.find_profile(launcher.default_profile))
+	assert_object(main.sim.road).is_same(main.road_profile)
+	assert_int(main.sim.rng_seed).is_equal(options.seed_value)
 
 
 func _traffic_view() -> TrafficView:
@@ -217,11 +235,35 @@ func test_scene_shows_traffic_at_the_launch_level() -> void:
 
 
 func test_hitting_a_car_in_learn_mode_charges_k4_fades_and_drives_on() -> void:
+	var wreck: VehicleState = _hit_a_stopped_car_and_respawn()
+	# A free window was found: the wreck is still on the road, clear of the player.
+	assert_bool(_is_on_road(wreck.id)).is_true()
+	assert_bool(_main.sim.vehicles_overlap(_player(), wreck)).is_false()
+
+
+## Issue #80: with no safe window nearby the respawn despawns the wreck and puts the
+## player back where it hit it — on top of nothing that is still on the road.
+func test_a_respawn_with_no_free_window_clears_the_wreck_away() -> void:
+	_runner = scene_runner(_scene(NO_FREE_WINDOW_SEED))
+	_main = _runner.scene() as Node3D
+	_finish_countdown()
+	var wreck_id: int = _hit_a_stopped_car_and_respawn().id
+	assert_bool(_is_on_road(wreck_id)).is_false()
+
+
+## Whether the vehicle `id` is still in the sim. By id: a removed vehicle's state is
+## pooled and may come back as a new vehicle with a new id.
+func _is_on_road(id: int) -> bool:
+	return _main.sim.vehicles.any(func(vehicle: VehicleState) -> bool: return vehicle.id == id)
+
+
+## Puts a stopped car right ahead of the player, drives into it and through the
+## respawn fade, checking the learn-mode respawn on the way; returns the stopped car.
+func _hit_a_stopped_car_and_respawn() -> VehicleState:
 	var hud: Hud = _main.get_node("Hud") as Hud
 	var session: SessionManager = _main.session
 	assert_bool(session.is_exam()).is_false()
 	assert_object(session.scoring).is_not_null()
-	# A stopped car right ahead of the player.
 	var wreck: VehicleState = _main.sim.add_vehicle(_player().s + _player().length_m + 1.0, 0, 0.0)
 	assert_object(_traffic_view().view_of(wreck.id)).is_not_null()
 	var steps: int = 0
@@ -237,7 +279,11 @@ func test_hitting_a_car_in_learn_mode_charges_k4_fades_and_drives_on() -> void:
 	assert_int(_player().lane).is_equal(0)
 	assert_bool(hud.respawn_notice.visible).is_false()
 	assert_bool(hud.fade_screen.visible).is_false()
-	assert_bool(_main.sim.vehicles_overlap(_player(), wreck)).is_false()
+	# Nothing still on the road sits on the player (a despawned wreck keeps its old s).
+	for vehicle: VehicleState in _main.sim.vehicles:
+		if vehicle != _player():
+			assert_bool(_main.sim.vehicles_overlap(_player(), vehicle)).is_false()
+	return wreck
 
 
 ## One key press delivered to the scene exactly once. The scene runner hands each
