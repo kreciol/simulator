@@ -1,12 +1,13 @@
 class_name StartScreen
 extends Control
 ## The start screen, the new-session setup and the settings (requirements §9.1, §9.4,
-## spec Phase 10 step 1 and UI/UX flow, issues #43, #44). The menu offers a new session,
-## the history, the settings and the tutorial — the last shown but disabled until it
-## exists (E11-S03) — with the "educational tool, not legal advice" note (spec Risks:
-## teaching correctness). The setup picks mode · road profile · level: learn mode is
-## selected, the recommended level is highlighted and every level is selectable (Q14),
-## and after enough completed learn sessions the exam is marked as suggested
+## spec Phase 10 step 1 and UI/UX flow, issues #43, #44, #45). The menu offers a new
+## session, the history, the settings and the tutorial, with the "educational tool, not
+## legal advice" note (spec Risks: teaching correctness). Until the tutorial was finished
+## or skipped once it is suggested: marked, with the focus and a line saying why; it can
+## be run again from here any time. The setup picks mode · road profile · level: learn
+## mode is selected, the recommended level is highlighted and every level is selectable
+## (Q14), and after enough completed learn sessions the exam is marked as suggested
 ## (`SessionSetup`). Start begins the session with the 3-2-1 countdown, using the
 ## quality and mirrors from the settings. The settings page sets those two (saved at once
 ## in `settings.cfg`, `SettingsStore`), toggles fullscreen (not remembered: a browser
@@ -19,6 +20,8 @@ extends Control
 const MARGIN: int = 48
 const SEPARATION: int = 12
 const ROW_SEPARATION: int = 12
+## Between the key-binding rows: tight, so every Input Map action fits at 1280×720.
+const KEY_ROW_SEPARATION: int = 0
 const OUTLINE_SIZE: int = 6
 const TITLE_FONT_SIZE: int = 56
 const HEADING_FONT_SIZE: int = 28
@@ -52,7 +55,8 @@ const MODE_HINT_KEYS: Dictionary[StringName, StringName] = {
 @export var launcher_config: DevLauncherConfig
 @export var menu_config: MenuConfig
 ## Follows the launch params and reads `SaveManager`'s history and settings once in the
-## tree (the scene sets it); tests set `completed_learn` and `settings` themselves.
+## tree (the scene sets it); tests set `completed_learn`, `tutorial_seen` and `settings`
+## themselves.
 @export var use_platform_state: bool = false
 
 ## The player's settings; when nothing set them, the launcher's defaults in a store
@@ -60,6 +64,8 @@ const MODE_HINT_KEYS: Dictionary[StringName, StringName] = {
 var settings: SettingsStore
 ## Completed learn sessions in the saved history; decides the exam suggestion.
 var completed_learn: int = 0
+## Whether the tutorial was finished or skipped once; until then it is suggested.
+var tutorial_seen: bool = false
 ## Switches to another scene by path; tests replace it to watch instead.
 var open_scene: Callable = func(path: String) -> void: AppFlow.open_scene(get_tree(), path)
 ## Starts a session with the given options; tests replace it to watch instead.
@@ -77,6 +83,8 @@ var new_session_button: Button
 var history_button: Button
 var settings_button: Button
 var tutorial_button: Button
+## Shown while the tutorial is suggested; says why.
+var tutorial_suggestion_label: Label
 var legal_note_label: Label
 
 var setup_page: VBoxContainer
@@ -120,6 +128,7 @@ func _ready() -> void:
 			_launch(DevLauncher.resolve(params, launcher_config, randi()))
 			return
 		completed_learn = SessionSetup.completed_learn_sessions(SaveManager.store.sessions)
+		tutorial_seen = SaveManager.settings.tutorial_seen
 		settings = SaveManager.settings
 	if settings == null:
 		settings = SettingsStore.new("", launcher_config)
@@ -148,7 +157,22 @@ func show_menu() -> void:
 	menu_page.visible = true
 	setup_page.visible = false
 	settings_page.visible = false
-	_focus(new_session_button)
+	var suggested: bool = tutorial_suggested()
+	tutorial_button.text = _option_text(tr(&"START_TUTORIAL"), suggested)
+	tutorial_suggestion_label.visible = suggested
+	_focus(tutorial_button if suggested else new_session_button)
+
+
+func tutorial_suggested() -> bool:
+	return SessionSetup.suggests_tutorial(tutorial_seen)
+
+
+## Starts the tutorial: an empty road, no scoring, the steps prompted one by one, with
+## the quality and mirrors from the settings. Like Start, pressing it is the player's
+## gesture for sound.
+func start_tutorial() -> void:
+	AudioView.run_unlocked = true
+	start_session.call(SessionSetup.tutorial_options(launcher_config, randi(), settings))
 
 
 ## Opens the setup with its defaults: learn mode (§9.1), the launcher's road profile and
@@ -340,9 +364,15 @@ func _build_menu() -> void:
 	settings_button = _button("Settings", tr(&"START_SETTINGS"), MENU_BUTTON_SIZE)
 	settings_button.pressed.connect(show_settings)
 	buttons.add_child(settings_button)
-	# Enabled once the tutorial (E11-S03) exists.
-	tutorial_button = _coming_soon("Tutorial", &"START_TUTORIAL")
+	tutorial_button = _button("Tutorial", tr(&"START_TUTORIAL"), MENU_BUTTON_SIZE)
+	tutorial_button.pressed.connect(start_tutorial)
 	buttons.add_child(tutorial_button)
+	tutorial_suggestion_label = _wrapped("TutorialSuggestion", TEXT_FONT_SIZE, &"START_TUTORIAL_SUGGESTED")
+	tutorial_suggestion_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	tutorial_suggestion_label.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	tutorial_suggestion_label.add_theme_color_override("font_color", SUGGESTION_COLOR)
+	tutorial_suggestion_label.visible = false
+	menu_page.add_child(tutorial_suggestion_label)
 	legal_note_label = _wrapped("LegalNote", NOTE_FONT_SIZE, &"START_LEGAL_NOTE")
 	legal_note_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	legal_note_label.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
@@ -439,6 +469,7 @@ func _build_settings() -> void:
 	grid.name = "Bindings"
 	grid.columns = 2
 	grid.add_theme_constant_override("h_separation", ROW_SEPARATION)
+	grid.add_theme_constant_override("v_separation", KEY_ROW_SEPARATION)
 	keys.add_child(grid)
 	for action: StringName in KeyBindings.actions():
 		var name_label: Label = _label("Action_" + action, TEXT_FONT_SIZE, KeyBindings.action_label_key(action))

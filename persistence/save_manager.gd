@@ -3,8 +3,8 @@ extends Node
 ## Phase 9 step 1). Loads the history once at start-up and saves finished sessions to
 ## it; the history file itself is `HistoryStore`. Saving never blocks play: when it is
 ## disabled, `save_record` just reports false and the screens explain why. It also
-## loads the player's settings (`SettingsStore`, issue #44), checked against the
-## launcher's quality presets and defaults.
+## loads the player's settings (`SettingsStore`, issues #44, #45): quality and mirrors
+## checked against the launcher's presets and defaults, and whether the tutorial was seen.
 
 const CONFIG_PATH: String = "res://config/persistence.tres"
 const LAUNCHER_CONFIG_PATH: String = "res://config/dev_launcher.tres"

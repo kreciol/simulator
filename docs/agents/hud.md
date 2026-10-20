@@ -8,3 +8,4 @@
 - Warnings use icon + text, never colour alone.
 - The blind-spot zone lives in `ViewConfig.blind_spot_*_m`.
 - The end screen's again / history / menu buttons only emit signals; `main.gd` acts on them.
+- The tutorial panel shows only while driving: hidden in the countdown, a pause and a respawn, whose headings sit in the centre it would cover.

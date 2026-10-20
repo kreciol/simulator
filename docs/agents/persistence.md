@@ -11,10 +11,14 @@
 - Tests use their own `user://test_*` paths, never the real history.
 
 ## Settings file
-- `user://settings.cfg` (`SettingsStore`, a `ConfigFile`, loaded by `SaveManager`) holds the quality and mirrors.
-- A missing or unknown value in it takes the `DevLauncherConfig` default.
-- A save that will not last (failed write, or `user://` not persistent) keeps the choice for the run, and the settings screen says why.
+- `user://settings.cfg` (`SettingsStore`, a `ConfigFile`, loaded by `SaveManager`) holds the quality, the mirrors and whether the tutorial was seen.
+- `settings.cfg` (`PersistenceConfig.settings_path`) is read and written only through `SettingsStore` (`SaveManager.settings`).
+- A missing or unknown value in it takes the `DevLauncherConfig` default (the tutorial: not seen).
+- Each change writes only its own keys over what the file holds; keys it does not know survive.
+- `SettingsStore` never writes over a file it cannot parse.
+- A save that will not last (failed write, unreadable file, or `user://` not persistent) keeps the choice for the run, and the settings screen says why.
 - Key bindings are never stored.
+- Tests swap `SaveManager.settings` for a `user://test_*` store, never the real settings.
 
 ## History screen
 - It only reads `HistoryStore` (`recent`, `bests`, `previous_for`, `trend_scores`; counts `history_recent_count` / `history_trend_count`).

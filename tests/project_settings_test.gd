@@ -52,3 +52,14 @@ func test_mute_is_on_m() -> void:
 		if key_event != null:
 			keys.append(key_event.physical_keycode)
 	assert_array(keys).contains_exactly([KEY_M])
+
+
+func test_the_tutorial_is_skipped_with_tab() -> void:
+	# Issue #45: the tutorial can be skipped at once.
+	assert_bool(InputMap.has_action(&"tutorial_skip")).is_true()
+	var keys: Array[Key] = []
+	for event: InputEvent in InputMap.action_get_events(&"tutorial_skip"):
+		var key_event: InputEventKey = event as InputEventKey
+		if key_event != null:
+			keys.append(key_event.physical_keycode)
+	assert_array(keys).contains_exactly([KEY_TAB])

@@ -94,6 +94,21 @@ func test_without_settings_a_choice_keeps_the_default_quality_and_mirrors() -> v
 	assert_bool(options.perf).is_equal(_launcher.default_perf)
 
 
+func test_the_tutorial_is_suggested_until_seen() -> void:
+	assert_bool(SessionSetup.suggests_tutorial(false)).is_true()
+	assert_bool(SessionSetup.suggests_tutorial(true)).is_false()
+
+
+func test_the_tutorial_options_are_a_learn_session_on_the_default_road() -> void:
+	var options: LaunchOptions = SessionSetup.tutorial_options(_launcher, RANDOM_SEED)
+	assert_bool(options.is_tutorial()).is_true()
+	assert_str(options.mode).is_equal(LaunchOptions.MODE_LEARN)
+	assert_str(options.profile.id).is_equal(_launcher.default_profile)
+	assert_int(options.seed_value).is_equal(RANDOM_SEED)
+	assert_str(options.quality.id).is_equal(_launcher.default_quality)
+	assert_bool(options.mirrors).is_equal(_launcher.default_mirrors)
+
+
 ## Settings that never touch a file: these tests only read them.
 func _settings(quality: StringName, mirrors: bool) -> SettingsStore:
 	var settings: SettingsStore = SettingsStore.new("user://test_session_setup/unused.cfg", _launcher)
@@ -119,4 +134,11 @@ func test_an_unknown_saved_quality_falls_back_to_the_default() -> void:
 	var options: LaunchOptions = SessionSetup.options_for(
 			LaunchOptions.MODE_LEARN, &"motorway", 2, _launcher, RANDOM_SEED, _settings(&"ultra", false))
 	assert_str(options.quality.id).is_equal(_launcher.default_quality)
+	assert_bool(options.mirrors).is_false()
+
+
+func test_the_tutorial_uses_the_saved_quality_and_mirrors() -> void:
+	var options: LaunchOptions = SessionSetup.tutorial_options(_launcher, RANDOM_SEED, _settings(&"low", false))
+	assert_bool(options.is_tutorial()).is_true()
+	assert_str(options.quality.id).is_equal("low")
 	assert_bool(options.mirrors).is_false()
