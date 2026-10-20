@@ -237,7 +237,7 @@ func test_scene_shows_traffic_at_the_launch_level() -> void:
 func test_hitting_a_car_in_learn_mode_charges_k4_fades_and_drives_on() -> void:
 	var wreck: VehicleState = _hit_a_stopped_car_and_respawn()
 	# A free window was found: the wreck is still on the road, clear of the player.
-	assert_bool(_main.sim.vehicles.has(wreck)).is_true()
+	assert_bool(_is_on_road(wreck.id)).is_true()
 	assert_bool(_main.sim.vehicles_overlap(_player(), wreck)).is_false()
 
 
@@ -247,8 +247,14 @@ func test_a_respawn_with_no_free_window_clears_the_wreck_away() -> void:
 	_runner = scene_runner(_scene(NO_FREE_WINDOW_SEED))
 	_main = _runner.scene() as Node3D
 	_finish_countdown()
-	var wreck: VehicleState = _hit_a_stopped_car_and_respawn()
-	assert_bool(_main.sim.vehicles.has(wreck)).is_false()
+	var wreck_id: int = _hit_a_stopped_car_and_respawn().id
+	assert_bool(_is_on_road(wreck_id)).is_false()
+
+
+## Whether the vehicle `id` is still in the sim. By id: a removed vehicle's state is
+## pooled and may come back as a new vehicle with a new id.
+func _is_on_road(id: int) -> bool:
+	return _main.sim.vehicles.any(func(vehicle: VehicleState) -> bool: return vehicle.id == id)
 
 
 ## Puts a stopped car right ahead of the player, drives into it and through the
