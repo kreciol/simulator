@@ -22,7 +22,7 @@ extends RefCounted
 ## Emitted when a hint goes on screen.
 signal hint_shown(hint: Hint)
 
-## What `_show` did with a hint.
+## What `_show` did with a hint, or what `admission` says it would do.
 enum Shown { SHOWN, RATE_LIMITED, NO_ROOM }
 
 const KEEP_RIGHT: StringName = &"HINT_KEEP_RIGHT"
@@ -111,23 +111,26 @@ static func seconds_text(seconds: float) -> String:
 	return "%d,%d" % [floori(tenths / 10.0), tenths % 10]
 
 
+## Each hint is built only when `admission` lets its type on screen, so a held-back
+## type allocates nothing in a step.
 func _show_preventive(player: VehicleState) -> void:
-	if scoring.keep_right_rule.applies(player):
+	if scoring.keep_right_rule.applies(player) and admission(TYPE_KEEP_RIGHT) == Shown.SHOWN:
 		# From the first moment of the K2 grace, so it comes before any penalty.
 		_show(_hint(TYPE_KEEP_RIGHT, FeedbackLine.create(KEEP_RIGHT)))
 	var speed_kmh: float = ScoringSystem.speed_kmh(player)
 	var min_gap_m: float = LaneQuery.min_gap(speed_kmh)
 	var gap_m: float = LaneQuery.gap_to_leader(player, sim.lanes)
 	if scoring.gap_rule.gap_ratio(player) < 1.0:
-		# Rounded up, as half the shown speed; the epsilon absorbs km/h conversion drift.
-		var shown_min_gap: int = ceili(min_gap_m - MIN_GAP_EPSILON_M)
-		_show(_hint(TYPE_GAP_TOO_SMALL, FeedbackLine.create(GAP_TOO_SMALL, {
-			"speed": roundi(speed_kmh),
-			"min_gap": shown_min_gap,
-			# Below the minimum as shown, so a gap just short of it never reads as equal.
-			"gap": mini(floori(gap_m), shown_min_gap - 1),
-		})))
-	elif _gap_closing(player, gap_m, min_gap_m):
+		if admission(TYPE_GAP_TOO_SMALL) == Shown.SHOWN:
+			# Rounded up, as half the shown speed; the epsilon absorbs km/h conversion drift.
+			var shown_min_gap: int = ceili(min_gap_m - MIN_GAP_EPSILON_M)
+			_show(_hint(TYPE_GAP_TOO_SMALL, FeedbackLine.create(GAP_TOO_SMALL, {
+				"speed": roundi(speed_kmh),
+				"min_gap": shown_min_gap,
+				# Below the minimum as shown, so a gap just short of it never reads as equal.
+				"gap": mini(floori(gap_m), shown_min_gap - 1),
+			})))
+	elif _gap_closing(player, gap_m, min_gap_m) and admission(TYPE_GAP_CLOSING) == Shown.SHOWN:
 		_show(_hint(TYPE_GAP_CLOSING, FeedbackLine.create(GAP_CLOSING, {
 			"speed": roundi(speed_kmh),
 			"min_gap": roundi(min_gap_m),
@@ -136,7 +139,8 @@ func _show_preventive(player: VehicleState) -> void:
 	var limit_kmh: float = sim.road.speed_limit_kmh
 	# Above the limit as shown, so the speed never reads as equal to it; before S1's
 	# tolerance runs out.
-	if scoring.config.speed_rule_enabled and roundi(speed_kmh) > roundi(limit_kmh):
+	if scoring.config.speed_rule_enabled and roundi(speed_kmh) > roundi(limit_kmh) \
+			and admission(TYPE_SPEEDING) == Shown.SHOWN:
 		_show(_hint(TYPE_SPEEDING, FeedbackLine.create(SPEEDING, {
 			"limit": roundi(limit_kmh),
 			"speed": roundi(speed_kmh),
@@ -178,15 +182,16 @@ static func _hint(type: StringName, line: FeedbackLine, positive: bool = false) 
 	return hint
 
 
-## Puts `hint` on screen unless its type is rate-limited or there is no room: the
-## screen is full and its oldest hint has not been up `hint_min_display_s` yet, which
-## also keeps a hint from being replaced in the step that showed it.
-func _show(hint: Hint) -> Shown:
+## What `_show` would do with a hint of `type` now, without building one or changing
+## anything: rate-limited, no room (the screen is full and its oldest hint has not been
+## up `hint_min_display_s` yet, which also keeps a hint from being replaced in the step
+## that showed it), or SHOWN when it may go on screen.
+func admission(type: StringName) -> Shown:
 	var now_s: float = sim.time_s
-	if now_s - _last_shown_s.get(hint.type, -INF) < config.hint_cooldown_s:
+	if now_s - _last_shown_s.get(type, -INF) < config.hint_cooldown_s:
 		return Shown.RATE_LIMITED
 	for shown: Hint in hints:
-		if shown.type == hint.type:
+		if shown.type == type:
 			return Shown.RATE_LIMITED
 	if config.hint_max_on_screen <= 0:
 		return Shown.NO_ROOM
@@ -195,8 +200,18 @@ func _show(hint: Hint) -> Shown:
 		# Even a minimum of 0 never replaces a hint in the step that showed it.
 		if held_s <= 0.0 or held_s < config.hint_min_display_s - LaneQuery.TIME_EPSILON:
 			return Shown.NO_ROOM
-		while hints.size() >= config.hint_max_on_screen:
-			hints.pop_front()
+	return Shown.SHOWN
+
+
+## Puts `hint` on screen unless `admission` holds it back, replacing the oldest when
+## the screen is full.
+func _show(hint: Hint) -> Shown:
+	var admitted: Shown = admission(hint.type)
+	if admitted != Shown.SHOWN:
+		return admitted
+	var now_s: float = sim.time_s
+	while hints.size() >= config.hint_max_on_screen:
+		hints.pop_front()
 	hint.shown_at_s = now_s
 	hint.expires_at_s = now_s + config.hint_duration_s
 	hints.append(hint)
