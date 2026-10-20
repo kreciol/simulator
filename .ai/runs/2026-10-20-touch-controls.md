@@ -32,18 +32,20 @@ Phase 1 of the spec: `PlayerInput` action events with per-source holding, the `t
 
 ## Progress
 
+PR: #90
+
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: Input
 
-- [ ] 1.1 PlayerInput accepts action events
-- [ ] 1.2 touch launch param
+- [x] 1.1 PlayerInput accepts action events — 6b7e520
+- [x] 1.2 touch launch param — c13829e
 
 ### Phase 2: Touch overlay
 
-- [ ] 2.1 TouchConfig and TouchButton
-- [ ] 2.2 TouchControls overlay and main.gd wiring
+- [x] 2.1 TouchConfig and TouchButton — 1c1bb1c
+- [x] 2.2 TouchControls overlay and main.gd wiring — c30e4dc
 
 ### Phase 3: Docs
 
-- [ ] 3.1 Decisions table and agent docs
+- [x] 3.1 Decisions table and agent docs — 4c69fdb
