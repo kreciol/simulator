@@ -62,12 +62,18 @@ func _finish(main: DriveScene) -> void:
 	_hud(main).update(session)
 
 
+func _count_down(session: SessionManager) -> void:
+	for i: int in roundi(session.sim.config.countdown_s / DT) + 1:
+		session.step(DT)
+
+
 func test_the_tutorial_starts_on_an_empty_road_with_its_first_prompt() -> void:
 	var main: DriveScene = _main()
 	await get_tree().process_frame
 	assert_bool(main.session.is_tutorial()).is_true()
 	assert_int(main.session.sim.vehicles.size()).is_equal(1)
 	var hud: Hud = _hud(main)
+	_count_down(main.session)
 	hud.update(main.session)
 	assert_bool(hud.tutorial_panel.visible).is_true()
 	assert_str(hud.tutorial_step_label.text).is_equal("Krok 1 z 6")
@@ -225,3 +231,31 @@ func test_tab_through_the_viewport_skips_the_tutorial() -> void:
 	main.get_viewport().push_input(event)
 	assert_bool(main.session.tutorial.skipped).is_true()
 	assert_array(_opened).contains_exactly([AppFlow.START_SCENE])
+
+
+# The panel sits under the rear-view mirror and reaches the centre of the screen, where
+# the countdown digit, "Pauza" and the respawn heading are drawn (QA of PR #78).
+func test_the_panel_never_covers_a_centred_heading() -> void:
+	var main: DriveScene = _main()
+	await get_tree().process_frame
+	var session: SessionManager = main.session
+	var hud: Hud = _hud(main)
+	hud.update(session)
+	assert_bool(hud.countdown_label.visible).is_true()
+	assert_bool(hud.tutorial_panel.visible).is_false()
+	_count_down(session)
+	hud.update(session)
+	assert_bool(hud.tutorial_panel.visible).is_true()
+	session.pause()
+	hud.update(session)
+	assert_bool(hud.paused_label.is_visible_in_tree()).is_true()
+	assert_bool(hud.tutorial_panel.visible).is_false()
+	session.resume()
+	hud.update(session)
+	assert_bool(hud.tutorial_panel.visible).is_true()
+	session.step(DT, PlayerCommands.create(VehicleState.Longitudinal.NONE, VehicleState.Dir.RIGHT))
+	while session.state != SessionManager.State.RESPAWNING:
+		session.step(DT)
+	hud.update(session)
+	assert_bool(hud.respawn_notice.visible).is_true()
+	assert_bool(hud.tutorial_panel.visible).is_false()

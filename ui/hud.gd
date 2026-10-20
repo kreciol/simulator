@@ -408,8 +408,10 @@ func update(session: SessionManager) -> void:
 		widget.visible = not ended_screen.visible
 	# The tutorial has no time limit.
 	time_label.visible = time_label.visible and tutorial == null
-	tutorial_panel.visible = tutorial != null and session.state != SessionManager.State.ENDED
-	if tutorial_panel.visible:
+	# Only while driving: the countdown digit, the pause and the respawn headings sit in
+	# the centre of the screen, where the panel would cover them. Tab still skips.
+	tutorial_panel.visible = tutorial != null and session.state == SessionManager.State.DRIVING 			and not session.paused
+	if tutorial != null:
 		tutorial_step_label.text = tr(&"TUTORIAL_STEP").format(
 				{"number": tutorial.step_number(), "count": tutorial.step_count()})
 		tutorial_prompt_label.text = tr(tutorial.prompt_key())
