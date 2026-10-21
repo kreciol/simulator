@@ -32,10 +32,10 @@ Phases and steps follow the spec's Implementation Plan one to one.
 
 ### Phase 1: gh-pages as the site
 
-- [ ] 1.1 Publish script with main/preview/remove modes and its local test
-- [ ] 1.2 Run the script test in CI's test job
-- [ ] 1.3 Upload web-build on every event; replace deploy-pages with publish-main
-- [ ] 1.4 README and project-setup docs for the gh-pages site
+- [x] 1.1 Publish script with main/preview/remove modes and its local test — 19da1be
+- [x] 1.2 Run the script test in CI's test job — b6d0877
+- [x] 1.3 Upload web-build on every event; replace deploy-pages with publish-main — b6d0877
+- [x] 1.4 README and project-setup docs for the gh-pages site — bbe388b
 
 ### Phase 2: previews
 
