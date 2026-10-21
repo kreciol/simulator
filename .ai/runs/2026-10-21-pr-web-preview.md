@@ -42,4 +42,4 @@ Phases and steps follow the spec's Implementation Plan one to one.
 - [x] 2.1 publish-preview job in CI with the sticky comment — ffcfa28
 - [x] 2.2 pr-preview.yml for labeled and closed — 2186c1f
 - [x] 2.3 SDLC QA section and project-setup preview rules — 6e93efd
-- [ ] 2.4 PR description with the owner's manual step and pre-merge evidence
+- [x] 2.4 PR description with the owner's manual step and pre-merge evidence — PR body
