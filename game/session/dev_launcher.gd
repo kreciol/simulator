@@ -9,7 +9,8 @@ extends RefCounted
 ## #41) and `screen=tutorial` the tutorial, always in learn mode (issue #45). A missing
 ## or invalid value falls back to its default from `DevLauncherConfig` (`high` quality,
 ## mirrors on, probe off) or, for the screen, to a session; a missing seed is drawn at
-## random. Since the start screen (issue #43) the params are a debug
+## random. `touch=1` / `touch=0` force the on-screen touch buttons on or off (issue
+## #86; the default builds them on a touch device). Since the start screen (issue #43) the params are a debug
 ## shortcut: any of them skips the menus.
 
 const KEY_MODE: String = "mode"
@@ -20,8 +21,9 @@ const KEY_QUALITY: String = "quality"
 const KEY_MIRRORS: String = "mirrors"
 const KEY_PERF: String = "perf"
 const KEY_SCREEN: String = "screen"
+const KEY_TOUCH: String = "touch"
 const KEYS: Array[String] = [KEY_MODE, KEY_PROFILE, KEY_LEVEL, KEY_SEED, KEY_QUALITY,
-		KEY_MIRRORS, KEY_PERF, KEY_SCREEN]
+		KEY_MIRRORS, KEY_PERF, KEY_SCREEN, KEY_TOUCH]
 
 ## Whether this run's platform params were already taken: they launch once per run, so
 ## coming back to the menu later does not bounce into the same launch (issue #43).
@@ -140,6 +142,14 @@ static func resolve(params: Dictionary, config: DevLauncherConfig, random_seed: 
 			options.perf = perf == "1"
 		else:
 			_warn_invalid(KEY_PERF, perf)
+
+	options.touch = config.default_touch
+	if params.has(KEY_TOUCH):
+		var touch: String = params[KEY_TOUCH]
+		if touch == "0" or touch == "1":
+			options.touch = LaunchOptions.TOUCH_ON if touch == "1" else LaunchOptions.TOUCH_OFF
+		else:
+			_warn_invalid(KEY_TOUCH, touch)
 
 	options.screen = LaunchOptions.SCREEN_DRIVE
 	if params.has(KEY_SCREEN):

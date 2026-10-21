@@ -1,0 +1,83 @@
+[gd_resource type="Resource" script_class="TouchConfig" load_steps=10 format=3]
+
+[ext_resource type="Script" path="res://config/touch_config.gd" id="1_touch"]
+[ext_resource type="Script" path="res://config/touch_button_spec.gd" id="2_button"]
+
+[sub_resource type="Resource" id="Button_pause"]
+script = ExtResource("2_button")
+action = &"pause"
+label_key = &"TOUCH_PAUSE"
+icon = &"pause"
+anchor = Vector2(0, 0)
+offset = Vector2(24, 24)
+size = Vector2(96, 96)
+
+[sub_resource type="Resource" id="Button_signal_left"]
+script = ExtResource("2_button")
+action = &"signal_left"
+label_key = &"TOUCH_SIGNAL_LEFT"
+icon = &"signal_left"
+anchor = Vector2(0, 1)
+offset = Vector2(244, -292)
+size = Vector2(132, 132)
+
+[sub_resource type="Resource" id="Button_signal_right"]
+script = ExtResource("2_button")
+action = &"signal_right"
+label_key = &"TOUCH_SIGNAL_RIGHT"
+icon = &"signal_right"
+anchor = Vector2(0, 1)
+offset = Vector2(388, -292)
+size = Vector2(132, 132)
+
+[sub_resource type="Resource" id="Button_lane_left"]
+script = ExtResource("2_button")
+action = &"lane_left"
+label_key = &"TOUCH_LANE_LEFT"
+icon = &"left"
+anchor = Vector2(0, 1)
+offset = Vector2(244, -148)
+size = Vector2(132, 132)
+
+[sub_resource type="Resource" id="Button_lane_right"]
+script = ExtResource("2_button")
+action = &"lane_right"
+label_key = &"TOUCH_LANE_RIGHT"
+icon = &"right"
+anchor = Vector2(0, 1)
+offset = Vector2(388, -148)
+size = Vector2(132, 132)
+
+[sub_resource type="Resource" id="Button_brake"]
+script = ExtResource("2_button")
+action = &"brake"
+label_key = &"TOUCH_BRAKE"
+icon = &"down"
+anchor = Vector2(1, 1)
+offset = Vector2(-204, -280)
+size = Vector2(180, 104)
+
+[sub_resource type="Resource" id="Button_accelerate"]
+script = ExtResource("2_button")
+action = &"accelerate"
+label_key = &"TOUCH_ACCELERATE"
+icon = &"up"
+anchor = Vector2(1, 1)
+offset = Vector2(-204, -164)
+size = Vector2(180, 148)
+
+[resource]
+script = ExtResource("1_touch")
+buttons = Array[ExtResource("2_button")]([SubResource("Button_pause"), SubResource("Button_signal_left"), SubResource("Button_signal_right"), SubResource("Button_lane_left"), SubResource("Button_lane_right"), SubResource("Button_brake"), SubResource("Button_accelerate")])
+reference_height_px = 720.0
+reference_width_px = 1280.0
+idle_alpha = 0.35
+pressed_alpha = 0.8
+label_font_size = 18
+icon_fraction = 0.4
+corner_radius_px = 18.0
+idle_icon_alpha = 0.7
+background_color = Color(0.1, 0.1, 0.12, 1)
+icon_color = Color(1, 1, 1, 1)
+border_width_px = 2.0
+label_outline_px = 4

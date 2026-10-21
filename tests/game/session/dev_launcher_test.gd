@@ -27,6 +27,7 @@ func _assert_defaults(options: LaunchOptions) -> void:
 	assert_bool(options.mirrors).is_equal(_config.default_mirrors)
 	assert_bool(options.perf).is_equal(_config.default_perf)
 	assert_str(options.screen).is_equal(LaunchOptions.SCREEN_DRIVE)
+	assert_str(options.touch).is_equal(_config.default_touch)
 
 
 func test_config_offers_both_profiles_and_four_levels() -> void:
@@ -55,6 +56,24 @@ func test_the_fps_probe_is_off_unless_asked_for() -> void:
 	assert_bool(_from_query("?perf=1").perf).is_true()
 	assert_bool(_from_query("?perf=0").perf).is_false()
 	assert_str(_from_query("?perf=1&level=4&seed=1").describe()).contains("perf=1")
+
+
+func test_touch_buttons_follow_the_device_unless_forced() -> void:
+	# Issue #86: no touch param → built on a touch device; 1 / 0 force them on / off.
+	assert_str(_config.default_touch).is_equal(LaunchOptions.TOUCH_AUTO)
+	assert_str(_from_query("").touch).is_equal(LaunchOptions.TOUCH_AUTO)
+	assert_str(_from_query("?touch=1").touch).is_equal(LaunchOptions.TOUCH_ON)
+	assert_str(_from_query("?touch=0").touch).is_equal(LaunchOptions.TOUCH_OFF)
+	assert_str(_from_query("?touch=yes").touch).is_equal(_config.default_touch)
+	assert_str(_from_query("?touch=1&seed=1").describe()).contains("touch=on")
+
+
+func test_the_touch_param_skips_the_menus() -> void:
+	assert_bool(DevLauncher.has_launch_params(DevLauncher.parse_query("?touch=1"))).is_true()
+
+
+func test_again_keeps_the_touch_choice() -> void:
+	assert_str(_from_query("?touch=1").again(3).touch).is_equal(LaunchOptions.TOUCH_ON)
 
 
 func test_screen_history_opens_the_history_screen() -> void:

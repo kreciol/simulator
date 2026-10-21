@@ -21,6 +21,9 @@ extends Resource
 @export var default_mirrors: bool
 ## Whether the FPS probe runs when the `perf` param is missing or invalid.
 @export var default_perf: bool
+## Whether the touch buttons are built when the `touch` param is missing or invalid:
+## `auto`, `on` or `off` (`LaunchOptions.TOUCH_MODES`).
+@export var default_touch: StringName
 
 
 ## The profile with this id, or null when there is none.

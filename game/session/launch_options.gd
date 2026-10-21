@@ -14,6 +14,12 @@ const SCREEN_DRIVE: StringName = &"drive"
 const SCREEN_HISTORY: StringName = &"history"
 const SCREEN_TUTORIAL: StringName = &"tutorial"
 const SCREENS: Array[StringName] = [SCREEN_DRIVE, SCREEN_HISTORY, SCREEN_TUTORIAL]
+## Whether the on-screen touch buttons are built (issue #86): on a touch device or after
+## the first touch (`auto`), always (`on`, the desktop QA path) or never (`off`).
+const TOUCH_AUTO: StringName = &"auto"
+const TOUCH_ON: StringName = &"on"
+const TOUCH_OFF: StringName = &"off"
+const TOUCH_MODES: Array[StringName] = [TOUCH_AUTO, TOUCH_ON, TOUCH_OFF]
 
 var mode: StringName
 var profile: RoadProfile
@@ -30,10 +36,12 @@ var perf: bool
 ## `SCREEN_HISTORY` opens the history screen instead of a session, until the Phase 10
 ## menus reach it.
 var screen: StringName = SCREEN_DRIVE
+## One of `TOUCH_MODES`.
+var touch: StringName = TOUCH_AUTO
 
 
 ## The same session once more (the end screen's "again", issue #43): mode, road
-## profile, level, quality, mirrors, probe and whether it is the tutorial kept, with
+## profile, level, quality, mirrors, probe, touch buttons and whether it is the tutorial kept, with
 ## `random_seed` so the traffic differs from the last attempt.
 func again(random_seed: int) -> LaunchOptions:
 	var options: LaunchOptions = LaunchOptions.new()
@@ -46,6 +54,7 @@ func again(random_seed: int) -> LaunchOptions:
 	options.quality = quality
 	options.mirrors = mirrors
 	options.perf = perf
+	options.touch = touch
 	options.screen = SCREEN_TUTORIAL if is_tutorial() else SCREEN_DRIVE
 	return options
 
@@ -55,5 +64,5 @@ func is_tutorial() -> bool:
 
 
 func describe() -> String:
-	return "mode=%s profile=%s level=%d seed=%d quality=%s mirrors=%d perf=%d screen=%s" % [
-			mode, profile.id, level, seed_value, quality.id, int(mirrors), int(perf), screen]
+	return "mode=%s profile=%s level=%d seed=%d quality=%s mirrors=%d perf=%d screen=%s touch=%s" % [
+			mode, profile.id, level, seed_value, quality.id, int(mirrors), int(perf), screen, touch]

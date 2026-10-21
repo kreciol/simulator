@@ -27,6 +27,7 @@ All answered with the recommended default by the product owner.
 | Q13 | Difficulty beyond density | Higher levels also widen AI speed spread and lower AI discipline, moderately (per-level [PARAM]s). |
 | Q14 | Level unlocking | All levels available from the start; recommended level highlighted. |
 | Q15 | Feedback form | On-screen text + simple icons; no voice. Simple sound effects (engine, indicator, passing cars, collision, off-road) added by the product owner in #72 — spec [`2026-10-13-sound-effects.md`](2026-10-13-sound-effects.md). |
+| Q16 | Mobile / touch (supersedes requirements §2.2 / §3.1 for touch in a mobile browser) | The product owner added touch controls in a mobile browser (epic #85): on-screen buttons firing the keyboard's Input Map actions — spec [`2026-10-20-touch-controls.md`](2026-10-20-touch-controls.md). Native apps, a PWA, gestures, tilt and gamepads stay out of scope; the desktop keyboard stays the reference. |
 
 ## 📝 Problem Statement
 

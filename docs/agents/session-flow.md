@@ -47,7 +47,7 @@
 ## Dev launcher
 - `DevLauncher` turns URL params (web) or user args (desktop) into `LaunchOptions`; any known param (`DevLauncher.has_launch_params`) skips the menus.
 - Platform params are taken once per run (`DevLauncher.take_platform_params`), so returning to the menu never bounces back into the same launch.
-- Params: `mode`, `profile`, `level` (and its `DifficultyLevel`), `seed`, `quality` (`QualityPreset`), `mirrors` on/off, `perf` (FPS probe) on/off, `screen`.
+- Params: `mode`, `profile`, `level` (and its `DifficultyLevel`), `seed`, `quality` (`QualityPreset`), `mirrors` on/off, `perf` (FPS probe) on/off, `screen`, `touch` (touch buttons on/off; missing → by device).
 - `screen=tutorial` starts the tutorial, always in learn mode.
 - `screen=history` makes `main.gd` open `ui/history_screen.tscn` instead of starting a session.
 - Invalid or missing values take the config default (`high`, mirrors on, probe off, a session).

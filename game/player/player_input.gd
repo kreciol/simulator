@@ -1,27 +1,29 @@
 class_name PlayerInput
 extends RefCounted
 ## Turns Input Map action events (requirements §6.3) into one `PlayerCommands` per
-## physics step. Keys are never hard-coded: only action names are matched.
+## physics step. Keys are never hard-coded: only action names are matched. Keys arrive
+## as `InputEventKey`, the on-screen touch buttons (issue #86) as `InputEventAction`.
 ## Accelerate/brake act while held; lane change and signal fire once per press.
 
-## Physical keys currently holding an action down, keyed by physical keycode, so
-## releasing one of two keys bound to the same action keeps it held.
-var _held: Dictionary[Key, StringName] = {}
+## Sources currently holding an action down — a key by its physical keycode, a touch
+## button by its action — so releasing one of two sources bound to the same action
+## keeps it held.
+var _held: Dictionary[String, StringName] = {}
 var _lane_change: VehicleState.Dir = VehicleState.Dir.NONE
 var _signal_toggle: VehicleState.Dir = VehicleState.Dir.NONE
 
 
 ## Records `event`; returns whether it matched a driving action.
 func handle_event(event: InputEvent) -> bool:
-	var key_event: InputEventKey = event as InputEventKey
-	if key_event == null or key_event.is_echo():
+	var source: String = _source(event)
+	if source.is_empty() or event.is_echo():
 		return false
 	for action: StringName in [&"accelerate", &"brake"]:
 		if event.is_action(action):
 			if event.is_pressed():
-				_held[key_event.physical_keycode] = action
+				_held[source + String(action)] = action
 			else:
-				_held.erase(key_event.physical_keycode)
+				_held.erase(source + String(action))
 			return true
 	if not event.is_pressed():
 		return event.is_action(&"lane_left") or event.is_action(&"lane_right") \
@@ -43,8 +45,8 @@ func handle_event(event: InputEvent) -> bool:
 ## Braking wins when both accelerate and brake are held.
 func consume() -> PlayerCommands:
 	var longitudinal: VehicleState.Longitudinal = VehicleState.Longitudinal.NONE
-	for key: Key in _held:
-		if _held[key] == &"brake":
+	for source: String in _held:
+		if _held[source] == &"brake":
 			longitudinal = VehicleState.Longitudinal.BRAKE
 			break
 		longitudinal = VehicleState.Longitudinal.ACCELERATE
@@ -52,6 +54,16 @@ func consume() -> PlayerCommands:
 	_lane_change = VehicleState.Dir.NONE
 	_signal_toggle = VehicleState.Dir.NONE
 	return commands
+
+
+## What holds an action in `_held` (without the action): a key or a touch button.
+## Empty for any other event, which drives nothing.
+static func _source(event: InputEvent) -> String:
+	if event is InputEventKey:
+		return "key:%d:" % (event as InputEventKey).physical_keycode
+	if event is InputEventAction:
+		return "action:"
+	return ""
 
 
 ## Forgets all input, e.g. when the window loses focus and key releases go unseen.
