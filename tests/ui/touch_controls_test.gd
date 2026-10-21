@@ -107,18 +107,28 @@ func test_every_label_is_translated_and_fits_its_button() -> void:
 		assert_str(text).override_failure_message(String(button.label_key)).is_not_equal(String(button.label_key))
 		var font: Font = button.get_theme_default_font()
 		var font_size: int = button._fitting_font_size(font, text)
+		var room: float = button.size.x - 2.0 * config.label_outline_px * button.ui_scale
 		assert_float(font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x) \
-				.is_less_equal(button.size.x)
+				.is_less_equal(room)
+		# Fitted by a little, never shrunk to something unreadable.
+		assert_int(font_size).override_failure_message(text) \
+				.is_greater_equal(int(config.label_font_size * button.ui_scale * 0.6))
 
 
-func test_no_button_covers_a_mirror_at_the_reference_size() -> void:
-	# The mirrors are what the player checks before every lane change.
+func test_no_button_covers_a_mirror_on_any_screen_shape(
+		screen: Vector2,
+		test_parameters: Array = [
+			[Vector2(1280.0, 720.0)], [Vector2(1280.0, 960.0)], [Vector2(1560.0, 720.0)],
+			[Vector2(1280.0, 2770.0)],
+		]) -> void:
+	# The mirrors are what the player checks before every lane change. The project
+	# stretches with `expand`, so the visible rect only ever grows from 1280×720.
 	var config: TouchConfig = load("res://config/touch.tres") as TouchConfig
 	var view: ViewConfig = load("res://config/view_config.tres") as ViewConfig
-	var screen: Vector2 = Vector2(config.reference_width_px, config.reference_height_px)
+	var ui_scale: float = TouchControls.scale_for(screen, config)
 	var mirrors: Array[Rect2] = [view.rear_mirror_rect, view.left_mirror_rect, view.right_mirror_rect()]
 	for spec: TouchButtonSpec in config.buttons:
-		var rect: Rect2 = Rect2(spec.anchor * screen + spec.offset, spec.size)
+		var rect: Rect2 = Rect2(spec.anchor * screen + spec.offset * ui_scale, spec.size * ui_scale)
 		for mirror: Rect2 in mirrors:
 			var on_screen: Rect2 = Rect2(mirror.position * screen, mirror.size * screen)
 			assert_bool(rect.intersects(on_screen)).override_failure_message(String(spec.action)).is_false()

@@ -246,3 +246,14 @@ func test_a_seeded_replay_reproduces_a_touch_driven_session() -> void:
 		replayed.session.step(DT, step_commands)
 	assert_dict(replayed.sim.snapshot()).is_equal(driven.sim.snapshot())
 	assert_float(driven.player.speed_mps).is_greater(0.0)
+
+
+func test_no_button_covers_the_speedometer() -> void:
+	# The speed decides the legal gap (half the speed, in metres): it must stay readable.
+	var main: DriveScene = _main("?touch=1")
+	await get_tree().process_frame
+	var dashboard: Control = main.get_node("Hud").find_child("Dashboard", true, false) as Control
+	assert_object(dashboard).is_not_null()
+	for button: TouchButton in main.touch_controls.buttons:
+		assert_bool(button.get_global_rect().intersects(dashboard.get_global_rect())) \
+				.override_failure_message(String(button.action)).is_false()
