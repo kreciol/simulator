@@ -35,7 +35,7 @@ Alternatives considered:
 ## 📝 Architecture
 
 - **`TouchButton`** (new, `game/player/`) — a `Control` with an `action`. Its `_gui_input` takes `InputEventScreenTouch` (Godot's GUI routes each touch index to the control it started on, and its release and cancel to the same control) and a real left `InputEventMouseButton` (the `touch=1` desktop path); mouse events with `device == InputEvent.DEVICE_ID_EMULATION` — the emulated copy of a touch — are accepted (so they never reach the HUD beneath) and otherwise ignored. It tracks the set of pointers holding it: the first pointer down emits a pressed action event, the last pointer up (or a cancelled touch) a released one. A finger that slides off the button keeps it held until lifted. `release_all()` drops every pointer and emits the release.
-- **`TouchControls`** (new, `ui/`) — a `CanvasLayer` above the HUD that builds one `TouchButton` per `TouchConfig` entry, with a drawn icon (polygons, not a font glyph, so every browser shows it) and its `ACTION_*` label (translation keys already used by the settings screen's key list), and lays them out on resize. It `release_all()`s on hide and on focus loss.
+- **`TouchControls`** (new, `ui/`) — a `CanvasLayer` above the HUD that builds one `TouchButton` per `TouchConfig` entry, with a drawn icon (polygons, not a font glyph, so every browser shows it) and a short `TOUCH_*` label (shrunk to fit the button; the longer `ACTION_*` names did not fit), and lays them out on resize. It `release_all()`s on hide and on focus loss.
 - **`PlayerInput`** (changed) — also accepts `InputEventAction` for the driving actions. Held accelerate/brake are tracked per source: a key by its physical keycode, an action event by its action (the button aggregates its own fingers), so releasing a key keeps the action held by a touch and vice versa. Lane change and signal stay one-shot per press. `reset()` clears every source.
 - **`main.gd`** (changed) — decides whether the controls exist (below), builds them lazily, and on focus loss also releases them. The `pause` action already toggles the session.
 - **`DevLauncher` / `LaunchOptions`** (changed) — a `touch` param: `1` on, `0` off, missing or invalid → `DevLauncherConfig.default_touch` (`auto`). Like every known param, it skips the menus. `LaunchOptions.again` keeps it.
@@ -69,7 +69,7 @@ No persisted data changes. The history does not tell touch and keyboard results 
 
 ## 📝 UI/UX
 
-- The overlay sits above the HUD and below nothing; buttons are translucent so the road stays visible. Each button pairs a drawn icon (▲ gas, ▼ brake, ◀ ▶ lane, ⟸ ⟹ signal, ⏸ pause) with its Polish `ACTION_*` label — never colour alone.
+- The overlay sits above the HUD and below nothing; buttons are translucent so the road stays visible. Each button pairs a drawn icon (▲ gas, ▼ brake, ◀ ▶ lane, ⟸ ⟹ signal, ⏸ pause) with its short Polish `TOUCH_*` label — never colour alone. The layout keeps clear of the speedometer and the mirrors.
 - A held button is drawn opaque (`pressed_alpha`) so the player sees what is held.
 - The controls show in every session state but the end screen — the pause button must resume, and a held accelerator during the countdown behaves like a held key (the press counts once driving starts).
 - Out of scope here, phase 2 (#87): orientation handling, touch wording in the tutorial and settings, and moving HUD elements the buttons cover.
