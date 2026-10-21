@@ -108,6 +108,11 @@ The export is single-threaded, so it runs on any static host without COOP/COEP h
 
 ## Deployment
 
-`.github/workflows/ci.yml` runs import and tests on every pull request, and exports the Web build on every run. On a push to `main` it also deploys the build to GitHub Pages and prints the build size in the job summary.
+`.github/workflows/ci.yml` runs import and tests on every pull request, and exports the Web build on every run (printing its size in the job summary). GitHub Pages serves the `gh-pages` branch: on a push to `main` CI publishes the build to its root, and every same-repo pull request labelled `needs-qa` gets a preview at `https://kreciol.github.io/simulator/pr/<n>/<sha7>/`, linked from a bot comment on the PR and removed when the PR closes (`.github/workflows/pr-preview.yml`). All writes to `gh-pages` go through `.github/scripts/publish-gh-pages.sh`; `bash .github/scripts/test-publish-gh-pages.sh` tests it locally.
 
-One-time setup: in the repository settings, set **Pages → Build and deployment → Source** to **GitHub Actions**.
+One-time setup, in order, after `main` has published `gh-pages` once:
+
+1. **Settings → Environments → `github-pages` → Deployment branches**: allow `gh-pages` as well as `main`.
+2. **Settings → Pages → Build and deployment → Source**: **Deploy from a branch**, branch `gh-pages`, folder `/`.
+
+To roll back, set the source back to **GitHub Actions** and restore the `actions/deploy-pages` job.
