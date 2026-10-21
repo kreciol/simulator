@@ -28,6 +28,8 @@ Phases and steps follow the spec's Implementation Plan one to one.
 
 ## Progress
 
+PR: #93
+
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: gh-pages as the site
