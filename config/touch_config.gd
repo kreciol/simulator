@@ -31,3 +31,7 @@ extends Resource
 @export_range(0.0, 1.0) var icon_fraction: float
 ## Rounding of the button's corners, in reference pixels [PARAM].
 @export var corner_radius_px: float
+## Smallest side of anything a finger presses on a touch device — the touch buttons,
+## the menus' and the end screen's buttons — in CSS pixels as the browser reports them
+## (issue #87; WCAG 2.2 target size minimum) [PARAM].
+@export var min_touch_target_px: float

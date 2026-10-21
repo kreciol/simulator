@@ -14,6 +14,7 @@
 - While paused `step` does nothing.
 - `NOTIFICATION_APPLICATION_FOCUS_OUT` or `NOTIFICATION_WM_WINDOW_FOCUS_OUT` pauses; focus returning does not resume.
 - `physics/common/max_physics_steps_per_frame` caps catch-up.
+- On a touch device held upright (`RotateNotice`) the session pauses and stays paused; turning to landscape hides the notice, the player resumes. No orientation lock is relied on.
 
 ## Modes, collisions and respawn
 - The session carries the launch `mode`.

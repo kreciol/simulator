@@ -59,6 +59,23 @@ func test_buttons_sit_inside_the_viewport_and_scale_with_it() -> void:
 	assert_int(controls.layer).is_greater(1)
 
 
+func test_the_buttons_keep_to_the_safe_area() -> void:
+	# Issue #87: a notch or rounded corners move them inwards.
+	var config: TouchConfig = load("res://config/touch.tres") as TouchConfig
+	var controls: TouchControls = auto_free(TouchControls.new())
+	add_child(controls)
+	controls.setup(config, func(_event: InputEvent) -> void: pass)
+	var screen: Vector2 = controls.get_viewport().get_visible_rect().size
+	var area: Rect2 = Rect2(Vector2(90.0, 0.0), screen - Vector2(180.0, 40.0))
+	controls.safe_area = area
+	controls.layout()
+	for i: int in controls.buttons.size():
+		var rect: Rect2 = TouchControls.button_rect(config.buttons[i], area, config)
+		assert_vector(controls.buttons[i].position).is_equal_approx(rect.position, TOLERANCE)
+		assert_bool(area.encloses(rect)).override_failure_message(String(config.buttons[i].action)).is_true()
+	assert_array(TouchControls.button_rects(area, config)).has_size(config.buttons.size())
+
+
 func test_hiding_lets_go_of_held_buttons() -> void:
 	var events: Array[InputEventAction] = []
 	var controls: TouchControls = auto_free(TouchControls.new())

@@ -17,6 +17,10 @@ extends CanvasLayer
 ## history or the menu, each a signal the scene acts on. In the tutorial (spec Phase 10
 ## step 2) it shows the current step's prompt with a skip button instead of the time
 ## left, and the end screen recaps the three rules. Only reads session state.
+## With touch buttons on (issue #87, `set_layout`) it names the buttons instead of keys,
+## keeps every element clear of the buttons — the centred headings sit in the band
+## between the rear-view mirror and the buttons, the muted sign beside the pause button
+## — sizes its buttons for a finger, and stays inside the display's safe area.
 ## Placeholder styling until the UI theme lands (Phase 10).
 
 ## The player asked for the same session once more, from the end screen.
@@ -97,6 +101,8 @@ const TUTORIAL_PROMPT_WIDTH: float = 760.0
 const TUTORIAL_BACKDROP: Color = Color(0.0, 0.0, 0.0, 0.6)
 const TUTORIAL_PADDING: int = 16
 const TUTORIAL_SKIP_FONT_SIZE: int = 18
+## Side of a touch button's icon beside the tutorial's step.
+const TUTORIAL_ICON_SIZE: float = 40.0
 ## The three rules the tutorial's end screen recaps (requirements §12).
 const TUTORIAL_RECAP_KEYS: Array[StringName] = [&"TUTORIAL_RECAP_RIGHT_LANE",
 		&"TUTORIAL_RECAP_SIGNAL", &"TUTORIAL_RECAP_GAP"]
@@ -155,6 +161,18 @@ var tutorial_step_label: Label
 var tutorial_prompt_label: Label
 var tutorial_skip_button: Button
 var tutorial_recap: VBoxContainer
+## Tutorial, touch only: the icons of the buttons the current step asks for.
+var tutorial_icons: HBoxContainer
+## Holds the countdown and the respawn notice; with touch buttons it shrinks to the band
+## above them.
+var headings: Control
+var paused_box: VBoxContainer
+## The touch buttons' layout; null when the player drives by keyboard.
+var touch_config: TouchConfig
+## Where the HUD may draw, in canvas units; empty means the whole viewport.
+var safe_area: Rect2 = Rect2()
+## Smallest side of a button a finger presses, in canvas units; 0 without touch.
+var touch_target: float = 0.0
 
 ## The summary the panel shows, so it is filled once rather than every frame.
 var _shown_summary: Summary
@@ -165,6 +183,11 @@ var _driving_widgets: Array[Control] = []
 var _toast_left_s: float = 0.0
 ## The end screen opened and "again" is still to take the focus.
 var _focus_again_pending: bool = false
+var _root: Control
+var _tutorial_box: VBoxContainer
+var _tutorial_header: HBoxContainer
+## The actions whose icons the tutorial shows, so they are rebuilt only on a change.
+var _shown_actions: Array[StringName] = []
 
 
 func setup(view_config: ViewConfig) -> void:
@@ -174,6 +197,7 @@ func setup(view_config: ViewConfig) -> void:
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(root)
+	_root = root
 
 	var dashboard: HBoxContainer = HBoxContainer.new()
 	dashboard.name = "Dashboard"
@@ -240,8 +264,13 @@ func setup(view_config: ViewConfig) -> void:
 	hint_list.offset_bottom = HINTS_GAP
 	hint_list.grow_horizontal = Control.GROW_DIRECTION_BOTH
 
+	headings = Control.new()
+	headings.name = "Headings"
+	headings.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	headings.set_anchors_preset(Control.PRESET_FULL_RECT)
+	root.add_child(headings)
 	countdown_label = _centered_label("Countdown", COUNTDOWN_FONT_SIZE)
-	root.add_child(countdown_label)
+	headings.add_child(countdown_label)
 	fade_screen = ColorRect.new()
 	fade_screen.name = "FadeScreen"
 	fade_screen.color = Color(FADE_COLOR, 0.0)
@@ -253,7 +282,7 @@ func setup(view_config: ViewConfig) -> void:
 	root.move_child(fade_screen, 0)
 	respawn_notice = _notice("RespawnNotice")
 	respawn_notice.visible = false
-	root.add_child(respawn_notice)
+	headings.add_child(respawn_notice)
 	respawn_label = _label("Respawn", NOTICE_FONT_SIZE)
 	respawn_notice.add_child(respawn_label)
 	respawn_hint_label = _label("RespawnHint", CAUSE_FONT_SIZE)
@@ -262,7 +291,7 @@ func setup(view_config: ViewConfig) -> void:
 	_center(respawn_notice)
 	paused_screen = _backdrop("PausedScreen")
 	root.add_child(paused_screen)
-	var paused_box: VBoxContainer = VBoxContainer.new()
+	paused_box = VBoxContainer.new()
 	paused_box.name = "PausedNotice"
 	paused_box.alignment = BoxContainer.ALIGNMENT_CENTER
 	paused_box.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -327,6 +356,83 @@ func setup(view_config: ViewConfig) -> void:
 	root.add_child(toast)
 	toast.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP, Control.PRESET_MODE_MINSIZE, int(TOAST_TOP))
 	toast.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	get_viewport().size_changed.connect(_apply_layout)
+	_apply_layout()
+
+
+## Lays the HUD out inside `area` (canvas units; empty for the whole viewport) around the
+## touch buttons of `touch` (null when driving by keyboard), with every button at least
+## `min_target` canvas units each way.
+func set_layout(area: Rect2, touch: TouchConfig, min_target: float) -> void:
+	safe_area = area
+	touch_config = touch
+	touch_target = min_target
+	_apply_layout()
+
+
+func _apply_layout() -> void:
+	if _root == null or not is_inside_tree():
+		return
+	var screen: Vector2 = get_viewport().get_visible_rect().size
+	var area: Rect2 = safe_area if safe_area.has_area() else Rect2(Vector2.ZERO, screen)
+	_set_offsets(_root, area.position, area.end - screen)
+	# The dimming backdrops still cover the whole screen.
+	for backdrop: Control in [fade_screen, paused_screen, ended_screen]:
+		_set_offsets(backdrop, -area.position, screen - area.end)
+	var touch: bool = touch_config != null
+	var band_top: float = area.position.y
+	var band_bottom: float = area.end.y
+	var corner_right: float = area.position.x
+	if touch:
+		# The centred headings sit between the rear-view mirror and the button rows.
+		band_top = maxf(band_top, view.rear_mirror_rect.end.y * screen.y)
+		for rect: Rect2 in TouchControls.button_rects(area, touch_config):
+			if rect.get_center().y > area.get_center().y:
+				band_bottom = minf(band_bottom, rect.position.y - MARGIN)
+			elif rect.get_center().x < area.get_center().x:
+				corner_right = maxf(corner_right, rect.end.x)
+	_set_offsets(headings, Vector2(0.0, band_top - area.position.y), Vector2(0.0, band_bottom - area.end.y))
+	_set_offsets(paused_box, Vector2(area.position.x, band_top), Vector2(area.end.x - screen.x, band_bottom - screen.y))
+	if touch:
+		# The bottom-right corner holds the accelerator: the sign goes beside the pause button.
+		muted_indicator.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT, Control.PRESET_MODE_MINSIZE, int(MARGIN))
+		muted_indicator.grow_horizontal = Control.GROW_DIRECTION_END
+		muted_indicator.grow_vertical = Control.GROW_DIRECTION_END
+		muted_indicator.position.x = corner_right - area.position.x + MARGIN
+	else:
+		muted_indicator.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT, Control.PRESET_MODE_MINSIZE, int(MARGIN))
+		muted_indicator.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+		muted_indicator.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	# The buttons sit under the side mirrors: by touch the warnings go above them.
+	var mirrors: Dictionary[Control, Rect2] = {blind_spot_left: view.left_mirror_rect,
+			blind_spot_right: view.right_mirror_rect()}
+	for warning: Control in mirrors:
+		var edge: float = mirrors[warning].position.y if touch else mirrors[warning].end.y
+		warning.anchor_top = edge
+		warning.anchor_bottom = edge
+		warning.offset_top = -BLIND_SPOT_GAP if touch else BLIND_SPOT_GAP
+		warning.offset_bottom = warning.offset_top
+		warning.grow_vertical = Control.GROW_DIRECTION_BEGIN if touch else Control.GROW_DIRECTION_END
+	paused_hint_label.text = tr(&"SESSION_PAUSED_HINT_TOUCH" if touch else &"SESSION_PAUSED_HINT")
+	tutorial_skip_button.text = tr(&"TUTORIAL_SKIP_TOUCH" if touch else &"TUTORIAL_SKIP")
+	# By touch the skip button shares the step's row, so the panel stays above the buttons.
+	var skip_parent: Container = _tutorial_box
+	if touch:
+		skip_parent = _tutorial_header
+	if tutorial_skip_button.get_parent() != skip_parent:
+		tutorial_skip_button.reparent(skip_parent, false)
+	tutorial_icons.visible = touch
+	_shown_actions = []
+	ScreenFit.fit_buttons(_root, touch_target)
+
+
+## Sets `control`'s offsets from its anchors: the left and top edge from `begin`, the
+## right and bottom edge from `end`.
+static func _set_offsets(control: Control, begin: Vector2, end: Vector2) -> void:
+	control.offset_left = begin.x
+	control.offset_top = begin.y
+	control.offset_right = end.x
+	control.offset_bottom = end.y
 
 
 func _process(delta: float) -> void:
@@ -414,7 +520,11 @@ func update(session: SessionManager) -> void:
 	if tutorial != null:
 		tutorial_step_label.text = tr(&"TUTORIAL_STEP").format(
 				{"number": tutorial.step_number(), "count": tutorial.step_count()})
-		tutorial_prompt_label.text = tr(tutorial.prompt_key())
+		tutorial_prompt_label.text = tr(tutorial.prompt_key(touch_config != null))
+		var actions: Array[StringName] = []
+		if touch_config != null:
+			actions = tutorial.actions()
+		_show_tutorial_icons(actions)
 	tutorial_recap.visible = ended_screen.visible and tutorial != null
 	history_button.visible = tutorial == null
 	ended_label.visible = ended_screen.visible
@@ -547,8 +657,18 @@ func _tutorial_panel() -> PanelContainer:
 	var box: VBoxContainer = VBoxContainer.new()
 	box.name = "Box"
 	panel.add_child(box)
+	_tutorial_box = box
+	_tutorial_header = HBoxContainer.new()
+	_tutorial_header.name = "Header"
+	_tutorial_header.add_theme_constant_override("separation", TUTORIAL_PADDING)
+	box.add_child(_tutorial_header)
+	tutorial_icons = HBoxContainer.new()
+	tutorial_icons.name = "Icons"
+	tutorial_icons.visible = false
+	_tutorial_header.add_child(tutorial_icons)
 	tutorial_step_label = _label("Step", TUTORIAL_STEP_FONT_SIZE)
-	box.add_child(tutorial_step_label)
+	tutorial_step_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_tutorial_header.add_child(tutorial_step_label)
 	tutorial_prompt_label = _label("Prompt", TUTORIAL_PROMPT_FONT_SIZE)
 	tutorial_prompt_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	tutorial_prompt_label.custom_minimum_size = Vector2(TUTORIAL_PROMPT_WIDTH, 0.0)
@@ -562,6 +682,22 @@ func _tutorial_panel() -> PanelContainer:
 	tutorial_skip_button.pressed.connect(tutorial_skip_requested.emit)
 	box.add_child(tutorial_skip_button)
 	return panel
+
+
+## The icons of the touch buttons for `actions`, drawn as the buttons draw them.
+func _show_tutorial_icons(actions: Array[StringName]) -> void:
+	if actions == _shown_actions and tutorial_icons.get_child_count() == actions.size():
+		return
+	_shown_actions = actions.duplicate()
+	for child: Node in tutorial_icons.get_children():
+		tutorial_icons.remove_child(child)
+		child.queue_free()
+	if touch_config == null:
+		return
+	for action: StringName in actions:
+		for spec: TouchButtonSpec in touch_config.buttons:
+			if spec.action == action:
+				tutorial_icons.add_child(TouchIcon.create(spec.icon, TUTORIAL_ICON_SIZE))
 
 
 ## The three rules, one line each, on the tutorial's end screen.

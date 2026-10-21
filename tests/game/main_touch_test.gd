@@ -20,6 +20,7 @@ func before_test() -> void:
 
 func after_test() -> void:
 	SaveManager.store = _real_store
+	TouchControls.run_shown = false
 	# The buttons go through the real `Input`: never leave an action held for the next test.
 	for action: StringName in [&"accelerate", &"brake", &"lane_left", &"lane_right",
 			&"signal_left", &"signal_right", &"pause"]:

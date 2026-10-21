@@ -19,6 +19,25 @@ const PROMPT_KEYS: Dictionary[Step, StringName] = {
 	Step.RETURN_RIGHT: &"TUTORIAL_RETURN_RIGHT",
 	Step.CHECK_MIRRORS: &"TUTORIAL_CHECK_MIRRORS",
 }
+## Translation key of each step's prompt when the player drives by touch: it names the
+## on-screen buttons instead of keys (issue #87). The mirror check names no control.
+const TOUCH_PROMPT_KEYS: Dictionary[Step, StringName] = {
+	Step.ACCELERATE: &"TUTORIAL_ACCELERATE_TOUCH",
+	Step.SLOW_DOWN: &"TUTORIAL_SLOW_DOWN_TOUCH",
+	Step.SIGNAL: &"TUTORIAL_SIGNAL_TOUCH",
+	Step.CHANGE_LANE: &"TUTORIAL_CHANGE_LANE_TOUCH",
+	Step.RETURN_RIGHT: &"TUTORIAL_RETURN_RIGHT_TOUCH",
+	Step.CHECK_MIRRORS: &"TUTORIAL_CHECK_MIRRORS",
+}
+## The Input Map actions each step asks for, in the order the player uses them.
+const ACTIONS: Dictionary[Step, Array] = {
+	Step.ACCELERATE: [&"accelerate"],
+	Step.SLOW_DOWN: [&"brake"],
+	Step.SIGNAL: [&"signal_left"],
+	Step.CHANGE_LANE: [&"lane_left"],
+	Step.RETURN_RIGHT: [&"signal_right", &"lane_right"],
+	Step.CHECK_MIRRORS: [],
+}
 ## The right lane, where the player starts and returns to.
 const RIGHT_LANE: int = 0
 ## Absorbs float drift when fixed steps should sum to exactly a configured duration.
@@ -75,9 +94,17 @@ func step_count() -> int:
 	return STEPS.size()
 
 
-## The current step's prompt; empty once finished.
-func prompt_key() -> StringName:
-	return PROMPT_KEYS.get(step, &"")
+## The current step's prompt, naming the keys or, with `touch`, the on-screen buttons;
+## empty once finished.
+func prompt_key(touch: bool = false) -> StringName:
+	return (TOUCH_PROMPT_KEYS if touch else PROMPT_KEYS).get(step, &"")
+
+
+## The Input Map actions the current step asks for; none once finished.
+func actions() -> Array[StringName]:
+	var step_actions: Array[StringName] = []
+	step_actions.assign(ACTIONS.get(step, []))
+	return step_actions
 
 
 func _begin_step(next: Step) -> void:

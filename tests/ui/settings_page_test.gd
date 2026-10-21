@@ -45,6 +45,7 @@ func _make(settings: SettingsStore = _settings()) -> StartScreen:
 	var screen: StartScreen = auto_free(StartScreen.new()) as StartScreen
 	screen.launcher_config = _launcher
 	screen.menu_config = load("res://config/menu.tres") as MenuConfig
+	screen.touch_config = load("res://config/touch.tres") as TouchConfig
 	screen.settings = settings
 	screen.open_scene = func(_path: String) -> void: pass
 	screen.start_session = func(options: LaunchOptions) -> void: _started.append(options)

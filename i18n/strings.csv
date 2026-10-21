@@ -179,6 +179,17 @@ TOUCH_ACCELERATE,Gaz
 TOUCH_BRAKE,Hamulec
 TOUCH_LANE_LEFT,Pas w lewo
 TOUCH_LANE_RIGHT,Pas w prawo
-TOUCH_SIGNAL_LEFT,Kierunkowskaz
-TOUCH_SIGNAL_RIGHT,Kierunkowskaz
+TOUCH_SIGNAL_LEFT,Lewy kierunkowskaz
+TOUCH_SIGNAL_RIGHT,Prawy kierunkowskaz
 TOUCH_PAUSE,Pauza
+TUTORIAL_ACCELERATE_TOUCH,"Przyspiesz: przytrzymaj przycisk Gaz. Na autostradzie wjeżdżasz w ruch, który jedzie szybko."
+TUTORIAL_SLOW_DOWN_TOUCH,"Zwolnij: przytrzymaj przycisk Hamulec. Hamowanie zwiększa odstęp od pojazdu przed tobą."
+TUTORIAL_SIGNAL_TOUCH,"Włącz kierunkowskaz: dotknij przycisku Lewy kierunkowskaz. Inni kierowcy widzą wtedy, że chcesz zmienić pas."
+TUTORIAL_CHANGE_LANE_TOUCH,"Zmień pas na lewy: dotknij przycisku Pas w lewo. Kierunkowskaz zgaśnie sam po zmianie pasa."
+TUTORIAL_RETURN_RIGHT_TOUCH,"Wróć na prawy pas: dotknij przycisku Prawy kierunkowskaz, a potem Pas w prawo. Lewy pas służy do wyprzedzania."
+TUTORIAL_SKIP_TOUCH,Pomiń samouczek
+SESSION_PAUSED_HINT_TOUCH,"Dotknij przycisku Pauza, aby jechać dalej"
+ROTATE_DEVICE,Obróć urządzenie poziomo
+ROTATE_DEVICE_HINT,"Gra działa tylko w poziomie; rozpoczęta jazda czeka na pauzie."
+SETTINGS_TOUCH_HINT,"Podczas jazdy sterujesz przyciskami na ekranie:"
+SETTINGS_TOUCH_KEYBOARD,Z podłączoną klawiaturą działają też klawisze.

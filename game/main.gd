@@ -18,6 +18,9 @@ extends Node3D
 ## On a touch device (or with `touch=1`) on-screen buttons drive the car through the
 ## same Input Map actions as the keys (issue #86); with the launch's `touch` left to the
 ## device they also appear on the first touch and hide on a key press.
+## On a phone (issue #87) the HUD and the buttons stay inside the display's safe area and
+## the HUD keeps clear of the buttons; held upright, a touch device shows the rotate
+## notice and the session pauses until the player resumes it in landscape.
 
 const HISTORY_SCENE: String = AppFlow.HISTORY_SCENE
 
@@ -45,6 +48,12 @@ var touchscreen_available: Callable = func() -> bool: return DisplayServer.is_to
 ## The on-screen touch buttons; null until they are built (never on a desktop without
 ## touch and no `touch` param).
 var touch_controls: TouchControls
+## Asks to turn a touch device held upright; the drive pauses while it shows.
+var rotate_notice: RotateNotice
+## CSS pixels per canvas unit and the display's safe area in canvas units; tests
+## replace both.
+var css_scale: Callable = func() -> float: return ScreenFit.css_scale_now(get_viewport())
+var safe_area: Callable = func() -> Rect2: return ScreenFit.safe_rect_now(get_viewport())
 
 var _player_input: PlayerInput = PlayerInput.new()
 ## Null unless the launch asked for the probe.
@@ -101,8 +110,15 @@ func _ready() -> void:
 	_hud.menu_requested.connect(func() -> void: change_scene.call(AppFlow.START_SCENE))
 	_hud.tutorial_skip_requested.connect(skip_tutorial)
 	_audio_view.setup(session, view_config, audio_config, _engine_top_speed_kmh())
+	rotate_notice = RotateNotice.new()
+	add_child(rotate_notice)
+	rotate_notice.shown_changed.connect(_on_rotate_notice_shown)
+	rotate_notice.setup(touchscreen_available.call() or launch_options.touch == LaunchOptions.TOUCH_ON)
+	get_viewport().size_changed.connect(layout_screen)
 	if TouchControls.builds_at_start(launch_options.touch, touchscreen_available.call()):
 		show_touch_controls()
+	else:
+		layout_screen()
 	# Fog fades the road out by the draw distance, hiding where it ends.
 	_world_environment.environment.fog_depth_end = view_config.draw_distance_m()
 	_update_views()
@@ -119,6 +135,7 @@ func _input(event: InputEvent) -> void:
 			and TouchControls.hides_on_key(launch_options.touch):
 		_touch_wanted = false
 		touch_controls.set_shown(false)
+		layout_screen()
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -142,6 +159,9 @@ func _physics_process(delta: float) -> void:
 
 
 func _process(delta: float) -> void:
+	# Upright, the drive stays paused: a key cannot resume it behind the notice either.
+	if rotate_notice.visible:
+		session.pause()
 	track_performance(Performance.get_monitor(Performance.TIME_FPS), delta)
 	_update_views()
 
@@ -180,12 +200,41 @@ func _notification(what: int) -> void:
 ## Builds the touch buttons the first time and shows them.
 func show_touch_controls() -> void:
 	_touch_wanted = true
+	TouchControls.run_shown = true
 	if touch_controls == null:
 		touch_controls = TouchControls.new()
 		touch_controls.name = "TouchControls"
 		add_child(touch_controls)
 		touch_controls.setup(touch_config)
+	if not rotate_notice.applies:
+		rotate_notice.applies = true
+		rotate_notice.refresh()
 	_update_touch_controls()
+	layout_screen()
+
+
+## Lays the buttons and the HUD out inside the display's safe area; with the buttons
+## wanted the HUD keeps clear of them and sizes its buttons for a finger.
+func layout_screen() -> void:
+	var area: Rect2 = safe_area.call()
+	if touch_controls != null:
+		touch_controls.safe_area = area
+		touch_controls.layout()
+	if _touch_wanted:
+		_hud.set_layout(area, touch_config, ScreenFit.min_target(touch_config, css_scale.call()))
+	else:
+		_hud.set_layout(area, null, 0.0)
+
+
+## Upright, the drive pauses and every held button lets go; back in landscape the
+## player resumes it from the pause screen.
+func _on_rotate_notice_shown(shown: bool) -> void:
+	if not shown:
+		return
+	session.pause()
+	_player_input.reset()
+	if touch_controls != null:
+		touch_controls.release_all()
 
 
 ## Hidden on the end screen, so they never cover its again / history / menu buttons.

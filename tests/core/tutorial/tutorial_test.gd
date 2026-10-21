@@ -33,6 +33,24 @@ func test_it_prompts_the_six_steps_of_section_12_in_order() -> void:
 		assert_bool(Tutorial.PROMPT_KEYS.has(step)).is_true()
 
 
+func test_by_touch_each_step_has_its_own_prompt_and_buttons() -> void:
+	# Issue #87: the touch prompts name the on-screen buttons the step's actions press.
+	var tutorial: Tutorial = Tutorial.new(_config, _player)
+	for step: Tutorial.Step in Tutorial.STEPS:
+		tutorial._begin_step(step)
+		assert_str(tutorial.prompt_key(true)).is_equal(Tutorial.TOUCH_PROMPT_KEYS[step])
+		assert_str(tutorial.prompt_key()).is_equal(Tutorial.PROMPT_KEYS[step])
+		assert_bool(Tutorial.ACTIONS.has(step)).is_true()
+		var naming_keys: bool = not tutorial.actions().is_empty()
+		assert_bool(tutorial.prompt_key(true) != tutorial.prompt_key()).is_equal(naming_keys)
+	assert_array(Tutorial.new(_config, _player).actions()).contains_exactly([&"accelerate"])
+	tutorial._begin_step(Tutorial.Step.RETURN_RIGHT)
+	assert_array(tutorial.actions()).contains_exactly([&"signal_right", &"lane_right"])
+	tutorial.skip()
+	assert_array(tutorial.actions()).is_empty()
+	assert_str(tutorial.prompt_key(true)).is_empty()
+
+
 func test_it_starts_on_accelerate() -> void:
 	var tutorial: Tutorial = Tutorial.new(_config, _player)
 	assert_int(tutorial.step).is_equal(Tutorial.Step.ACCELERATE)
