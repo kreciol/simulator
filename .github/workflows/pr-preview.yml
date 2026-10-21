@@ -1,0 +1,88 @@
+name: PR preview
+
+# Pushes to a PR are deployed by ci.yml's publish-preview job. This workflow covers the
+# two events that do not re-run CI: needs-qa added after CI passed, and the PR closing.
+on:
+  pull_request:
+    types: [labeled, closed]
+
+permissions:
+  contents: read
+
+env:
+  GH_TOKEN: ${{ github.token }}
+  GH_REPO: ${{ github.repository }}
+  PR: ${{ github.event.pull_request.number }}
+  HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+  SITE_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
+
+jobs:
+  deploy-on-label:
+    name: Publish the preview when needs-qa is added
+    if: >-
+      github.event.action == 'labeled' && github.event.label.name == 'needs-qa' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+      actions: read
+    concurrency:
+      group: gh-pages
+      cancel-in-progress: false
+    steps:
+      - name: Find the passing CI run at the head
+        id: ci
+        run: |
+          run_id="$(gh run list --repo "${{ github.repository }}" --workflow ci.yml --commit "$HEAD_SHA" \
+            --status success --limit 1 --json databaseId --jq '.[0].databaseId // empty')"
+          if [ -z "$run_id" ]; then
+            echo "::notice::CI has not passed at ${HEAD_SHA:0:7} yet — its publish-preview job deploys when it does."
+            exit 0
+          fi
+          if ! gh api "repos/${{ github.repository }}/actions/runs/$run_id/artifacts" \
+              --jq '.artifacts[] | select(.name == "web-build" and (.expired | not)) | .id' | grep -q .; then
+            echo "::notice::CI run $run_id has no web-build artifact any more — re-run CI or push to rebuild."
+            exit 0
+          fi
+          echo "run-id=$run_id" >> "$GITHUB_OUTPUT"
+
+      - if: steps.ci.outputs.run-id != ''
+        uses: actions/checkout@v7
+
+      - if: steps.ci.outputs.run-id != ''
+        uses: actions/download-artifact@v8
+        with:
+          name: web-build
+          path: build/web
+          run-id: ${{ steps.ci.outputs.run-id }}
+          github-token: ${{ github.token }}
+
+      - name: Publish and link the preview
+        if: steps.ci.outputs.run-id != ''
+        run: |
+          bash .github/scripts/publish-gh-pages.sh preview "$PR" "$HEAD_SHA" build/web
+          bash .github/scripts/preview-comment.sh deployed "$PR" "$HEAD_SHA" "$SITE_URL"
+
+  remove-on-close:
+    name: Remove the preview of a closed PR
+    if: github.event.action == 'closed' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+    concurrency:
+      group: gh-pages
+      cancel-in-progress: false
+    steps:
+      # A closed PR's merge ref may be gone; the scripts come from the base branch.
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.base.ref }}
+
+      - name: Remove the preview
+        run: |
+          bash .github/scripts/publish-gh-pages.sh remove "$PR"
+          bash .github/scripts/preview-comment.sh removed "$PR"
