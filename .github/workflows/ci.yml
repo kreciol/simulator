@@ -114,4 +114,51 @@ jobs:
       - name: Publish
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
         run: bash .github/scripts/publish-gh-pages.sh main build/web
+
+  # A same-repo PR labelled needs-qa gets its build at pr/<n>/<sha7>/. The label is read
+  # live: it may have been added while the tests ran (pr-preview.yml then found no
+  # passing run and left the deploy to this job).
+  publish-preview:
+    name: Publish PR preview
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    needs: build-web
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+    concurrency:
+      group: gh-pages
+      cancel-in-progress: false
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      PR: ${{ github.event.pull_request.number }}
+      HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      SITE_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
+    steps:
+      - name: Check for needs-qa
+        id: label
+        run: |
+          if gh api "repos/${{ github.repository }}/issues/$PR/labels" --jq '.[].name' | grep -qx needs-qa; then
+            echo "deploy=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "PR #$PR has no needs-qa label — no preview."
+          fi
+
+      - if: steps.label.outputs.deploy == 'true'
+        uses: actions/checkout@v7
+
+      - if: steps.label.outputs.deploy == 'true'
+        uses: actions/download-artifact@v8
+        with:
+          name: web-build
+          path: build/web
+
+      - name: Publish and link the preview
+        if: steps.label.outputs.deploy == 'true'
+        run: |
+          bash .github/scripts/publish-gh-pages.sh preview "$PR" "$HEAD_SHA" build/web
+          bash .github/scripts/preview-comment.sh deployed "$PR" "$HEAD_SHA" "$SITE_URL"
