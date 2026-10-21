@@ -110,42 +110,48 @@ trap 'rm -rf "$WORK"' EXIT
 TRACKING="refs/remotes/$REMOTE/$BRANCH"
 GIT_DIR_ABS="$(git rev-parse --absolute-git-dir)"
 
-# One read-apply-push pass. Returns 0 when published or nothing changed, 1 when the
-# lease was lost (someone else pushed first).
+# One read-apply-push pass. Sets PUBLISHED=1 when pushed or nothing changed, 0 when
+# the lease was lost (someone else pushed first). Any other failure ends the script:
+# it is never called in a condition, which would switch errexit off inside it, and
+# every step that could leave a partial tree dies explicitly.
 publish_once() {
-  local tip site tree old_tree commit
-  tip="$(git ls-remote --heads "$REMOTE" "refs/heads/$BRANCH" | cut -f1)"
+  local exists tip site tree old_tree commit
+  PUBLISHED=0
+  exists="$(git ls-remote --heads "$REMOTE" "refs/heads/$BRANCH")" || die "cannot read $REMOTE"
   site="$WORK/site"
   rm -rf "$site" "$WORK/index"
   mkdir -p "$site"
+  tip=""
   old_tree=""
-  if [ -n "$tip" ]; then
-    git fetch --quiet --depth 1 "$REMOTE" "+refs/heads/$BRANCH:$TRACKING"
-    git archive "$tip" | tar -x -C "$site"
-    old_tree="$(git rev-parse "$tip^{tree}")"
+  if [ -n "$exists" ]; then
+    git fetch --quiet --depth 1 "$REMOTE" "+refs/heads/$BRANCH:$TRACKING" || die "cannot fetch $BRANCH"
+    tip="$(git rev-parse --verify "$TRACKING^{commit}")" || die "cannot resolve $BRANCH"
+    git archive "$tip" | tar -x -C "$site" || die "cannot unpack $BRANCH"
+    old_tree="$(git rev-parse --verify "$tip^{tree}")" || die "cannot read the $BRANCH tree"
   fi
 
   apply_change "$site"
 
   tree="$(export GIT_INDEX_FILE="$WORK/index"
           git -C "$site" --git-dir="$GIT_DIR_ABS" --work-tree="$site" add -A -f . &&
-          git write-tree)"
+          git write-tree)" || die "cannot build the site tree"
+  [ -n "$tree" ] || die "empty site tree"
   if [ "$tree" = "$old_tree" ]; then
     log "nothing changed on $BRANCH"
+    PUBLISHED=1
     return 0
   fi
-  commit="$(git commit-tree "$tree" -m "$MESSAGE")"
+  commit="$(git commit-tree "$tree" -m "$MESSAGE")" || die "cannot commit the site tree"
+  [ -n "$commit" ] || die "empty commit id"
   if git push --quiet --force-with-lease="refs/heads/$BRANCH:$tip" "$REMOTE" "$commit:refs/heads/$BRANCH"; then
     log "$MESSAGE → $BRANCH ${commit:0:7}"
-    return 0
+    PUBLISHED=1
   fi
-  return 1
 }
 
 for attempt in $(seq 1 "$MAX_ATTEMPTS"); do
-  if publish_once; then
-    exit 0
-  fi
+  publish_once
+  [ "$PUBLISHED" = 1 ] && exit 0
   log "push rejected (attempt $attempt/$MAX_ATTEMPTS) — re-reading $BRANCH"
   sleep "$BACKOFF_S"
 done

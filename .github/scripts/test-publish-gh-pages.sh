@@ -51,10 +51,10 @@ case "$method" in
     if compgen -G "$STUB/comments/*.json" >/dev/null; then jq -s . "$STUB"/comments/*.json; else echo '[]'; fi ;;
   POST)
     id=$(( $(ls "$STUB/comments" | wc -l) + 100 ))
-    jq -n --argjson id "$id" --arg b "$body" '{id: $id, body: $b}' >"$STUB/comments/$id.json" ;;
+    jq -n --argjson id "$id" --arg b "$body" '{id: $id, body: $b, user: {login: "github-actions[bot]"}}' >"$STUB/comments/$id.json" ;;
   PATCH)
     id="${path##*/}"
-    jq -n --argjson id "$id" --arg b "$body" '{id: $id, body: $b}' >"$STUB/comments/$id.json" ;;
+    jq -n --argjson id "$id" --arg b "$body" '{id: $id, body: $b, user: {login: "github-actions[bot]"}}' >"$STUB/comments/$id.json" ;;
 esac
 EOF
 chmod +x "$STUB/bin/gh"
@@ -143,12 +143,35 @@ check "the retry keeps the concurrent write" has concurrent.txt
 check "the retry applies its own change" has pr/9/bbbbbbb/index.html
 check "one commit after a race" single_commit
 
+# A failing git step must stop the script, never push a partial tree or delete the
+# branch. A shim fails one git subcommand and passes the rest to the real git.
+REAL_GIT="$(command -v git)"
+mkdir -p "$TMP/gitshim"
+cat >"$TMP/gitshim/git" <<EOF
+#!/usr/bin/env bash
+for a in "\$@"; do [ "\$a" = "\$FAIL_GIT" ] && exit 1; done
+exec "$REAL_GIT" "\$@"
+EOF
+chmod +x "$TMP/gitshim/git"
+for sub in fetch archive write-tree commit-tree; do
+  before="$(tip)"
+  if (cd "$TMP/work" && FAIL_GIT="$sub" PATH="$TMP/gitshim:$PATH" bash "$PUBLISH" remove 9) 2>>"$TMP/log"; then
+    fail "a failed git $sub fails the publish"
+  else
+    pass "a failed git $sub fails the publish"
+  fi
+  check "a failed git $sub leaves the branch alone" [ "$(tip)" = "$before" ]
+done
+
 # --- preview-comment.sh ---
 comment() { bash "$COMMENT" "$@"; }
 count() { ls "$STUB/comments" | wc -l | tr -d ' '; }
 body() { jq -r .body "$STUB"/comments/*.json; }
 
+jq -n '{id: 1, body: "<!-- pr-web-preview --> a human quoting the marker", user: {login: "someone"}}' >"$STUB/comments/1.json"
 comment deployed 7 "$SHA_A" https://example.github.io/sim/
+check "a human comment with the marker is left alone" grep -q "a human quoting" "$STUB/comments/1.json"
+rm "$STUB/comments/1.json"
 check "deployed creates one comment" [ "$(count)" = 1 ]
 check "the comment links pr/<n>/<sha7>/" grep -q "https://example.github.io/sim/pr/7/aaaaaaa/" <<<"$(body)"
 check "the comment carries the full SHA" grep -q "$SHA_A" <<<"$(body)"
