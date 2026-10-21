@@ -25,6 +25,9 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - name: Test the gh-pages publish scripts
+        run: bash .github/scripts/test-publish-gh-pages.sh
+
       - uses: ./.github/actions/setup-godot
         with:
           version: ${{ env.GODOT_VERSION }}
@@ -78,28 +81,89 @@ jobs:
             echo '```'
           } | tee -a "$GITHUB_STEP_SUMMARY"
 
-      - name: Upload Pages artifact
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
-        uses: actions/upload-pages-artifact@v5
+      - name: Upload web build
+        uses: actions/upload-artifact@v7
         with:
+          name: web-build
           path: build/web
+          if-no-files-found: error
+          retention-days: 7
 
-  deploy-pages:
-    name: Deploy to GitHub Pages
+  # Pages deploys from the gh-pages branch: main owns the root, PR previews live under
+  # pr/<n>/<sha7>/. Every write goes through publish-gh-pages.sh in the gh-pages group.
+  publish-main:
+    name: Publish main to gh-pages
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     needs: build-web
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+      contents: write
+      pull-requests: read
     concurrency:
-      group: pages
+      group: gh-pages
       cancel-in-progress: false
     steps:
-      - name: Deploy
-        id: deployment
-        uses: actions/deploy-pages@v5
+      - uses: actions/checkout@v7
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: web-build
+          path: build/web
+
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: bash .github/scripts/publish-gh-pages.sh main build/web
+
+  # A same-repo PR labelled needs-qa gets its build at pr/<n>/<sha7>/. The label is read
+  # live: it may have been added while the tests ran (pr-preview.yml then found no
+  # passing run and left the deploy to this job).
+  publish-preview:
+    name: Publish PR preview
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    needs: build-web
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+    concurrency:
+      group: gh-pages
+      cancel-in-progress: false
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      PR: ${{ github.event.pull_request.number }}
+      HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      SITE_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
+    steps:
+      - name: Check for needs-qa
+        id: label
+        run: |
+          if ! gh api "repos/${{ github.repository }}/issues/$PR/labels" --jq '.[].name' | grep -qx needs-qa; then
+            echo "PR #$PR has no needs-qa label — no preview."
+            exit 0
+          fi
+          live="$(gh pr view "$PR" --json headRefOid --jq .headRefOid)"
+          if [ "$live" != "$HEAD_SHA" ]; then
+            echo "PR #$PR has moved on to ${live:0:7} — its own run publishes that."
+            exit 0
+          fi
+          echo "deploy=true" >> "$GITHUB_OUTPUT"
+
+      - if: steps.label.outputs.deploy == 'true'
+        uses: actions/checkout@v7
+
+      - if: steps.label.outputs.deploy == 'true'
+        uses: actions/download-artifact@v8
+        with:
+          name: web-build
+          path: build/web
+
+      - name: Publish and link the preview
+        if: steps.label.outputs.deploy == 'true'
+        run: |
+          bash .github/scripts/publish-gh-pages.sh preview "$PR" "$HEAD_SHA" build/web
+          bash .github/scripts/preview-comment.sh deployed "$PR" "$HEAD_SHA" "$SITE_URL"
