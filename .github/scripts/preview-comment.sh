@@ -4,18 +4,20 @@
 #   preview-comment.sh deployed <pr> <sha> <site-url>   create or update the link comment
 #   preview-comment.sh removed <pr>                     say the preview is gone (only if a comment exists)
 #
-# The comment is found by its hidden marker and edited in place, never duplicated.
+# The comment is found by its hidden marker and bot author, and edited in place, never duplicated.
 # Needs `gh` with a token that may write PR comments; the repository comes from
 # GH_REPO or the checkout's remote.
 set -euo pipefail
 
 MARKER='<!-- pr-web-preview -->'
+BOT='github-actions[bot]'  # the GITHUB_TOKEN's author; a human comment with the marker is left alone
 
 die() { echo "preview-comment: $*" >&2; exit 2; }
 
 find_comment() {
   gh api --paginate "repos/{owner}/{repo}/issues/$1/comments" |
-    jq -r --arg m "$MARKER" '.[] | select(.body | startswith($m)) | .id' |
+    jq -r --arg m "$MARKER" --arg bot "$BOT" \
+      '.[] | select(.user.login == $bot and (.body | startswith($m))) | .id' |
     tr -d '\r' | head -n 1
 }
 

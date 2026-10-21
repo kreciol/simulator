@@ -35,6 +35,11 @@ jobs:
       - name: Find the passing CI run at the head
         id: ci
         run: |
+          live="$(gh pr view "$PR" --json headRefOid --jq .headRefOid)"
+          if [ "$live" != "$HEAD_SHA" ]; then
+            echo "::notice::PR #$PR has moved on to ${live:0:7} — its CI run publishes that."
+            exit 0
+          fi
           run_id="$(gh run list --repo "${{ github.repository }}" --workflow ci.yml --commit "$HEAD_SHA" \
             --status success --limit 1 --json databaseId --jq '.[0].databaseId // empty')"
           if [ -z "$run_id" ]; then

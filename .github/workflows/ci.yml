@@ -142,11 +142,16 @@ jobs:
       - name: Check for needs-qa
         id: label
         run: |
-          if gh api "repos/${{ github.repository }}/issues/$PR/labels" --jq '.[].name' | grep -qx needs-qa; then
-            echo "deploy=true" >> "$GITHUB_OUTPUT"
-          else
+          if ! gh api "repos/${{ github.repository }}/issues/$PR/labels" --jq '.[].name' | grep -qx needs-qa; then
             echo "PR #$PR has no needs-qa label — no preview."
+            exit 0
           fi
+          live="$(gh pr view "$PR" --json headRefOid --jq .headRefOid)"
+          if [ "$live" != "$HEAD_SHA" ]; then
+            echo "PR #$PR has moved on to ${live:0:7} — its own run publishes that."
+            exit 0
+          fi
+          echo "deploy=true" >> "$GITHUB_OUTPUT"
 
       - if: steps.label.outputs.deploy == 'true'
         uses: actions/checkout@v7
