@@ -72,7 +72,7 @@ No persisted data changes. The history does not tell touch and keyboard results 
 - The overlay sits above the HUD and below nothing; buttons are translucent so the road stays visible. Each button pairs a drawn icon (▲ gas, ▼ brake, ◀ ▶ lane, ⟸ ⟹ signal, ⏸ pause) with its short Polish `TOUCH_*` label — never colour alone. The layout keeps clear of the speedometer and the mirrors.
 - A held button is drawn opaque (`pressed_alpha`) so the player sees what is held.
 - The controls show in every session state but the end screen — the pause button must resume, and a held accelerator during the countdown behaves like a held key (the press counts once driving starts).
-- Out of scope here, phase 2 (#87): orientation handling, touch wording in the tutorial and settings, and moving HUD elements the buttons cover.
+- Phase 2 (#87): orientation handling, touch wording in the tutorial and settings, and the HUD laid out around the buttons (Implementation Plan below).
 
 ## 📝 Edge Cases & Failure Scenarios
 
@@ -114,9 +114,19 @@ No persisted data changes. The history does not tell touch and keyboard results 
 4. **`TouchControls` overlay and `main.gd` wiring.** Build per `TouchConfig`, layout scaled to the viewport, the show/hide policy table, lazy build on the first touch, hide on key in `auto`, hide on the end screen, release on focus loss. Tests: no node on desktop without the param; `touch=1` shows and a mouse press on the accelerator speeds the car up; pause button pauses and resumes; held accelerator plus signal and lane taps (multitouch); input dropped in the countdown; a seeded replay of a touch-driven session reproduces it.
 5. **Docs.** Q16 in the MVP spec's *Decisions* table; the `touch` param and the touch rules in `docs/agents/input.md` / `session-flow.md`.
 
-### Phase 2 (#87) and Phase 3 (#88)
+### Phase 2 (#87)
 
-Specified in their own stories when phase 1 has landed; they build on `TouchConfig` (layout) and the `perf=1` probe (performance).
+1. **Screen helpers.** `ScreenFit` (`ui/`): portrait, CSS px per canvas unit, the display's safe area in canvas units, `fit_buttons` for the minimum touch target (`TouchConfig.min_touch_target_px`, 24 CSS px — WCAG 2.2 target size minimum); `TouchControls.button_rect(s)` and `safe_area`; the screen-size matrix as one test fixture (`tests/fixtures/screen_matrix.gd`).
+2. **Orientation.** `RotateNotice` (icon + text, above everything, takes every touch) on the drive, the start and the history screen of a touch device; the drive pauses while it shows and stays paused until the player resumes in landscape.
+3. **Tutorial and texts.** `Tutorial.TOUCH_PROMPT_KEYS` / `ACTIONS`; by touch the HUD names the buttons, shows their icons (`TouchIcon`, the buttons' own drawing) and puts the skip button on the step's row; the pause hint names the pause button; the signal buttons are "Lewy/Prawy kierunkowskaz".
+4. **HUD re-layout.** `Hud.set_layout(area, touch, min_target)` from `main.gd`: headings in the band above the button rows, blind-spot warnings above the side mirrors, muted sign beside the pause button, everything inside the safe area. Tests: no overlap and the touch target at every matrix size, each phone 60 px shorter; notch; desktop unchanged.
+5. **Menus.** Start, setup, settings and history buttons fit a finger on a touch device; the settings preview the touch buttons instead of keys alone.
+
+The brake stays 180×104 reference px: a taller one would reach the right mirror. A 44 px target (Apple HIG) would not fit the setup page on a 315 px tall screen without a redesign.
+
+### Phase 3 (#88)
+
+Specified in its own story; it builds on the `perf=1` probe.
 
 ## Resolved assumptions (autonomous defaults)
 

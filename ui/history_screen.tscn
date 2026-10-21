@@ -1,7 +1,8 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://ui/history_screen.gd" id="1_history"]
 [ext_resource type="Resource" path="res://config/dev_launcher.tres" id="2_launcher"]
+[ext_resource type="Resource" path="res://config/touch.tres" id="3_touch"]
 
 [node name="HistoryScreen" type="Control"]
 layout_mode = 3
@@ -13,3 +14,4 @@ grow_vertical = 2
 script = ExtResource("1_history")
 show_saved_on_ready = true
 launcher_config = ExtResource("2_launcher")
+touch_config = ExtResource("3_touch")

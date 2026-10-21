@@ -18,6 +18,7 @@ func _make(completed_learn: int = 0, tutorial_seen: bool = false) -> StartScreen
 	_screen = auto_free(StartScreen.new()) as StartScreen
 	_screen.launcher_config = load("res://config/dev_launcher.tres") as DevLauncherConfig
 	_screen.menu_config = load("res://config/menu.tres") as MenuConfig
+	_screen.touch_config = load("res://config/touch.tres") as TouchConfig
 	_screen.completed_learn = completed_learn
 	_screen.tutorial_seen = tutorial_seen
 	_screen.open_scene = func(path: String) -> void: _opened.append(path)

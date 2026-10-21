@@ -47,6 +47,8 @@ const EXAM_FAILED: StringName = &"HISTORY_EXAM_FAILED"
 @export var show_saved_on_ready: bool = false
 ## Road profiles' display names; without it a profile shows its id.
 @export var launcher_config: DevLauncherConfig
+## The minimum touch target, for a touch device (issue #87).
+@export var touch_config: TouchConfig
 
 ## Switches to another scene by path; tests replace it to watch instead.
 var open_scene: Callable = func(path: String) -> void: AppFlow.open_scene(get_tree(), path)
@@ -146,6 +148,12 @@ func _ready() -> void:
 		back_button.grab_focus()
 	if not show_saved_on_ready:
 		return
+	var rotate_notice: RotateNotice = RotateNotice.new()
+	add_child(rotate_notice)
+	rotate_notice.setup(ScreenFit.touch_device())
+	if ScreenFit.touch_device() and touch_config != null:
+		get_viewport().size_changed.connect(_fit_for_touch)
+		_fit_for_touch()
 	recent_count = SaveManager.config.history_recent_count
 	trend_count = SaveManager.config.history_trend_count
 	show_history(SaveManager.store)
@@ -155,6 +163,15 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed(&"ui_cancel"):
 		get_viewport().set_input_as_handled()
 		back()
+
+
+## On a touch device the back button grows to the minimum touch target (issue #87).
+func fit_for_touch(css_scale: float) -> void:
+	ScreenFit.fit_buttons(self, ScreenFit.min_target(touch_config, css_scale))
+
+
+func _fit_for_touch() -> void:
+	fit_for_touch(ScreenFit.css_scale_now(get_viewport()))
 
 
 ## Back to the start screen.

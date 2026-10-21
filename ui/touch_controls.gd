@@ -7,12 +7,19 @@ extends CanvasLayer
 ## and show is the launch's `touch` mode (`builds_at_start`, `builds_on_touch`,
 ## `hides_on_key`); `main.gd` decides, this layer only draws and lays them out. Hiding
 ## lets go of every held button, so nothing stays pressed behind a hidden control.
+## They are laid out inside `safe_area` (issue #87), clear of a notch or rounded corners.
 
 ## Above the HUD and the mirrors (both on the default layer 1).
 const LAYER: int = 2
 
+## Whether touch buttons were shown this run, so the menus fit a finger afterwards too
+## (`ScreenFit.touch_device`). For the run, not one scene; tests reset it.
+static var run_shown: bool = false
+
 var config: TouchConfig
 var buttons: Array[TouchButton] = []
+## Where the buttons may sit, in canvas units; empty means the whole viewport.
+var safe_area: Rect2 = Rect2()
 
 
 ## Whether the buttons are built as the session starts: forced on, or on a touch device.
@@ -56,16 +63,35 @@ static func scale_for(viewport_size: Vector2, touch_config: TouchConfig) -> floa
 			viewport_size.x / touch_config.reference_width_px)
 
 
+## Where the button of `spec` sits when the buttons are laid out in `area`.
+static func button_rect(spec: TouchButtonSpec, area: Rect2, touch_config: TouchConfig) -> Rect2:
+	var ui_scale: float = TouchControls.scale_for(area.size, touch_config)
+	return Rect2(area.position + spec.anchor * area.size + spec.offset * ui_scale, spec.size * ui_scale)
+
+
+## Every button's rect in `area`, in `touch_config`'s order.
+static func button_rects(area: Rect2, touch_config: TouchConfig) -> Array[Rect2]:
+	var rects: Array[Rect2] = []
+	for spec: TouchButtonSpec in touch_config.buttons:
+		rects.append(TouchControls.button_rect(spec, area, touch_config))
+	return rects
+
+
+## The area the buttons are laid out in now.
+func layout_area() -> Rect2:
+	return safe_area if safe_area.has_area() else get_viewport().get_visible_rect()
+
+
 ## Places every button for the current viewport size.
 func layout() -> void:
-	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
-	var ui_scale: float = TouchControls.scale_for(viewport_size, config)
+	var area: Rect2 = layout_area()
+	var ui_scale: float = TouchControls.scale_for(area.size, config)
 	for i: int in buttons.size():
-		var spec: TouchButtonSpec = config.buttons[i]
 		var button: TouchButton = buttons[i]
+		var rect: Rect2 = TouchControls.button_rect(config.buttons[i], area, config)
 		button.ui_scale = ui_scale
-		button.position = spec.anchor * viewport_size + spec.offset * ui_scale
-		button.size = spec.size * ui_scale
+		button.position = rect.position
+		button.size = rect.size
 		button.queue_redraw()
 
 

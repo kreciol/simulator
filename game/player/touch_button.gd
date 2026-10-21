@@ -107,7 +107,8 @@ func _draw() -> void:
 	var text: String = tr(label_key)
 	var font_size: int = _fitting_font_size(font, text)
 	var centre: Vector2 = Vector2(size.x / 2.0, (size.y - font_size) / 2.0)
-	_draw_icon(Rect2(centre - Vector2(side, side) / 2.0, Vector2(side, side)), Color(config.icon_color, icon_alpha))
+	TouchIcon.draw_icon(self, icon, Rect2(centre - Vector2(side, side) / 2.0, Vector2(side, side)),
+			Color(config.icon_color, icon_alpha))
 	var baseline: Vector2 = Vector2(0.0, size.y - font_size * 0.6)
 	draw_string_outline(font, baseline, text, HORIZONTAL_ALIGNMENT_CENTER, size.x, font_size, config.label_outline_px, Color(Color.BLACK, icon_alpha))
 	draw_string(font, baseline, text, HORIZONTAL_ALIGNMENT_CENTER, size.x, font_size, Color(config.icon_color, icon_alpha))
@@ -121,31 +122,4 @@ func _fitting_font_size(font: Font, text: String) -> int:
 	while font_size > 1 and font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x > room:
 		font_size -= 1
 	return font_size
-
-
-## The icon inside `rect`: triangles for speed and lanes, a double arrow for a signal,
-## two bars for pause — drawn, not a font glyph, so every browser shows it.
-func _draw_icon(rect: Rect2, color: Color) -> void:
-	var p: Vector2 = rect.position
-	var w: float = rect.size.x
-	var h: float = rect.size.y
-	match icon:
-		&"up":
-			draw_colored_polygon(PackedVector2Array([p + Vector2(w / 2.0, 0.0), p + Vector2(w, h), p + Vector2(0.0, h)]), color)
-		&"down":
-			draw_colored_polygon(PackedVector2Array([p, p + Vector2(w, 0.0), p + Vector2(w / 2.0, h)]), color)
-		&"left":
-			draw_colored_polygon(PackedVector2Array([p + Vector2(0.0, h / 2.0), p + Vector2(w, 0.0), p + Vector2(w, h)]), color)
-		&"right":
-			draw_colored_polygon(PackedVector2Array([p, p + Vector2(w, h / 2.0), p + Vector2(0.0, h)]), color)
-		&"signal_left", &"signal_right":
-			var tip_x: float = 0.0 if icon == &"signal_left" else w
-			var back_x: float = w - tip_x
-			var mid_x: float = (tip_x + back_x) / 2.0
-			draw_colored_polygon(PackedVector2Array([p + Vector2(tip_x, h / 2.0), p + Vector2(mid_x, 0.0),
-					p + Vector2(mid_x, h)]), color)
-			draw_rect(Rect2(p + Vector2(minf(mid_x, back_x), h * 0.3), Vector2(w / 2.0, h * 0.4)), color)
-		&"pause":
-			draw_rect(Rect2(p + Vector2(w * 0.15, 0.0), Vector2(w * 0.25, h)), color)
-			draw_rect(Rect2(p + Vector2(w * 0.6, 0.0), Vector2(w * 0.25, h)), color)
 

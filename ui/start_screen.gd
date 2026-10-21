@@ -15,6 +15,9 @@ extends Control
 ## Dev-launcher params in the URL (user args on desktop) skip the menus and start the
 ## session (or the history screen) directly, once per run, so returning to the menu
 ## later does not bounce back into the same launch.
+## On a touch device (issue #87) every button meets the minimum touch target, the
+## settings preview the on-screen buttons instead of the keys alone, and held upright
+## the screen asks to be turned to landscape.
 ## Placeholder styling until the UI theme lands (Phase 10).
 
 const MARGIN: int = 48
@@ -38,6 +41,9 @@ const SUGGESTION_COLOR: Color = Color(1.0, 0.82, 0.4)
 ## Columns of the settings page: the choices, and the key-bindings preview.
 const SETTINGS_COLUMN_WIDTH: float = 540.0
 const KEY_ACTION_WIDTH: float = 260.0
+## The touch buttons' preview: an icon, the button's name, what it does.
+const TOUCH_ICON_SIZE: float = 26.0
+const TOUCH_NAME_WIDTH: float = 200.0
 const WARNING_COLOR: Color = Color(1.0, 0.6, 0.45)
 
 ## Translation key of a quality preset's name: this + its id in upper case.
@@ -54,6 +60,8 @@ const MODE_HINT_KEYS: Dictionary[StringName, StringName] = {
 
 @export var launcher_config: DevLauncherConfig
 @export var menu_config: MenuConfig
+## The touch buttons the settings preview and the minimum touch target.
+@export var touch_config: TouchConfig
 ## Follows the launch params and reads `SaveManager`'s history and settings once in the
 ## tree (the scene sets it); tests set `completed_learn`, `tutorial_seen` and `settings`
 ## themselves.
@@ -109,6 +117,11 @@ var display_buttons: Dictionary[bool, Button] = {}
 var settings_save_failed_label: Label
 ## The keys of each game action, as previewed.
 var key_labels: Dictionary[StringName, Label] = {}
+## The keyboard preview, and the touch buttons' one that replaces it on a touch device.
+var key_preview: VBoxContainer
+var touch_preview: VBoxContainer
+## Whether the player plays by touch (`ScreenFit.touch_device`); tests set it.
+var touch: bool = false
 var settings_back_button: Button
 ## Each setting's heading and the group of its options; the heading names the choice.
 var setting_headings: Dictionary[Label, ButtonGroup] = {}
@@ -130,10 +143,17 @@ func _ready() -> void:
 		completed_learn = SessionSetup.completed_learn_sessions(SaveManager.store.sessions)
 		tutorial_seen = SaveManager.settings.tutorial_seen
 		settings = SaveManager.settings
+		touch = ScreenFit.touch_device()
 	if settings == null:
 		settings = SettingsStore.new("", launcher_config)
 	_build()
 	get_viewport().size_changed.connect(_on_viewport_size_changed)
+	if use_platform_state:
+		var rotate_notice: RotateNotice = RotateNotice.new()
+		add_child(rotate_notice)
+		rotate_notice.setup(touch)
+		if touch:
+			fit_for_touch(ScreenFit.css_scale_now(get_viewport()))
 	show_menu()
 
 
@@ -299,6 +319,16 @@ func _show_setting_choices() -> void:
 func _on_viewport_size_changed() -> void:
 	if settings_page.visible:
 		_show_window_mode()
+	if touch and use_platform_state:
+		fit_for_touch(ScreenFit.css_scale_now(get_viewport()))
+
+
+## Sizes every button for a finger at `css_scale` CSS pixels per canvas unit and shows the
+## touch buttons' preview in the settings (issue #87).
+func fit_for_touch(css_scale: float) -> void:
+	ScreenFit.fit_buttons(self, ScreenFit.min_target(touch_config, css_scale) if touch else 0.0)
+	key_preview.visible = not touch
+	touch_preview.visible = touch
 
 
 func _show_saved(saved: bool) -> void:
@@ -463,14 +493,18 @@ func _build_settings() -> void:
 	var keys: VBoxContainer = _column("Keys")
 	columns.add_child(keys)
 	keys.add_child(_label("KeysHeading", HEADING_FONT_SIZE, &"SETTINGS_KEYS"))
-	keys.add_child(_note("KeysHint", &"SETTINGS_KEYS_HINT"))
+	key_preview = VBoxContainer.new()
+	key_preview.name = "KeyPreview"
+	key_preview.add_theme_constant_override("separation", SEPARATION)
+	keys.add_child(key_preview)
+	key_preview.add_child(_note("KeysHint", &"SETTINGS_KEYS_HINT"))
 	# Labels only: the preview has nothing to press, so no key can be changed here.
 	var grid: GridContainer = GridContainer.new()
 	grid.name = "Bindings"
 	grid.columns = 2
 	grid.add_theme_constant_override("h_separation", ROW_SEPARATION)
 	grid.add_theme_constant_override("v_separation", KEY_ROW_SEPARATION)
-	keys.add_child(grid)
+	key_preview.add_child(grid)
 	for action: StringName in KeyBindings.actions():
 		var name_label: Label = _label("Action_" + action, TEXT_FONT_SIZE, KeyBindings.action_label_key(action))
 		name_label.custom_minimum_size = Vector2(KEY_ACTION_WIDTH, 0.0)
@@ -479,6 +513,8 @@ func _build_settings() -> void:
 		keys_label.text = key_text(action)
 		grid.add_child(keys_label)
 		key_labels[action] = keys_label
+	touch_preview = _touch_preview()
+	keys.add_child(touch_preview)
 	_switch(keys, "Display", &"SETTINGS_DISPLAY", display_buttons, &"SETTINGS_FULLSCREEN",
 			&"SETTINGS_WINDOWED", select_fullscreen)
 
@@ -486,6 +522,31 @@ func _build_settings() -> void:
 	settings_back_button.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	settings_back_button.pressed.connect(show_menu)
 	settings_page.add_child(settings_back_button)
+
+
+## The on-screen buttons as a touch device drives with them: each one's icon, its name
+## on the button and what it does, then a line that a keyboard works too. Hidden until
+## `fit_for_touch` shows it in place of the keys.
+func _touch_preview() -> VBoxContainer:
+	var preview: VBoxContainer = VBoxContainer.new()
+	preview.name = "TouchPreview"
+	preview.add_theme_constant_override("separation", SEPARATION)
+	preview.visible = false
+	preview.add_child(_note("TouchHint", &"SETTINGS_TOUCH_HINT"))
+	var grid: GridContainer = GridContainer.new()
+	grid.name = "TouchBindings"
+	grid.columns = 3
+	grid.add_theme_constant_override("h_separation", ROW_SEPARATION)
+	grid.add_theme_constant_override("v_separation", KEY_ROW_SEPARATION)
+	preview.add_child(grid)
+	for spec: TouchButtonSpec in touch_config.buttons:
+		grid.add_child(TouchIcon.create(spec.icon, TOUCH_ICON_SIZE))
+		var button_label: Label = _label("Button_" + spec.action, TEXT_FONT_SIZE, spec.label_key)
+		button_label.custom_minimum_size = Vector2(TOUCH_NAME_WIDTH, 0.0)
+		grid.add_child(button_label)
+		grid.add_child(_label("Does_" + spec.action, TEXT_FONT_SIZE, KeyBindings.action_label_key(spec.action)))
+	preview.add_child(_note("TouchKeyboard", &"SETTINGS_TOUCH_KEYBOARD"))
+	return preview
 
 
 ## A yes/no setting under `parent`: its heading, then its two options, the `true` one

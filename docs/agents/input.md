@@ -15,3 +15,4 @@
 - Touch buttons exist on a touch device, after the first touch or with `touch=1` — never on a desktop without touch and no param.
 - Hiding the touch buttons or losing focus releases every held button.
 - Button positions and sizes live in `config/touch.tres`.
+- With touch buttons shown, texts name the buttons (`TOUCH_*` labels), never keys: the tutorial's `TOUCH_PROMPT_KEYS`, the pause hint, the settings' touch preview.
