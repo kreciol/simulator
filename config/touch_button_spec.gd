@@ -6,6 +6,8 @@ extends Resource
 ## Input Map action the button presses while held (`accelerate`, `brake`, `lane_left`,
 ## `lane_right`, `signal_left`, `signal_right`, `pause`).
 @export var action: StringName
+## Translation key of the short name under the icon (`TOUCH_*`).
+@export var label_key: StringName
 ## Drawn icon: `up`, `down`, `left`, `right`, `signal_left`, `signal_right` or `pause`.
 @export var icon: StringName
 ## Point of the viewport the button is placed from, 0–1 of its width and height.

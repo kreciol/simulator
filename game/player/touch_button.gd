@@ -14,6 +14,7 @@ const MOUSE_POINTER: int = -1
 
 var action: StringName
 var icon: StringName
+var label_key: StringName
 var config: TouchConfig
 ## Actual viewport size over the reference size, set by the layout.
 var ui_scale: float = 1.0
@@ -31,6 +32,7 @@ static func create(spec: TouchButtonSpec, touch_config: TouchConfig) -> TouchBut
 	button.name = "Touch_%s" % spec.action
 	button.action = spec.action
 	button.icon = spec.icon
+	button.label_key = spec.label_key
 	button.config = touch_config
 	button.mouse_filter = Control.MOUSE_FILTER_STOP
 	return button
@@ -101,14 +103,24 @@ func _draw() -> void:
 	draw_style_box(_box, Rect2(Vector2.ZERO, size))
 	var icon_alpha: float = 1.0 if is_held() else config.idle_icon_alpha
 	var side: float = minf(size.x, size.y) * config.icon_fraction
-	var font_size: int = maxi(1, int(config.label_font_size * ui_scale))
+	var font: Font = get_theme_default_font()
+	var text: String = tr(label_key)
+	var font_size: int = _fitting_font_size(font, text)
 	var centre: Vector2 = Vector2(size.x / 2.0, (size.y - font_size) / 2.0)
 	_draw_icon(Rect2(centre - Vector2(side, side) / 2.0, Vector2(side, side)), Color(config.icon_color, icon_alpha))
-	var font: Font = get_theme_default_font()
-	var text: String = tr(StringName("ACTION_%s" % String(action).to_upper()))
 	var baseline: Vector2 = Vector2(0.0, size.y - font_size * 0.6)
 	draw_string_outline(font, baseline, text, HORIZONTAL_ALIGNMENT_CENTER, size.x, font_size, config.label_outline_px, Color(Color.BLACK, icon_alpha))
 	draw_string(font, baseline, text, HORIZONTAL_ALIGNMENT_CENTER, size.x, font_size, Color(config.icon_color, icon_alpha))
+
+
+## The label's size: `TouchConfig.label_font_size` scaled, shrunk until the text fits
+## the button's width, so a long translation is never cut off.
+func _fitting_font_size(font: Font, text: String) -> int:
+	var font_size: int = maxi(1, int(config.label_font_size * ui_scale))
+	var room: float = size.x - 2.0 * config.label_outline_px * ui_scale
+	while font_size > 1 and font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x > room:
+		font_size -= 1
+	return font_size
 
 
 ## The icon inside `rect`: triangles for speed and lanes, a double arrow for a signal,

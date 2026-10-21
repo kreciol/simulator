@@ -6,6 +6,7 @@
 [sub_resource type="Resource" id="Button_pause"]
 script = ExtResource("2_button")
 action = &"pause"
+label_key = &"TOUCH_PAUSE"
 icon = &"pause"
 anchor = Vector2(0, 0)
 offset = Vector2(24, 24)
@@ -14,50 +15,56 @@ size = Vector2(96, 96)
 [sub_resource type="Resource" id="Button_signal_left"]
 script = ExtResource("2_button")
 action = &"signal_left"
+label_key = &"TOUCH_SIGNAL_LEFT"
 icon = &"signal_left"
 anchor = Vector2(0, 1)
-offset = Vector2(24, -340)
-size = Vector2(150, 150)
+offset = Vector2(244, -292)
+size = Vector2(132, 132)
 
 [sub_resource type="Resource" id="Button_signal_right"]
 script = ExtResource("2_button")
 action = &"signal_right"
+label_key = &"TOUCH_SIGNAL_RIGHT"
 icon = &"signal_right"
 anchor = Vector2(0, 1)
-offset = Vector2(190, -340)
-size = Vector2(150, 150)
+offset = Vector2(388, -292)
+size = Vector2(132, 132)
 
 [sub_resource type="Resource" id="Button_lane_left"]
 script = ExtResource("2_button")
 action = &"lane_left"
+label_key = &"TOUCH_LANE_LEFT"
 icon = &"left"
 anchor = Vector2(0, 1)
-offset = Vector2(24, -174)
-size = Vector2(150, 150)
+offset = Vector2(244, -148)
+size = Vector2(132, 132)
 
 [sub_resource type="Resource" id="Button_lane_right"]
 script = ExtResource("2_button")
 action = &"lane_right"
+label_key = &"TOUCH_LANE_RIGHT"
 icon = &"right"
 anchor = Vector2(0, 1)
-offset = Vector2(190, -174)
-size = Vector2(150, 150)
+offset = Vector2(388, -148)
+size = Vector2(132, 132)
 
 [sub_resource type="Resource" id="Button_brake"]
 script = ExtResource("2_button")
 action = &"brake"
+label_key = &"TOUCH_BRAKE"
 icon = &"down"
 anchor = Vector2(1, 1)
-offset = Vector2(-204, -400)
-size = Vector2(180, 140)
+offset = Vector2(-204, -280)
+size = Vector2(180, 104)
 
 [sub_resource type="Resource" id="Button_accelerate"]
 script = ExtResource("2_button")
 action = &"accelerate"
+label_key = &"TOUCH_ACCELERATE"
 icon = &"up"
 anchor = Vector2(1, 1)
-offset = Vector2(-204, -244)
-size = Vector2(180, 220)
+offset = Vector2(-204, -164)
+size = Vector2(180, 148)
 
 [resource]
 script = ExtResource("1_touch")

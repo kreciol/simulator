@@ -95,3 +95,30 @@ func test_hidden_buttons_take_no_touches() -> void:
 	controls.set_shown(true)
 	viewport.push_input(touch)
 	assert_bool(gas.is_held()).is_true()
+
+
+func test_every_label_is_translated_and_fits_its_button() -> void:
+	var config: TouchConfig = load("res://config/touch.tres") as TouchConfig
+	var controls: TouchControls = auto_free(TouchControls.new())
+	add_child(controls)
+	controls.setup(config, func(_event: InputEvent) -> void: pass)
+	for button: TouchButton in controls.buttons:
+		var text: String = tr(button.label_key)
+		assert_str(text).override_failure_message(String(button.label_key)).is_not_equal(String(button.label_key))
+		var font: Font = button.get_theme_default_font()
+		var font_size: int = button._fitting_font_size(font, text)
+		assert_float(font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x) \
+				.is_less_equal(button.size.x)
+
+
+func test_no_button_covers_a_mirror_at_the_reference_size() -> void:
+	# The mirrors are what the player checks before every lane change.
+	var config: TouchConfig = load("res://config/touch.tres") as TouchConfig
+	var view: ViewConfig = load("res://config/view_config.tres") as ViewConfig
+	var screen: Vector2 = Vector2(config.reference_width_px, config.reference_height_px)
+	var mirrors: Array[Rect2] = [view.rear_mirror_rect, view.left_mirror_rect, view.right_mirror_rect()]
+	for spec: TouchButtonSpec in config.buttons:
+		var rect: Rect2 = Rect2(spec.anchor * screen + spec.offset, spec.size)
+		for mirror: Rect2 in mirrors:
+			var on_screen: Rect2 = Rect2(mirror.position * screen, mirror.size * screen)
+			assert_bool(rect.intersects(on_screen)).override_failure_message(String(spec.action)).is_false()
