@@ -164,8 +164,10 @@ func test_traffic_uses_all_three_lanes(level_id: int, test_parameters: Array = [
 	_sim.lane_change_started.connect(func(_vehicle_id: int, from_lane: int, to_lane: int) -> void:
 		var key: Vector2i = Vector2i(from_lane, to_lane)
 		changes[key] = changes.get(key, 0) + 1)
-	var collisions: int = 0
-	_sim.collision.connect(func(_vehicle_id: int, _other_id: int) -> void: collisions += 1)
+	# An Array, not an int: a lambda captures locals by value, so a counter would stay 0.
+	var collisions: Array[Vector2i] = []
+	_sim.collision.connect(func(vehicle_id: int, other_id: int) -> void:
+		collisions.append(Vector2i(vehicle_id, other_id)))
 	var steps_on_lane: Array[int] = [0, 0, 0]
 	for i: int in roundi(SESSION_S / DT):
 		_sim.step(DT)
@@ -178,7 +180,7 @@ func test_traffic_uses_all_three_lanes(level_id: int, test_parameters: Array = [
 	assert_int(changes.get(Vector2i(1, 2), 0)).override_failure_message(label).is_greater(0)
 	assert_int(changes.get(Vector2i(2, 1), 0)).override_failure_message(label).is_greater(0)
 	assert_int(changes.get(Vector2i(1, 0), 0)).override_failure_message(label).is_greater(0)
-	assert_int(collisions).is_equal(0)
+	assert_array(collisions).is_empty()
 
 
 ## Requirements §16: a higher level brings noticeably more traffic — measured, not just

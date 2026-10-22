@@ -97,6 +97,7 @@ func test_k2_in_the_leftmost_lane_of_three_while_the_middle_lane_is_free() -> vo
 	world.sim.add_vehicle(world.player.s, 0, world.player.speed_mps)
 	world.drive(_config.k2_grace_s + 2.0)
 	assert_float(world.total_of_type(KeepRightRule.TYPE)).is_equal_approx(-2.0 * _config.k2_penalty_per_s, 1e-6)
+	assert_dict(world.scoring.event_log.events_of_type(KeepRightRule.TYPE)[0].context).contains_key_value("lane", 2)
 
 
 func test_no_k2_in_the_middle_lane_of_three_while_a_car_is_beside_on_the_right() -> void:

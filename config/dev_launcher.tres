@@ -4,7 +4,6 @@
 [ext_resource type="Script" path="res://config/road_profile.gd" id="2_road"]
 [ext_resource type="Resource" path="res://config/road_profiles/motorway.tres" id="3_motorway"]
 [ext_resource type="Resource" path="res://config/road_profiles/expressway.tres" id="4_expressway"]
-[ext_resource type="Resource" path="res://config/road_profiles/motorway_3lane.tres" id="13_motorway_3lane"]
 [ext_resource type="Script" path="res://config/difficulty_level.gd" id="5_level"]
 [ext_resource type="Resource" path="res://config/difficulty_levels/level_1.tres" id="6_level_1"]
 [ext_resource type="Resource" path="res://config/difficulty_levels/level_2.tres" id="7_level_2"]
@@ -14,6 +13,7 @@
 [ext_resource type="Script" path="res://config/quality_preset.gd" id="10_quality"]
 [ext_resource type="Resource" path="res://config/quality_presets/low.tres" id="11_low"]
 [ext_resource type="Resource" path="res://config/quality_presets/high.tres" id="12_high"]
+[ext_resource type="Resource" path="res://config/road_profiles/motorway_3lane.tres" id="13_motorway_3lane"]
 
 [resource]
 script = ExtResource("1_launcher")
