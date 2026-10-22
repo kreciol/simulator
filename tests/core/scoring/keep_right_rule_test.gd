@@ -80,3 +80,36 @@ func test_no_k2_when_a_car_is_beside_on_the_right() -> void:
 	world.sim.add_vehicle(world.player.s - 3.0, 0, world.player.speed_mps)
 	world.drive(_config.k2_grace_s + 2.0)
 	assert_float(world.total_of_type(KeepRightRule.TYPE)).is_equal(0.0)
+
+
+## Issue #96: on three lanes K2 asks for one lane right whenever it is free, so the
+## middle lane is "left" while the rightmost lane is free.
+func test_k2_in_the_middle_lane_of_three_while_the_right_lane_is_free() -> void:
+	var world: ScoringTestHelper = ScoringTestHelper.new(1, 120.0, null, ScoringTestHelper.MOTORWAY_3LANE)
+	world.drive(_config.k2_grace_s + 2.0)
+	assert_float(world.total_of_type(KeepRightRule.TYPE)).is_equal_approx(-2.0 * _config.k2_penalty_per_s, 1e-6)
+	assert_dict(world.scoring.event_log.events_of_type(KeepRightRule.TYPE)[0].context).contains_key_value("lane", 1)
+
+
+func test_k2_in_the_leftmost_lane_of_three_while_the_middle_lane_is_free() -> void:
+	var world: ScoringTestHelper = ScoringTestHelper.new(2, 120.0, null, ScoringTestHelper.MOTORWAY_3LANE)
+	# The rightmost lane is busy alongside; only the middle one counts.
+	world.sim.add_vehicle(world.player.s, 0, world.player.speed_mps)
+	world.drive(_config.k2_grace_s + 2.0)
+	assert_float(world.total_of_type(KeepRightRule.TYPE)).is_equal_approx(-2.0 * _config.k2_penalty_per_s, 1e-6)
+	assert_dict(world.scoring.event_log.events_of_type(KeepRightRule.TYPE)[0].context).contains_key_value("lane", 2)
+
+
+func test_no_k2_in_the_middle_lane_of_three_while_a_car_is_beside_on_the_right() -> void:
+	var world: ScoringTestHelper = ScoringTestHelper.new(1, 120.0, null, ScoringTestHelper.MOTORWAY_3LANE)
+	world.sim.add_vehicle(world.player.s - 3.0, 0, world.player.speed_mps)
+	world.drive(_config.k2_grace_s + 2.0)
+	assert_array(world.scoring.event_log.events_of_type(KeepRightRule.TYPE)).is_empty()
+
+
+func test_no_k2_overtaking_from_lane_2_a_car_on_lane_1() -> void:
+	var world: ScoringTestHelper = ScoringTestHelper.new(2, 140.0, null, ScoringTestHelper.MOTORWAY_3LANE)
+	world.add_car_ahead(1, 5.0, 135.0)
+	world.drive(_config.k2_grace_s + 2.0)
+	assert_bool(LaneQuery.is_overtaking(world.player, world.sim.lanes, world.scoring.config.overtake_look_ahead_m)).is_true()
+	assert_float(world.total_of_type(KeepRightRule.TYPE)).is_equal(0.0)

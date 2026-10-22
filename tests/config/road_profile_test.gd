@@ -9,15 +9,17 @@ func test_profile_loads_from_tres(
 		path: String,
 		id: StringName,
 		limit_kmh: float,
+		lanes: int,
 		test_parameters: Array = [
-			["res://config/road_profiles/motorway.tres", &"motorway", 140.0],
-			["res://config/road_profiles/expressway.tres", &"expressway", 120.0],
+			["res://config/road_profiles/motorway.tres", &"motorway", 140.0, 2],
+			["res://config/road_profiles/expressway.tres", &"expressway", 120.0, 2],
+			["res://config/road_profiles/motorway_3lane.tres", &"motorway_3lane", 140.0, 3],
 		]) -> void:
 	var profile: RoadProfile = load(path) as RoadProfile
 	assert_object(profile).is_not_null()
 	assert_str(profile.id).is_equal(id)
 	assert_float(profile.speed_limit_kmh).is_equal(limit_kmh)
-	assert_int(profile.lane_count).is_equal(2)
+	assert_int(profile.lane_count).is_equal(lanes)
 	assert_float(profile.lane_width_m).is_equal(3.75)
 	assert_float(profile.shoulder_width_m).is_greater(0.0)
 	assert_str(profile.display_name_key).is_not_empty()
@@ -31,6 +33,20 @@ func test_lane_centers_follow_lane_width() -> void:
 	assert_bool(profile.is_lane_on_road(0)).is_true()
 	assert_bool(profile.is_lane_on_road(1)).is_true()
 	assert_bool(profile.is_lane_on_road(2)).is_false()
+
+
+## Issue #96: the 3-lane motorway keeps the motorway's lane width and shoulder, with
+## lane 2 the leftmost lane on the road.
+func test_the_3_lane_motorway_has_a_third_lane_on_the_left() -> void:
+	var motorway: RoadProfile = load("res://config/road_profiles/motorway.tres") as RoadProfile
+	var profile: RoadProfile = load("res://config/road_profiles/motorway_3lane.tres") as RoadProfile
+	assert_str(profile.display_name_key).is_equal("ROAD_MOTORWAY_3LANE")
+	assert_float(profile.shoulder_width_m).is_equal(motorway.shoulder_width_m)
+	assert_float(profile.lane_center(2)).is_equal_approx(9.375, 1e-9)
+	assert_bool(profile.is_lane_on_road(-1)).is_false()
+	for lane: int in 3:
+		assert_bool(profile.is_lane_on_road(lane)).is_true()
+	assert_bool(profile.is_lane_on_road(3)).is_false()
 
 
 func test_road_values_are_not_hard_coded() -> void:

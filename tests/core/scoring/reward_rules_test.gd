@@ -82,3 +82,12 @@ func test_no_n2_during_a_lane_change() -> void:
 	commands.lane_change = VehicleState.Dir.LEFT
 	world.drive(world.sim.config.lane_change_duration_s, commands)
 	assert_array(world.scoring.event_log.events_of_type(RightLaneRule.TYPE)).is_empty()
+
+
+## Issue #96: N2 rewards the rightmost lane only, so on three lanes the middle and the
+## leftmost lane earn none.
+func test_n2_only_on_lane_0_of_three(lane: int, rewarded: bool,
+		test_parameters: Array = [[0, true], [1, false], [2, false]]) -> void:
+	var world: ScoringTestHelper = ScoringTestHelper.new(lane, 120.0, null, ScoringTestHelper.MOTORWAY_3LANE)
+	world.drive(2.0)
+	assert_bool(world.total_of_type(RightLaneRule.TYPE) > 0.0).is_equal(rewarded)

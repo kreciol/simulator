@@ -35,7 +35,7 @@ godot --path . -- --mode=exam --profile=expressway --level=3 --seed=42 --quality
 | Param | Values | Default |
 |---|---|---|
 | `mode` | `learn`, `exam` | `learn` |
-| `profile` | `motorway`, `expressway` | `motorway` |
+| `profile` | `motorway`, `expressway`, `motorway_3lane` | `motorway` |
 | `level` | `1`–`4` | `1` |
 | `seed` | integer ≥ 0 | random |
 | `quality` | `low`, `high` — mirror resolution and refresh, shadows, draw distance (`config/quality_presets/`) | `high` |

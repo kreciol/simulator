@@ -31,6 +31,10 @@ func test_ten_minutes_of_traffic_without_collisions(
 			["res://config/road_profiles/expressway.tres", 2],
 			["res://config/road_profiles/expressway.tres", 3],
 			["res://config/road_profiles/expressway.tres", 4],
+			["res://config/road_profiles/motorway_3lane.tres", 1],
+			["res://config/road_profiles/motorway_3lane.tres", 2],
+			["res://config/road_profiles/motorway_3lane.tres", 3],
+			["res://config/road_profiles/motorway_3lane.tres", 4],
 		]) -> void:
 	var config: SimConfig = load("res://config/sim_config.tres") as SimConfig
 	var road: RoadProfile = load(profile_path) as RoadProfile

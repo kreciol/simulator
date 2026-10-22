@@ -35,13 +35,13 @@ func _new_store() -> HistoryStore:
 
 
 func _record(id: String, score: float, status: StringName = SessionRecord.STATUS_COMPLETED,
-		mode: StringName = SessionRecord.MODE_LEARN, level: int = 2) -> SessionRecord:
+		mode: StringName = SessionRecord.MODE_LEARN, level: int = 2, profile: StringName = &"motorway") -> SessionRecord:
 	var record: SessionRecord = SessionRecord.new()
 	record.id = id
 	record.started_at = "2026-10-12T10:00:00"
 	record.app_version = "0.1.0"
 	record.mode = mode
-	record.road_profile = &"motorway"
+	record.road_profile = profile
 	record.difficulty = level
 	record.seed_value = 1234567
 	record.duration_s = 90.0
@@ -139,6 +139,16 @@ func test_bests_are_kept_per_mode_profile_and_level() -> void:
 	assert_str(str(_store.best_for(SessionRecord.MODE_LEARN, &"motorway", 3)["id"])).is_equal("learn3")
 	assert_dict(_store.best_for(SessionRecord.MODE_LEARN, &"expressway", 2)).is_empty()
 	assert_str(_store.best[HistoryStore.combination_key(SessionRecord.MODE_EXAM, &"motorway", 2)]).is_equal("exam2")
+
+
+## Issue #96: the 3-lane motorway is its own profile, so its results never mix with
+## the 2-lane motorway's.
+func test_the_3_lane_motorway_keeps_its_own_best() -> void:
+	_store.save_record(_record("two_lanes", 50.0))
+	_store.save_record(_record("three_lanes", 20.0, SessionRecord.STATUS_COMPLETED, SessionRecord.MODE_LEARN, 2, &"motorway_3lane"))
+	assert_str(str(_store.best_for(SessionRecord.MODE_LEARN, &"motorway", 2)["id"])).is_equal("two_lanes")
+	assert_str(str(_store.best_for(SessionRecord.MODE_LEARN, &"motorway_3lane", 2)["id"])).is_equal("three_lanes")
+	assert_str(str(_new_store().best_for(SessionRecord.MODE_LEARN, &"motorway_3lane", 2)["id"])).is_equal("three_lanes")
 
 
 func test_an_aborted_session_never_sets_a_best() -> void:

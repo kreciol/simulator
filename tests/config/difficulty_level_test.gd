@@ -66,6 +66,7 @@ func test_trucks_always_count_as_slow_vehicles_to_overtake(
 		test_parameters: Array = [
 			["res://config/road_profiles/motorway.tres"],
 			["res://config/road_profiles/expressway.tres"],
+			["res://config/road_profiles/motorway_3lane.tres"],
 		]) -> void:
 	var config: SimConfig = load("res://config/sim_config.tres") as SimConfig
 	var road: RoadProfile = load(profile_path) as RoadProfile

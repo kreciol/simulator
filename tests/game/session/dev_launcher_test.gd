@@ -30,9 +30,11 @@ func _assert_defaults(options: LaunchOptions) -> void:
 	assert_str(options.touch).is_equal(_config.default_touch)
 
 
-func test_config_offers_both_profiles_and_four_levels() -> void:
+func test_config_offers_three_profiles_and_four_levels() -> void:
 	assert_object(_config.find_profile(&"motorway")).is_not_null()
 	assert_object(_config.find_profile(&"expressway")).is_not_null()
+	assert_object(_config.find_profile(&"motorway_3lane")).is_not_null()
+	assert_str(_config.default_profile).is_equal(&"motorway")
 	assert_object(_config.find_profile(&"country_road")).is_null()
 	assert_int(_config.levels.size()).is_equal(4)
 	assert_bool(_config.default_mode in LaunchOptions.MODES).is_true()
@@ -96,6 +98,13 @@ func test_all_params_are_used() -> void:
 	assert_int(options.level).is_equal(3)
 	assert_int(options.seed_value).is_equal(42)
 	assert_bool(options.seed_given).is_true()
+
+
+## Issue #96.
+func test_the_3_lane_motorway_starts_from_the_url() -> void:
+	var options: LaunchOptions = _from_query("?profile=motorway_3lane")
+	assert_str(options.profile.id).is_equal(&"motorway_3lane")
+	assert_int(options.profile.lane_count).is_equal(3)
 
 
 func test_missing_params_use_defaults() -> void:

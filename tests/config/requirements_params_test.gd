@@ -11,6 +11,9 @@ const PARAMS: Dictionary[String, Dictionary] = {
 	"res://config/road_profiles/expressway.tres": {
 		"speed_limit_kmh": "§4.1", "lane_count": "§4.1", "lane_width_m": "§4.1", "shoulder_width_m": "§4.1",
 	},
+	"res://config/road_profiles/motorway_3lane.tres": {
+		"speed_limit_kmh": "§4.1", "lane_count": "§4.1", "lane_width_m": "§4.1", "shoulder_width_m": "§4.1",
+	},
 	"res://config/view_config.tres": {
 		"segment_length_m": "§4.3", "segment_count": "§4.3",
 	},

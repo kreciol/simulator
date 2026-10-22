@@ -34,6 +34,10 @@ func test_session_traffic(
 			["res://config/road_profiles/expressway.tres", 2],
 			["res://config/road_profiles/expressway.tres", 3],
 			["res://config/road_profiles/expressway.tres", 4],
+			["res://config/road_profiles/motorway_3lane.tres", 1],
+			["res://config/road_profiles/motorway_3lane.tres", 2],
+			["res://config/road_profiles/motorway_3lane.tres", 3],
+			["res://config/road_profiles/motorway_3lane.tres", 4],
 		]) -> void:
 	var config: SimConfig = load("res://config/sim_config.tres") as SimConfig
 	var road: RoadProfile = load(profile_path) as RoadProfile
@@ -146,6 +150,37 @@ func test_ai_never_runs_into_a_player_that_holds_its_speed(
 				close_behind_steps += 1
 	assert_int(close_behind_steps).is_greater(0)
 	assert_array(caused_by_ai).override_failure_message("AI collisions with the player: %s" % [caused_by_ai]).is_empty()
+
+
+## Issue #96: on three lanes traffic uses every lane — the leftmost one too, where
+## nothing spawns at first but overtaking AI moves onto it — and returns right.
+func test_traffic_uses_all_three_lanes(level_id: int, test_parameters: Array = [[1], [4]]) -> void:
+	var config: SimConfig = load("res://config/sim_config.tres") as SimConfig
+	var road: RoadProfile = load("res://config/road_profiles/motorway_3lane.tres") as RoadProfile
+	_sim = TrafficSim.new(road, config, level_id * 31)
+	_sim.player = _sim.add_ai_vehicle(0.0, 0, config.start_speed_kmh * KMH, road.speed_limit_kmh * KMH, 1.0)
+	Spawner.new(load("res://config/difficulty_levels/level_%d.tres" % level_id) as DifficultyLevel).attach(_sim)
+	var changes: Dictionary[Vector2i, int] = {}
+	_sim.lane_change_started.connect(func(_vehicle_id: int, from_lane: int, to_lane: int) -> void:
+		var key: Vector2i = Vector2i(from_lane, to_lane)
+		changes[key] = changes.get(key, 0) + 1)
+	# An Array, not an int: a lambda captures locals by value, so a counter would stay 0.
+	var collisions: Array[Vector2i] = []
+	_sim.collision.connect(func(vehicle_id: int, other_id: int) -> void:
+		collisions.append(Vector2i(vehicle_id, other_id)))
+	var steps_on_lane: Array[int] = [0, 0, 0]
+	for i: int in roundi(SESSION_S / DT):
+		_sim.step(DT)
+		for lane: int in road.lane_count:
+			if not _sim.lanes.on_lane(lane).is_empty():
+				steps_on_lane[lane] += 1
+	for lane: int in road.lane_count:
+		assert_int(steps_on_lane[lane]).override_failure_message("lane %d: %s" % [lane, steps_on_lane]).is_greater(0)
+	var label: String = str(changes)
+	assert_int(changes.get(Vector2i(1, 2), 0)).override_failure_message(label).is_greater(0)
+	assert_int(changes.get(Vector2i(2, 1), 0)).override_failure_message(label).is_greater(0)
+	assert_int(changes.get(Vector2i(1, 0), 0)).override_failure_message(label).is_greater(0)
+	assert_array(collisions).is_empty()
 
 
 ## Requirements §16: a higher level brings noticeably more traffic — measured, not just

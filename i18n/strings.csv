@@ -98,6 +98,7 @@ MODE_LEARN,Nauka
 MODE_EXAM,Egzamin
 ROAD_MOTORWAY,Autostrada
 ROAD_EXPRESSWAY,Droga ekspresowa
+ROAD_MOTORWAY_3LANE,Autostrada (3 pasy)
 LEVEL_CALM,Spokojny ruch
 LEVEL_MODERATE,Umiarkowany ruch
 LEVEL_BUSY,Duży ruch

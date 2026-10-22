@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="RoadProfile" format=3]
+
+[ext_resource type="Script" path="res://config/road_profile.gd" id="1_road"]
+
+[resource]
+script = ExtResource("1_road")
+id = &"motorway_3lane"
+display_name_key = "ROAD_MOTORWAY_3LANE"
+speed_limit_kmh = 140.0
+lane_count = 3
+lane_width_m = 3.75
+shoulder_width_m = 3.0

@@ -47,6 +47,36 @@ func test_lane_lines_are_dashed_and_edge_lines_solid() -> void:
 	assert_int(_layout.strips_of(RoadLayout.Surface.PAINT).size()).is_equal(2 * (_road.lane_count - 1 + 2))
 
 
+## Issue #96: three lanes, two dashed lines between them, the shoulder and barrier on
+## the right and the opposite carriageway beyond a median as wide as on two lanes.
+func test_the_3_lane_motorway_draws_three_lanes_and_keeps_the_sides_in_place() -> void:
+	var road: RoadProfile = load("res://config/road_profiles/motorway_3lane.tres") as RoadProfile
+	var two_lanes: RoadLayout = _layout
+	_layout = RoadLayout.new(road, _view)
+	var width: float = 3.0 * road.lane_width_m
+	assert_float(_layout.carriageway_width()).is_equal_approx(width, EPS)
+	var asphalt: RoadLayout.Strip = _layout.strips_of(RoadLayout.Surface.ASPHALT)[0]
+	assert_float(asphalt.u_max).is_equal_approx(width, EPS)
+	for lane: int in 3:
+		assert_object(_strip_at(RoadLayout.Surface.ASPHALT, road.lane_center(lane))).is_same(asphalt)
+	for boundary: int in [1, 2]:
+		var line: RoadLayout.Strip = _strip_at(RoadLayout.Surface.PAINT, boundary * road.lane_width_m)
+		assert_object(line).is_not_null()
+		assert_bool(line.dashed).is_true()
+	var left_edge: RoadLayout.Strip = _strip_at(RoadLayout.Surface.PAINT, width + _view.edge_line_width_m / 2.0)
+	assert_object(left_edge).is_not_null()
+	assert_bool(left_edge.dashed).is_false()
+	assert_int(_layout.strips_of(RoadLayout.Surface.PAINT).size()).is_equal(2 * (2 + 2))
+	# The right side does not move; the median and the opposite carriageway move left by one lane.
+	assert_float(_layout.outer_barrier_u()).is_equal_approx(two_lanes.outer_barrier_u(), EPS)
+	assert_float(_layout.hectometre_post_u()).is_equal_approx(two_lanes.hectometre_post_u(), EPS)
+	assert_float(_layout.median_center_u() - two_lanes.median_center_u()).is_equal_approx(road.lane_width_m, EPS)
+	var opposite: RoadLayout.Strip = _layout.strips_of(RoadLayout.Surface.ASPHALT)[1]
+	assert_float(opposite.u_min - width).is_equal_approx(2.0 * _view.inner_strip_width_m + _view.median_width_m, EPS)
+	assert_float(opposite.u_max - opposite.u_min).is_equal_approx(width, EPS)
+	assert_int(_layout.strips_of(RoadLayout.Surface.BARRIER).size()).is_equal(3)
+
+
 func test_shoulder_and_outer_barrier_are_right_of_the_carriageway() -> void:
 	var shoulder: RoadLayout.Strip = _strip_at(RoadLayout.Surface.SHOULDER, -_road.shoulder_width_m / 2.0)
 	assert_object(shoulder).is_not_null()

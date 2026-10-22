@@ -44,6 +44,7 @@ func test_seeded_mixed_traffic_never_collides(
 		test_parameters: Array = [
 			["res://config/road_profiles/motorway.tres", 1],
 			["res://config/road_profiles/expressway.tres", 2],
+			["res://config/road_profiles/motorway_3lane.tres", 3],
 		]) -> void:
 	_sim = _populated_sim(profile_path, seed_value)
 	var collisions: Array[Vector2i] = []

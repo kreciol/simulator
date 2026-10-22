@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="DevLauncherConfig" load_steps=13 format=3]
+[gd_resource type="Resource" script_class="DevLauncherConfig" load_steps=14 format=3]
 
 [ext_resource type="Script" path="res://config/dev_launcher_config.gd" id="1_launcher"]
 [ext_resource type="Script" path="res://config/road_profile.gd" id="2_road"]
@@ -13,10 +13,11 @@
 [ext_resource type="Script" path="res://config/quality_preset.gd" id="10_quality"]
 [ext_resource type="Resource" path="res://config/quality_presets/low.tres" id="11_low"]
 [ext_resource type="Resource" path="res://config/quality_presets/high.tres" id="12_high"]
+[ext_resource type="Resource" path="res://config/road_profiles/motorway_3lane.tres" id="13_motorway_3lane"]
 
 [resource]
 script = ExtResource("1_launcher")
-profiles = Array[ExtResource("2_road")]([ExtResource("3_motorway"), ExtResource("4_expressway")])
+profiles = Array[ExtResource("2_road")]([ExtResource("3_motorway"), ExtResource("4_expressway"), ExtResource("13_motorway_3lane")])
 default_profile = &"motorway"
 default_mode = &"learn"
 levels = Array[ExtResource("5_level")]([ExtResource("6_level_1"), ExtResource("7_level_2"), ExtResource("8_level_3"), ExtResource("9_level_4")])

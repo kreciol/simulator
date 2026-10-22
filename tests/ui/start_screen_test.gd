@@ -89,11 +89,12 @@ func test_all_four_levels_are_selectable() -> void:
 		assert_int(screen.selected_level).is_equal(level)
 
 
-func test_both_road_profiles_are_offered() -> void:
+func test_every_road_profile_is_offered() -> void:
 	var screen: StartScreen = _make()
 	screen.show_setup()
-	assert_array(screen.profile_buttons.keys()).contains_exactly([&"motorway", &"expressway"])
+	assert_array(screen.profile_buttons.keys()).contains_exactly([&"motorway", &"expressway", &"motorway_3lane"])
 	assert_str(screen.profile_buttons[&"expressway"].text).is_equal("Droga ekspresowa")
+	assert_str(screen.profile_buttons[&"motorway_3lane"].text).is_equal("Autostrada (3 pasy)")
 
 
 func test_the_exam_is_not_suggested_before_three_learn_sessions(completed: int,

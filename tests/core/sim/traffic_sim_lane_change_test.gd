@@ -16,10 +16,10 @@ func before_test() -> void:
 	_change_steps = roundi(_sim.config.lane_change_duration_s / DT)
 
 
-## A fresh sim with the car alone on `lane`.
-func _start_on_lane(lane: int) -> void:
+## A fresh sim with the car alone on `lane` of the `road_path` profile.
+func _start_on_lane(lane: int, road_path: String = "res://config/road_profiles/motorway.tres") -> void:
 	var config: SimConfig = load("res://config/sim_config.tres") as SimConfig
-	_sim = TrafficSim.new(load("res://config/road_profiles/motorway.tres") as RoadProfile, config)
+	_sim = TrafficSim.new(load(road_path) as RoadProfile, config)
 	_car = _sim.add_vehicle(0.0, lane, 30.0)
 
 
@@ -77,14 +77,17 @@ func test_request_during_active_change_is_ignored() -> void:
 
 
 func test_change_beyond_outermost_lane_ends_off_road(
+		road_path: String,
 		start_lane: int,
 		dir: VehicleState.Dir,
 		end_lane: int,
 		test_parameters: Array = [
-			[0, VehicleState.Dir.RIGHT, -1],
-			[1, VehicleState.Dir.LEFT, 2],
+			["res://config/road_profiles/motorway.tres", 0, VehicleState.Dir.RIGHT, -1],
+			["res://config/road_profiles/motorway.tres", 1, VehicleState.Dir.LEFT, 2],
+			["res://config/road_profiles/motorway_3lane.tres", 0, VehicleState.Dir.RIGHT, -1],
+			["res://config/road_profiles/motorway_3lane.tres", 2, VehicleState.Dir.LEFT, 3],
 		]) -> void:
-	_start_on_lane(start_lane)
+	_start_on_lane(start_lane, road_path)
 	var offroad_ids: Array[int] = []
 	_sim.offroad.connect(func(vehicle_id: int) -> void: offroad_ids.append(vehicle_id))
 	assert_bool(_sim.request_lane_change(_car, dir)).is_true()
@@ -149,3 +152,14 @@ func test_signal_toggled_with_lane_change_counts_as_on_first() -> void:
 	assert_bool(_car.lane_change_active).is_true()
 	_steps(_change_steps)
 	assert_int(_car.signal_dir).is_equal(VehicleState.Dir.NONE)
+
+
+## Issue #96: on three lanes the middle lane is a lane like any other, either way.
+func test_from_the_middle_of_three_lanes_both_changes_stay_on_the_road(dir: VehicleState.Dir, end_lane: int,
+		test_parameters: Array = [[VehicleState.Dir.LEFT, 2], [VehicleState.Dir.RIGHT, 0]]) -> void:
+	_start_on_lane(1, "res://config/road_profiles/motorway_3lane.tres")
+	assert_bool(_sim.request_lane_change(_car, dir)).is_true()
+	_steps(_change_steps)
+	assert_bool(_car.off_road).is_false()
+	assert_int(_car.lane).is_equal(end_lane)
+	assert_float(_sim.lateral_position(_car)).is_equal(_sim.road.lane_center(end_lane))
