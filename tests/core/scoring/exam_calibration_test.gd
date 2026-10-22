@@ -5,6 +5,7 @@ extends GdUnitTestSuite
 const PROFILE_PATHS: Array[String] = [
 	"res://config/road_profiles/motorway.tres",
 	"res://config/road_profiles/expressway.tres",
+	"res://config/road_profiles/motorway_3lane.tres",
 ]
 ## Longest the bot may spend below the legal gap in a session, all of it after cut-ins.
 const MAX_CUT_IN_S: float = 2.0

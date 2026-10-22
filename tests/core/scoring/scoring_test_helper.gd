@@ -4,16 +4,20 @@ extends RefCounted
 ## scoring rule tests. Scripted vehicles keep their speed unless commanded.
 
 const DT: float = 1.0 / 60.0
+const MOTORWAY: String = "res://config/road_profiles/motorway.tres"
+const MOTORWAY_3LANE: String = "res://config/road_profiles/motorway_3lane.tres"
 
 var sim: TrafficSim
 var scoring: ScoringSystem
 var player: VehicleState
 
 
-## `scoring_config` overrides `scoring.tres` (e.g. a duplicate with one value changed).
-func _init(player_lane: int, player_speed_kmh: float, scoring_config: ScoringConfig = null) -> void:
+## `scoring_config` overrides `scoring.tres` (e.g. a duplicate with one value changed);
+## `road_path` picks another road profile (e.g. `MOTORWAY_3LANE`).
+func _init(player_lane: int, player_speed_kmh: float, scoring_config: ScoringConfig = null,
+		road_path: String = MOTORWAY) -> void:
 	sim = TrafficSim.new(
-			load("res://config/road_profiles/motorway.tres") as RoadProfile,
+			load(road_path) as RoadProfile,
 			load("res://config/sim_config.tres") as SimConfig)
 	player = sim.add_vehicle(0.0, player_lane, kmh(player_speed_kmh))
 	sim.player = player
